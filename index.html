@@ -625,9 +625,9 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 
 <script>
 // ══ CONFIG ══
-const MASTER_KEY = "$2a$10$3E2kLNvPGqY3lb/WE.4o7uXawL1DYruxuYexxv0RXnagND.XprhAG";
-const ACCESS_KEY = "$2a$10$9VfaQRuaCX9fyS6yiO1dhuh5DeDt89523dzWLH/.6jPYvy3wOcPv.";
-const BIN_ID     = "6a2f95d2da38895dfec1c3bb";
+const MASTER_KEY = "PEGA_AQUI_TU_MASTER_KEY";
+const ACCESS_KEY = "PEGA_AQUI_TU_ACCESS_KEY";
+const BIN_ID     = "PEGA_AQUI_TU_BIN_ID";
 const BIN_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 let currentUser = null, allUsers = [], allClientes = [];
@@ -691,7 +691,6 @@ function enterPanel(){
   document.getElementById("screen-welcome").style.display="none";
   document.getElementById("screen-panel").classList.add("show");
   document.getElementById("top-user").textContent="@"+currentUser.user;
-  // Ocultar opciones de admin si es worker
   if(currentUser.role!=="admin"){
     document.getElementById("admin-sub-colab").style.display="none";
   }
@@ -701,6 +700,8 @@ function enterPanel(){
   initColorPicker();
   initAdicionales();
   initPkgComponents("xv");
+  // Mostrar lista de clientes por defecto al entrar
+  goSec("lista-clientes");
 }
 
 function doLogout(){
@@ -714,19 +715,28 @@ function doLogout(){
 function toggleNav(name){
   const items=document.querySelectorAll(".nav-item");
   items.forEach(it=>{
-    if(it.id==="nav-"+name){it.classList.toggle("open");}
-    else{it.classList.remove("open");}
+    if(it.id==="nav-"+name){
+      const isOpen=it.classList.contains("open");
+      it.classList.toggle("open",!isOpen);
+    } else {
+      it.classList.remove("open");
+    }
   });
+  // Detener propagación para que no cierre inmediatamente en móvil
+  event.stopPropagation();
 }
 function closeAllNav(){document.querySelectorAll(".nav-item").forEach(i=>i.classList.remove("open"));}
-document.addEventListener("click",e=>{
-  if(!e.target.closest(".nav-item"))closeAllNav();
+
+// Cerrar submenú al tocar fuera — solo en click real, no en toques dentro del nav
+document.addEventListener("click",function(e){
+  if(!e.target.closest(".nav-bar"))closeAllNav();
 });
 
 function goSec(id){
   closeAllNav();
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-  document.getElementById("sec-"+id).classList.add("active");
+  const sec=document.getElementById("sec-"+id);
+  if(sec)sec.classList.add("active");
   if(id==="colaboradores")loadWorkers();
   if(id==="historial-accesos")loadHistorial();
 }
