@@ -426,10 +426,14 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
       <div class="card">
         <div class="card-title">Paquete</div>
         <div class="pkg-selector">
-          <button class="pkg-btn" onclick="selPkg('xv')"   id="pb-xv">Paquete XV</button>
-          <button class="pkg-btn" onclick="selPkg('novia')" id="pb-novia">Paquete Novia</button>
-          <button class="pkg-btn" onclick="selPkg('solo')"  id="pb-solo">Solo vestido</button>
+          <button class="pkg-btn" onclick="selPkg('xv')"    id="pb-xv">Paquete XV</button>
+          <button class="pkg-btn" onclick="selPkg('novia')"  id="pb-novia">Paquete Novia</button>
+          <button class="pkg-btn" onclick="selPkg('solo')"   id="pb-solo">Solo vestido</button>
           <button class="pkg-btn" onclick="selPkg('custom')" id="pb-custom">Personalizado</button>
+        </div>
+        <div class="fi" style="max-width:220px;margin-top:.6rem;">
+          <label>Precio del paquete ($)</label>
+          <input type="number" id="c-precio-paquete" placeholder="0" oninput="calcTotal()">
         </div>
         <div class="pkg-components" id="pkg-components"></div>
       </div>
@@ -482,12 +486,21 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
       <div class="card" style="background:#FDF8F0;border:1px solid #E8D8B0;">
         <div class="card-title">Resumen de costos</div>
         <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.5rem;">
-          <span>Adicionales:</span><strong id="resumen-extras">$0</strong>
+          <span>Precio del vestido:</span><strong id="resumen-vestido">$0</strong>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.5rem;">
-          <span>Total (vestido + adicionales):</span><strong id="resumen-total" style="color:var(--dorado-d)">$0</strong>
+          <span>Precio del paquete:</span><strong id="resumen-paquete">$0</strong>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:.82rem;border-top:1px solid #E8D8B0;padding-top:.5rem;">
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.5rem;">
+          <span>Artículos adicionales:</span><strong id="resumen-extras">$0</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.9rem;font-weight:500;border-top:1px solid #E8D8B0;padding-top:.5rem;margin-bottom:.5rem;">
+          <span>Total:</span><strong id="resumen-total" style="color:var(--dorado-d)">$0</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.5rem;">
+          <span>Anticipo:</span><strong id="resumen-anticipo" style="color:var(--verde)">$0</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.92rem;font-weight:500;border-top:1px solid #E8D8B0;padding-top:.5rem;">
           <span>Saldo restante:</span><strong id="resumen-saldo" style="color:var(--rojo)">$0</strong>
         </div>
       </div>
@@ -632,9 +645,9 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 
 <script>
 // ══ CONFIG ══
-const MASTER_KEY = "$2a$10$3E2kLNvPGqY3lb/WE.4o7uXawL1DYruxuYexxv0RXnagND.XprhAG";
-const ACCESS_KEY = "$2a$10$9VfaQRuaCX9fyS6yiO1dhuh5DeDt89523dzWLH/.6jPYvy3wOcPv.";
-const BIN_ID     = "6a2f95d2da38895dfec1c3bb";
+const MASTER_KEY = "PEGA_AQUI_TU_MASTER_KEY";
+const ACCESS_KEY = "PEGA_AQUI_TU_ACCESS_KEY";
+const BIN_ID     = "PEGA_AQUI_TU_BIN_ID";
 const BIN_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 let currentUser = null, allUsers = [], allClientes = [];
@@ -854,6 +867,9 @@ function toggleAdicional(i){
   calcTotal();
 }
 function calcTotal(){
+  const vestido  = parseFloat(document.getElementById("c-precio").value)||0;
+  const paquete  = parseFloat(document.getElementById("c-precio-paquete").value)||0;
+  const anticipo = parseFloat(document.getElementById("c-anticipo").value)||0;
   let extras=0;
   ADICIONALES.forEach((_,i)=>{
     const chk=document.getElementById("ac-"+i);
@@ -862,13 +878,14 @@ function calcTotal(){
       extras+=p;
     }
   });
-  const base=parseFloat(document.getElementById("c-precio").value)||0;
-  const anticipo=parseFloat(document.getElementById("c-anticipo").value)||0;
-  const total=base+extras;
-  const saldo=total-anticipo;
-  document.getElementById("resumen-extras").textContent="$"+extras.toLocaleString();
-  document.getElementById("resumen-total").textContent="$"+total.toLocaleString();
-  document.getElementById("resumen-saldo").textContent="$"+saldo.toLocaleString();
+  const total  = vestido + paquete + extras;
+  const saldo  = total - anticipo;
+  document.getElementById("resumen-vestido").textContent  = "$"+vestido.toLocaleString();
+  document.getElementById("resumen-paquete").textContent  = "$"+paquete.toLocaleString();
+  document.getElementById("resumen-extras").textContent   = "$"+extras.toLocaleString();
+  document.getElementById("resumen-total").textContent    = "$"+total.toLocaleString();
+  document.getElementById("resumen-anticipo").textContent = "$"+anticipo.toLocaleString();
+  document.getElementById("resumen-saldo").textContent    = "$"+saldo.toLocaleString();
 }
 
 // ══ GUARDAR CLIENTE ══
@@ -916,6 +933,7 @@ async function saveCliente(){
     elaboracion:document.getElementById("c-elab").value,
     medidas:{busto:document.getElementById("m-busto").value,cintura:document.getElementById("m-cintura").value,cadera:document.getElementById("m-cadera").value,copa:document.getElementById("m-copa").value,largo:document.getElementById("m-largo").value},
     paquete:getPkgData(),
+    precioPaquete:document.getElementById("c-precio-paquete").value,
     precio:document.getElementById("c-precio").value,
     anticipo:document.getElementById("c-anticipo").value,
     sispago:document.getElementById("c-sispago").value,
