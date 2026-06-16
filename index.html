@@ -281,10 +281,11 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 #modal-worker .modal{max-width:400px;}
 /* print */
 @media print{
-  #screen-welcome,#screen-panel,#modal-abono,.overlay:not(#modal-contrato){display:none!important;}
-  #modal-contrato{position:static!important;overflow:visible!important;background:#fff!important;}
-  #modal-contrato>div{box-shadow:none!important;padding:0!important;}
-  #modal-contrato button{display:none!important;}
+  #screen-welcome,#screen-panel,#modal-abono{display:none!important;}
+  .overlay:not(#modal-contrato):not(#modal-nota){display:none!important;}
+  #modal-contrato,#modal-nota{position:static!important;overflow:visible!important;background:#fff!important;}
+  #modal-contrato>div,#modal-nota>div{box-shadow:none!important;padding:0!important;}
+  #modal-contrato button,#modal-nota button{display:none!important;}
 }
 </style>
 </head>
@@ -740,6 +741,17 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
     </div>
     <div class="msg-err" id="abono-msg"></div>
     <button class="btn-primary" onclick="guardarAbono()" style="background:linear-gradient(135deg,#1E8449,#27AE60)">Registrar abono</button>
+  </div>
+</div>
+
+<!-- MODAL NOTA DE VENTA -->
+<div class="overlay" id="modal-nota" style="z-index:300;align-items:flex-start;padding:0;overflow-y:auto">
+  <div style="background:#fff;width:100%;max-width:780px;margin:0 auto;padding:2rem;position:relative;min-height:100vh">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:.5rem;flex-wrap:wrap">
+      <button onclick="closeNotaVenta()" style="background:none;border:1px solid #DDD;padding:.4rem .9rem;border-radius:2px;cursor:pointer;font-size:.75rem;letter-spacing:.1em">✕ Cerrar</button>
+      <button onclick="imprimirNota()" style="background:var(--dorado-g);color:#FFF8EC;border:none;padding:.5rem 1.2rem;border-radius:2px;cursor:pointer;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase">🖨️ Imprimir</button>
+    </div>
+    <div id="nota-content"></div>
   </div>
 </div>
 
@@ -1432,7 +1444,227 @@ function verPagos(id){
   renderPagosPendientes();
 }
 function verNotaVenta(id){
-  toast("Nota de Venta · próxima entrega 🎀","ok");
+  const c = allClientes.find(x=>x.id===id);
+  if(!c){toast("Cliente no encontrado","err");return;}
+  generarNotaVenta(c);
+  document.getElementById("modal-nota").classList.add("open");
+  document.getElementById("modal-nota").scrollTop=0;
+}
+function closeNotaVenta(){document.getElementById("modal-nota").classList.remove("open");}
+function imprimirNota(){window.print();}
+
+function generarNotaVenta(c){
+  const precio    = Number(c.precio||0);
+  const paquete   = Number(c.precioPaquete||0);
+  const extras    = (c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
+  const total     = precio+paquete+extras;
+  const anticipo  = Number(c.anticipo||0);
+  const saldo     = total-anticipo;
+  const tipos     = {"xv":"Quinceañera","novia":"Novia","solo":"Solo vestido","custom":"Personalizado"};
+  const fContrato = c.fecha   ? new Date(c.fecha+"T12:00:00").toLocaleDateString("es-MX",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
+  const fEntrega  = c.entrega ? new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
+
+  // Componentes del paquete
+  const comps = (c.paquete?.componentes||[]).map(x=>x.name+(x.opcion?" ("+x.opcion+")":"")).join(", ")||"—";
+
+  // Tabla accesorios: paquete + adicionales
+  let accesoriosRows = "";
+  if(c.paquete?.tipo && c.paquete.tipo!=="solo"){
+    accesoriosRows += `<tr>
+      <td style="text-align:center;border:1px solid #CCC;padding:.4rem">1</td>
+      <td style="border:1px solid #CCC;padding:.4rem">${c.paquete.tipo==="xv"?"Paquete XV":c.paquete.tipo==="novia"?"Paquete Novia":"Paquete personalizado"} — ${comps}</td>
+      <td style="text-align:right;border:1px solid #CCC;padding:.4rem">$${paquete.toLocaleString()}</td>
+    </tr>`;
+  }
+  (c.paquete?.adicionales||[]).forEach(a=>{
+    accesoriosRows += `<tr>
+      <td style="text-align:center;border:1px solid #CCC;padding:.4rem">1</td>
+      <td style="border:1px solid #CCC;padding:.4rem">${a.nombre}${a.nota?" — "+a.nota:""}</td>
+      <td style="text-align:right;border:1px solid #CCC;padding:.4rem">$${Number(a.precio||0).toLocaleString()}</td>
+    </tr>`;
+  });
+  // Filas vacías para llenar a mano si se imprime
+  const filasVacias = Math.max(0, 8-(c.paquete?.componentes?.length||0)-(c.paquete?.adicionales?.length||0));
+  for(let i=0;i<filasVacias;i++){
+    accesoriosRows+=`<tr>
+      <td style="border:1px solid #CCC;padding:.4rem;height:24px">&nbsp;</td>
+      <td style="border:1px solid #CCC;padding:.4rem">&nbsp;</td>
+      <td style="border:1px solid #CCC;padding:.4rem">&nbsp;</td>
+    </tr>`;
+  }
+
+  // Tabla ajustes
+  const ajustes = ["1er","2o","3er","4o","Entrega"];
+
+  document.getElementById("nota-content").innerHTML = `
+  <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:720px;margin:0 auto;font-size:.85rem">
+
+    <!-- ENCABEZADO -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border:2px solid #1a1a1a;padding:.6rem .8rem;margin-bottom:0">
+      <div style="font-size:1.4rem;font-weight:700;letter-spacing:.05em">NOTA DE VENTA</div>
+      <div style="text-align:right">
+        <div>Folio: <strong>${c.folio||"____"}</strong></div>
+      </div>
+    </div>
+
+    <!-- DATOS CLIENTE Y PEDIDO -->
+    <table style="width:100%;border-collapse:collapse;border:2px solid #1a1a1a;border-top:none">
+      <tr>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem;width:15%"><strong>Nombre:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem;width:35%">${c.nombre||"—"}</td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem;width:25%"><strong>Fecha de contrato:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem;width:25%">${fContrato}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Contacto:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem">${c.cel||"—"}</td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Fecha entrega/evento:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem">${fEntrega}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Tipo:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem">${tipos[c.tipo]||"—"}</td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Talla:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem">${c.talla||"—"}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Modelo:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem">${c.modelo||"—"} ${c.marca?"("+c.marca+")":""}</td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Color:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem">
+          <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${c.color?.hex||"#CCC"};vertical-align:middle;margin-right:4px;border:1px solid #999"></span>
+          ${c.color?.nombre||"—"}
+        </td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Precio:</strong></td>
+        <td colspan="3" style="border:1px solid #CCC;padding:.4rem .6rem"><strong style="color:#7A4F2A">$${total.toLocaleString()}</strong></td>
+      </tr>
+    </table>
+
+    <!-- MEDIDAS -->
+    <table style="width:100%;border-collapse:collapse;border:2px solid #1a1a1a;border-top:none">
+      <tr>
+        <td colspan="10" style="background:#F0F0F0;font-weight:700;text-align:center;border:1px solid #CCC;padding:.3rem">Medidas</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center;font-weight:600;width:20%">Busto</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center;width:20%">${c.medidas?.busto||""}</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center;font-weight:600;width:20%">Cintura</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center;width:20%">${c.medidas?.cintura||""}</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center;font-weight:600;width:20%">Cadera</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.medidas?.cadera||""}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center;font-weight:600">Copa</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.medidas?.copa||""}</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center;font-weight:600">Largo</td>
+        <td colspan="3" style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.medidas?.largo||""}</td>
+      </tr>
+    </table>
+
+    <!-- ACCESORIOS -->
+    <table style="width:100%;border-collapse:collapse;border:2px solid #1a1a1a;border-top:none">
+      <tr>
+        <td colspan="3" style="background:#F0F0F0;font-weight:700;text-align:center;border:1px solid #CCC;padding:.3rem">Accesorios</td>
+      </tr>
+      <tr>
+        <th style="border:1px solid #CCC;padding:.35rem .5rem;width:12%;background:#F9F9F9">Cantidad</th>
+        <th style="border:1px solid #CCC;padding:.35rem .5rem;background:#F9F9F9">Artículo</th>
+        <th style="border:1px solid #CCC;padding:.35rem .5rem;width:18%;background:#F9F9F9;text-align:right">Monto</th>
+      </tr>
+      ${accesoriosRows}
+      <!-- TOTALES -->
+      <tr>
+        <td colspan="2" style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right">Precio del vestido:</td>
+        <td style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right">$${precio.toLocaleString()}</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right;font-weight:700">TOTAL:</td>
+        <td style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right;font-weight:700;color:#7A4F2A">$${total.toLocaleString()}</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right;color:#1E8449">Anticipo:</td>
+        <td style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right;color:#1E8449">$${anticipo.toLocaleString()}</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right;font-weight:700;color:#C0392B">Saldo restante:</td>
+        <td style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right;font-weight:700;color:#C0392B">$${saldo.toLocaleString()}</td>
+      </tr>
+    </table>
+
+    <!-- MEDIDAS Y AJUSTES -->
+    <table style="width:100%;border-collapse:collapse;border:2px solid #1a1a1a;border-top:none">
+      <tr>
+        <td colspan="2" style="background:#F0F0F0;font-weight:700;text-align:center;border:1px solid #CCC;padding:.3rem;width:50%">MEDIDAS</td>
+        <td colspan="2" style="background:#F0F0F0;font-weight:700;text-align:center;border:1px solid #CCC;padding:.3rem">Ajustes</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;font-weight:600">Busto</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem">${c.medidas?.busto||""}</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;font-weight:600">1er</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;min-width:100px">&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;font-weight:600">Cintura</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem">${c.medidas?.cintura||""}</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;font-weight:600">2o</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem">&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;font-weight:600">Cadera</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem">${c.medidas?.cadera||""}</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;font-weight:600">3er</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem">&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;font-weight:600">Copa</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem">${c.medidas?.copa||""}</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;font-weight:600">4o</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem">&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;font-weight:600">Largo</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem">${c.medidas?.largo||""}</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;font-weight:600">Entrega</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem">&nbsp;</td>
+      </tr>
+    </table>
+
+    <!-- REQUISICIONES ESPECIALES -->
+    <table style="width:100%;border-collapse:collapse;border:2px solid #1a1a1a;border-top:none">
+      <tr>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;font-weight:600;width:30%">Requisiciones especiales</td>
+        <td style="border:1px solid #CCC;padding:.5rem;min-height:40px">${c.observaciones||"&nbsp;"}</td>
+      </tr>
+    </table>
+
+    <!-- FIRMA 1 — Al recibir pedido -->
+    <div style="border:2px solid #1a1a1a;border-top:none;padding:.8rem;margin-bottom:0">
+      <div style="font-style:italic;font-size:.78rem;margin-bottom:.8rem">
+        El cliente acepta que la información aquí detallada es correcta, incluyendo modelo, color y medidas. Asimismo, está de acuerdo con los términos de pago y las fechas de entrega establecidas.
+      </div>
+      <div style="text-align:center;margin-top:1.5rem">
+        <div style="border-top:1px solid #333;display:inline-block;width:280px;padding-top:.3rem">NOMBRE Y FIRMA DEL CLIENTE</div>
+      </div>
+    </div>
+
+    <!-- FIRMA 2 — Al recoger -->
+    <div style="border:2px solid #1a1a1a;border-top:none;padding:.8rem">
+      <div style="font-style:italic;font-size:.78rem;margin-bottom:.8rem">
+        El cliente acepta de conformidad que el producto entregado cumple con todas las especificaciones solicitadas y que no existen ajustes pendientes por realizar.
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:1.5rem;padding-top:.3rem">
+        <div style="text-align:center">
+          <div style="border-top:1px solid #333;display:inline-block;width:220px;padding-top:.3rem">NOMBRE Y FIRMA DEL CLIENTE</div>
+        </div>
+        <div style="text-align:center">
+          <div style="border-top:1px solid #333;display:inline-block;width:160px;padding-top:.3rem">FECHA</div>
+        </div>
+      </div>
+    </div>
+
+  </div>`;
 }
 
 // ══ CONTRATO ══
