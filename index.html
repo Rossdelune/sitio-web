@@ -109,7 +109,9 @@ html,body{min-height:100vh;background:var(--crema);font-family:"Lato",sans-serif
   background:#FFFDF9;border-bottom:1px solid var(--borde);
   display:flex;padding:0 .5rem;overflow-x:auto;position:sticky;top:52px;z-index:90;
   scrollbar-width:none;
+  position:sticky;
 }
+.nav-bar > .nav-btn{position:relative;}
 .nav-bar::-webkit-scrollbar{display:none;}
 
 .nav-btn{
@@ -127,17 +129,27 @@ html,body{min-height:100vh;background:var(--crema);font-family:"Lato",sans-serif
 /* subnav inline debajo del nav */
 .subnav{
   display:none;
-  background:#FFFDF9;border-bottom:2px solid var(--dorado);
-  padding:.3rem .5rem;
-  flex-wrap:wrap;gap:.2rem;
+  position:absolute;
+  top:100%;
+  left:0;
+  min-width:200px;
+  background:#fff;
+  border:1px solid var(--borde);
+  border-radius:3px;
+  box-shadow:0 8px 28px rgba(30,18,8,.14);
+  z-index:200;
+  flex-direction:column;
+  padding:.3rem 0;
 }
 .subnav.open{display:flex;}
 .sub-item{
-  padding:.55rem 1rem;border:none;background:none;
-  font-family:"Lato",sans-serif;font-size:.76rem;color:var(--texto);
+  padding:.65rem 1.1rem;border:none;background:none;
+  font-family:"Lato",sans-serif;font-size:.78rem;color:var(--texto);
   cursor:pointer;transition:background .15s,color .15s;
-  border-radius:2px;letter-spacing:.04em;white-space:nowrap;
+  text-align:left;letter-spacing:.04em;white-space:nowrap;
+  border-bottom:1px solid #F5F0E8;
 }
+.sub-item:last-child{border-bottom:none;}
 .sub-item:hover{background:var(--crema);color:var(--dorado-d);}
 
 /* contenido */
@@ -269,6 +281,86 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 .alerta-vencido{background:#FDEDEC;color:var(--rojo);}
 .alerta-ok{background:#D4EDDA;color:#155724;}
 .alerta-interes{background:#F8D7DA;color:#721C24;font-weight:500;}
+/* ── PROCESO DE ELABORACIÓN ── */
+.proceso-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;}
+.proceso-search{border:none;border-bottom:1px solid #DDD;padding:.4rem .2rem;font-family:"Lato",sans-serif;font-size:.82rem;outline:none;width:220px;background:transparent;}
+.proceso-search:focus{border-color:var(--dorado);}
+
+.proceso-card{background:#fff;border-radius:4px;box-shadow:0 2px 10px rgba(122,79,42,.07);margin-bottom:1rem;overflow:hidden;}
+.proceso-card-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.85rem 1.1rem;cursor:pointer;
+  border-bottom:1px solid transparent;transition:background .15s;
+}
+.proceso-card-header:hover{background:#FDFAF6;}
+.proceso-card-header.open{border-bottom:1px solid var(--borde);}
+.proceso-cliente-info{display:flex;flex-direction:column;gap:.15rem;}
+.proceso-cliente-nombre{font-size:.88rem;font-weight:500;color:var(--texto);}
+.proceso-cliente-sub{font-size:.72rem;color:#AAA;letter-spacing:.04em;}
+.proceso-progress-bar{
+  flex:1;margin:0 1rem;height:6px;
+  background:#F0EAE0;border-radius:3px;overflow:hidden;
+  min-width:60px;max-width:180px;
+}
+.proceso-progress-fill{height:100%;background:linear-gradient(90deg,#7A4F2A,#C9A84C);border-radius:3px;transition:width .4s;}
+.proceso-pct{font-size:.72rem;color:var(--dorado-d);font-weight:500;white-space:nowrap;}
+.proceso-arrow{font-size:.7rem;color:#AAA;transition:transform .2s;margin-left:.5rem;}
+.proceso-card-header.open .proceso-arrow{transform:rotate(180deg);}
+
+.proceso-body{display:none;padding:1rem;}
+.proceso-body.open{display:block;}
+
+/* pasos */
+.pasos-container{position:relative;padding-left:1.8rem;margin-bottom:1rem;}
+.pasos-container::before{content:"";position:absolute;left:.55rem;top:.5rem;bottom:.5rem;width:2px;background:#F0EAE0;}
+.paso-item{position:relative;margin-bottom:.9rem;}
+.paso-item:last-child{margin-bottom:0;}
+.paso-dot{
+  position:absolute;left:-1.8rem;top:.2rem;
+  width:18px;height:18px;border-radius:50%;
+  border:2px solid #DDD;background:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.7rem;transition:all .2s;cursor:pointer;
+  z-index:1;
+}
+.paso-dot.done{background:var(--dorado-d);border-color:var(--dorado-d);color:#fff;}
+.paso-dot.skip{background:#DDD;border-color:#CCC;color:#999;}
+.paso-nombre{font-size:.82rem;font-weight:500;color:var(--texto);margin-bottom:.35rem;}
+.paso-nombre.done{color:var(--dorado-d);}
+.paso-nombre.skip{color:#BBB;text-decoration:line-through;}
+.paso-fields{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.4rem;}
+@media(max-width:480px){.paso-fields{grid-template-columns:1fr;}}
+.paso-input{
+  border:none;border-bottom:1px solid #EEE;padding:.3rem 0;
+  font-family:"Lato",sans-serif;font-size:.78rem;color:var(--texto);
+  background:transparent;outline:none;width:100%;transition:border-color .2s;
+}
+.paso-input:focus{border-color:var(--dorado);}
+.paso-pct-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;}
+.paso-pct-label{font-size:.7rem;color:#888;white-space:nowrap;}
+.paso-pct-input{width:60px;text-align:center;}
+.paso-opcional{display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem;}
+.paso-opcional label{font-size:.72rem;color:#AAA;cursor:pointer;}
+.paso-notas{
+  width:100%;border:none;border-bottom:1px dashed #EEE;
+  padding:.3rem 0;font-family:"Lato",sans-serif;font-size:.76rem;
+  color:var(--texto);background:transparent;outline:none;resize:none;
+  min-height:38px;transition:border-color .2s;
+}
+.paso-notas:focus{border-color:var(--dorado);}
+
+/* suministros */
+.sumi-tabla{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:.5rem;}
+.sumi-tabla th{text-align:left;padding:.45rem .5rem;font-size:.63rem;letter-spacing:.12em;text-transform:uppercase;color:#AAA;font-weight:400;border-bottom:1px solid #EEE;}
+.sumi-tabla td{padding:.5rem .5rem;border-bottom:1px solid #F5F0E8;vertical-align:middle;}
+.sumi-tabla tr:last-child td{border-bottom:none;}
+.sumi-input{border:none;border-bottom:1px solid #EEE;padding:.2rem 0;font-family:"Lato",sans-serif;font-size:.76rem;background:transparent;outline:none;width:100%;transition:border-color .2s;}
+.sumi-input:focus{border-color:var(--dorado);}
+.btn-add-row{background:none;border:1px dashed #DDD;padding:.35rem .8rem;border-radius:2px;font-size:.7rem;color:#AAA;cursor:pointer;transition:all .2s;margin-top:.5rem;}
+.btn-add-row:hover{border-color:var(--dorado);color:var(--dorado-d);}
+.btn-del-row{background:none;border:none;color:#DDD;cursor:pointer;font-size:.9rem;transition:color .15s;}
+.btn-del-row:hover{color:var(--rojo);}
+
 /* spinner / toast */
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid #DDD;border-top-color:var(--dorado);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:.4rem;}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -328,40 +420,58 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
     </div>
   </div>
 
-  <!-- NAV horizontal -->
+  <!-- NAV horizontal con submenús verticales -->
   <nav class="nav-bar" id="nav-bar">
-    <button class="nav-btn" id="nb-clientes"   onclick="toggleNav('clientes')">👗 Clientes <span class="arrow">▾</span></button>
-    <button class="nav-btn" id="nb-pagos"      onclick="toggleNav('pagos')">💳 Pagos <span class="arrow">▾</span></button>
-    <button class="nav-btn" id="nb-pedidos"    onclick="toggleNav('pedidos')">📋 Pedidos <span class="arrow">▾</span></button>
-    <button class="nav-btn" id="nb-progreso"   onclick="toggleNav('progreso')">📦 Progreso <span class="arrow">▾</span></button>
-    <button class="nav-btn" id="nb-inventario" onclick="toggleNav('inventario')">🏷️ Inventario <span class="arrow">▾</span></button>
-    <button class="nav-btn" id="nb-config"     onclick="toggleNav('config')">⚙️ Config <span class="arrow">▾</span></button>
+
+    <div style="position:relative;flex-shrink:0">
+      <button class="nav-btn" id="nb-clientes" onclick="toggleNav('clientes')">👗 Clientes <span class="arrow">▾</span></button>
+      <div class="subnav" id="sub-clientes">
+        <button class="sub-item" onclick="goSec('nuevo-cliente')">➕ Nuevo cliente</button>
+        <button class="sub-item" onclick="goSec('lista-clientes')">📋 Lista de clientes</button>
+      </div>
+    </div>
+
+    <div style="position:relative;flex-shrink:0">
+      <button class="nav-btn" id="nb-pagos" onclick="toggleNav('pagos')">💳 Pagos <span class="arrow">▾</span></button>
+      <div class="subnav" id="sub-pagos">
+        <button class="sub-item" onclick="goSec('pagos-pendientes')">⏳ Pendientes</button>
+        <button class="sub-item" onclick="goSec('pagos-historial')">📊 Historial</button>
+      </div>
+    </div>
+
+    <div style="position:relative;flex-shrink:0">
+      <button class="nav-btn" id="nb-pedidos" onclick="toggleNav('pedidos')">📋 Pedidos <span class="arrow">▾</span></button>
+      <div class="subnav" id="sub-pedidos">
+        <button class="sub-item" onclick="goSec('todos-pedidos')">📋 Todos los pedidos</button>
+      </div>
+    </div>
+
+    <div style="position:relative;flex-shrink:0">
+      <button class="nav-btn" id="nb-progreso" onclick="toggleNav('progreso')">📦 Progreso <span class="arrow">▾</span></button>
+      <div class="subnav" id="sub-progreso">
+        <button class="sub-item" onclick="goSec('progreso-pedido')">🔄 Proceso pedido</button>
+        <button class="sub-item" onclick="goSec('progreso-diseno')">✂️ Proceso diseño</button>
+      </div>
+    </div>
+
+    <div style="position:relative;flex-shrink:0">
+      <button class="nav-btn" id="nb-inventario" onclick="toggleNav('inventario')">🏷️ Inventario <span class="arrow">▾</span></button>
+      <div class="subnav" id="sub-inventario">
+        <button class="sub-item" onclick="goSec('inv-qr')">📱 Códigos QR</button>
+        <button class="sub-item" onclick="goSec('inv-paquetes')">🎁 Paquetes</button>
+      </div>
+    </div>
+
+    <div style="position:relative;flex-shrink:0">
+      <button class="nav-btn" id="nb-config" onclick="toggleNav('config')">⚙️ Config <span class="arrow">▾</span></button>
+      <div class="subnav" id="sub-config">
+        <button class="sub-item" onclick="goSec('mi-cuenta')" id="admin-sub-micuenta">👤 Mi cuenta</button>
+        <button class="sub-item" onclick="goSec('colaboradores')" id="admin-sub-colab">👥 Colaboradores</button>
+        <button class="sub-item" onclick="goSec('historial-accesos')" id="admin-sub-hist">🕐 Historial accesos</button>
+      </div>
+    </div>
+
   </nav>
-  <!-- SUBNAVS inline -->
-  <div class="subnav" id="sub-clientes">
-    <button class="sub-item" onclick="goSec('nuevo-cliente')">➕ Nuevo cliente</button>
-    <button class="sub-item" onclick="goSec('lista-clientes')">📋 Lista de clientes</button>
-  </div>
-  <div class="subnav" id="sub-pagos">
-    <button class="sub-item" onclick="goSec('pagos-pendientes')">⏳ Pendientes</button>
-    <button class="sub-item" onclick="goSec('pagos-historial')">📊 Historial</button>
-  </div>
-  <div class="subnav" id="sub-pedidos">
-    <button class="sub-item" onclick="goSec('todos-pedidos')">📋 Todos los pedidos</button>
-  </div>
-  <div class="subnav" id="sub-progreso">
-    <button class="sub-item" onclick="goSec('progreso-pedido')">🔄 Proceso pedido</button>
-    <button class="sub-item" onclick="goSec('progreso-diseno')">✂️ Proceso diseño</button>
-  </div>
-  <div class="subnav" id="sub-inventario">
-    <button class="sub-item" onclick="goSec('inv-qr')">📱 Códigos QR</button>
-    <button class="sub-item" onclick="goSec('inv-paquetes')">🎁 Paquetes</button>
-  </div>
-  <div class="subnav" id="sub-config">
-    <button class="sub-item" onclick="goSec('mi-cuenta')" id="admin-sub-micuenta">👤 Mi cuenta</button>
-    <button class="sub-item" onclick="goSec('colaboradores')" id="admin-sub-colab">👥 Colaboradores</button>
-    <button class="sub-item" onclick="goSec('historial-accesos')" id="admin-sub-hist">🕐 Historial accesos</button>
-  </div>
 
   <div class="panel-body">
 
@@ -625,9 +735,18 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
         </div>
       </div>
     </div>
+    <!-- ── PROCESO DE ELABORACIÓN ── -->
     <div class="section" id="sec-progreso-pedido">
-      <div class="sec-title">Proceso del Pedido</div>
-      <div class="card"><p style="color:#AAA;font-size:.82rem;font-style:italic;">Módulo en construcción · Fase siguiente 🎀</p></div>
+      <div class="sec-title">Proceso de Elaboración</div>
+      <div class="card" style="padding:.8rem 1rem">
+        <div class="proceso-header">
+          <div class="card-title" style="margin:0">Pedidos activos</div>
+          <input class="proceso-search" id="proceso-search" placeholder="🔍 Buscar cliente..." oninput="filtrarProceso(this.value)">
+        </div>
+        <div id="proceso-lista">
+          <p style="color:#AAA;font-size:.82rem;padding:.5rem">Cargando pedidos...</p>
+        </div>
+      </div>
     </div>
     <div class="section" id="sec-progreso-diseno">
       <div class="sec-title">Proceso de Diseño</div>
@@ -888,6 +1007,7 @@ function goSec(id){
   if(id==="todos-pedidos")renderPedidos();
   if(id==="pagos-pendientes"){renderPagosPendientes();}
   if(id==="pagos-historial"){renderHistorialPagos();}
+  if(id==="progreso-pedido"){renderProceso();}
 }
 
 // ══ COLOR PICKER ══
@@ -1814,6 +1934,285 @@ function generarContrato(c){
       Ross de Lune · Novias y Quinceañeras · Fecha de entrega acordada: ${fechaEntrega}
     </div>
   </div>`;
+}
+
+// ══ PROCESO DE ELABORACIÓN ══
+const PASOS_TALLER = [
+  {id:"bocetaje",   nombre:"Bocetaje",          opcional:false},
+  {id:"insumos",    nombre:"Adquisición de insumos", opcional:false},
+  {id:"corte",      nombre:"Corte",             opcional:false},
+  {id:"confeccion", nombre:"Confección",         opcional:false},
+  {id:"bordado",    nombre:"Bordado / Decoración",opcional:false},
+  {id:"ajuste1",    nombre:"1er ajuste",          opcional:false},
+  {id:"ajuste2",    nombre:"2o ajuste",            opcional:true},
+  {id:"ajuste3",    nombre:"3er ajuste",            opcional:true},
+  {id:"entrega",    nombre:"Entrega",            opcional:false},
+];
+const PASOS_STOCK = [
+  {id:"ajuste1",    nombre:"1er ajuste",          opcional:false},
+  {id:"ajuste2",    nombre:"2o ajuste",            opcional:true},
+  {id:"ajuste3",    nombre:"3er ajuste",            opcional:true},
+  {id:"entrega",    nombre:"Entrega",            opcional:false},
+];
+
+function getPasos(c){
+  return (c.elaboracion==="Sobre pedido"||c.elaboracion==="Sobre diseño") ? PASOS_TALLER : PASOS_STOCK;
+}
+
+function getPct(c){
+  const pasos = getPasos(c);
+  const prog = c.progreso||{};
+  const activos = pasos.filter(p=>!prog[p.id+"_skip"]);
+  const hechos  = activos.filter(p=>prog[p.id+"_done"]);
+  return activos.length ? Math.round(hechos.length/activos.length*100) : 0;
+}
+
+function renderProceso(){
+  const lista = document.getElementById("proceso-lista");
+  if(!lista) return;
+  const activos = allClientes.filter(c=>c.estatus!=="Entregado");
+  if(!activos.length){
+    lista.innerHTML='<p style="color:#AAA;font-size:.82rem;padding:.5rem">No hay pedidos activos.</p>';
+    return;
+  }
+  lista.innerHTML = activos.map(c=>{
+    const pct = getPct(c);
+    const pasos = getPasos(c);
+    const tipo = c.elaboracion==="Sobre pedido"||c.elaboracion==="Sobre diseño" ? "Taller":"Stock";
+    return `
+    <div class="proceso-card" id="pc-${c.id}">
+      <div class="proceso-card-header" id="pch-${c.id}" onclick="toggleProceso('${c.id}')">
+        <div class="proceso-cliente-info">
+          <div class="proceso-cliente-nombre">${c.nombre}</div>
+          <div class="proceso-cliente-sub">${c.folio||"—"} · ${tipo} · ${c.tipo==="xv"?"XV":"Novia"}</div>
+        </div>
+        <div class="proceso-progress-bar">
+          <div class="proceso-progress-fill" id="pf-${c.id}" style="width:${pct}%"></div>
+        </div>
+        <div class="proceso-pct" id="pp-${c.id}">${pct}%</div>
+        <div class="proceso-arrow" id="pa-${c.id}">▾</div>
+      </div>
+      <div class="proceso-body" id="pb-${c.id}">
+        ${renderPasosList(c)}
+        ${renderSuministros(c)}
+        <div style="margin-top:.8rem">
+          <button class="btn-save" onclick="guardarProceso('${c.id}')">💾 Guardar proceso</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderPasosList(c){
+  const pasos = getPasos(c);
+  const prog = c.progreso||{};
+  return `<div class="pasos-container">` +
+    pasos.map(p=>{
+      const done = prog[p.id+"_done"]||false;
+      const skip = prog[p.id+"_skip"]||false;
+      const fecha = prog[p.id+"_fecha"]||"";
+      const pct   = prog[p.id+"_pct"]||"";
+      const notas = prog[p.id+"_notas"]||"";
+      return `
+      <div class="paso-item" id="pi-${c.id}-${p.id}">
+        <div class="paso-dot ${done?"done":skip?"skip":""}" onclick="toggleDone('${c.id}','${p.id}')" title="Marcar como completado">
+          ${done?"✓":skip?"–":""}
+        </div>
+        <div class="paso-nombre ${done?"done":skip?"skip":""}">${p.nombre}${p.opcional?' <span style="font-size:.68rem;color:#CCC">(opcional)</span>':""}</div>
+        ${p.opcional?`
+        <div class="paso-opcional">
+          <input type="checkbox" id="skip-${c.id}-${p.id}" ${skip?"checked":""} onchange="toggleSkip('${c.id}','${p.id}',this.checked)" style="accent-color:#CCC">
+          <label for="skip-${c.id}-${p.id}">No aplica / Omitir</label>
+        </div>`:""}
+        <div class="paso-fields">
+          <div>
+            <div style="font-size:.66rem;color:#AAA;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.2rem">Fecha</div>
+            <input type="date" class="paso-input" id="fecha-${c.id}-${p.id}" value="${fecha}" ${skip?"disabled":""}>
+          </div>
+          <div class="paso-pct-row">
+            <span class="paso-pct-label">Avance %</span>
+            <input type="number" class="paso-input paso-pct-input" id="pct-${c.id}-${p.id}" 
+              value="${pct}" min="0" max="100" placeholder="0" ${skip?"disabled":""}>
+          </div>
+        </div>
+        <textarea class="paso-notas" id="notas-${c.id}-${p.id}" placeholder="Notas del paso..." rows="1" ${skip?"disabled":""}>${notas}</textarea>
+      </div>`;
+    }).join("") +
+  `</div>`;
+}
+
+function renderSuministros(c){
+  const sumi = c.suministros||[{insumo:"",categoria:"",proveedor:"",estado:"",fechaRecepcion:""}];
+  return `
+  <div style="margin-top:.5rem">
+    <div class="card-title" style="margin-bottom:.5rem">Suministros</div>
+    <div style="overflow-x:auto">
+      <table class="sumi-tabla" id="sumi-${c.id}">
+        <thead><tr>
+          <th>Insumo</th><th>Categoría</th><th>Proveedor</th><th>Estado</th><th>F. Recepción</th><th></th>
+        </tr></thead>
+        <tbody id="sumi-tbody-${c.id}">
+          ${sumi.map((s,i)=>renderSumiRow(c.id,i,s)).join("")}
+        </tbody>
+      </table>
+    </div>
+    <button class="btn-add-row" onclick="addSumiRow('${c.id}')">+ Agregar insumo</button>
+  </div>`;
+}
+
+function renderSumiRow(cid, i, s){
+  return `<tr id="sumi-row-${cid}-${i}">
+    <td><input class="sumi-input" id="si-insumo-${cid}-${i}" value="${s.insumo||""}" placeholder="Ej: Tela satín"></td>
+    <td><input class="sumi-input" id="si-cat-${cid}-${i}" value="${s.categoria||""}" placeholder="Ej: Tela"></td>
+    <td><input class="sumi-input" id="si-prov-${cid}-${i}" value="${s.proveedor||""}" placeholder="Proveedor"></td>
+    <td>
+      <select class="sumi-input" id="si-estado-${cid}-${i}">
+        <option ${s.estado==="Pendiente"?"selected":""}>Pendiente</option>
+        <option ${s.estado==="Pedido"?"selected":""}>Pedido</option>
+        <option ${s.estado==="Recibido"?"selected":""}>Recibido</option>
+      </select>
+    </td>
+    <td><input type="date" class="sumi-input" id="si-fecha-${cid}-${i}" value="${s.fechaRecepcion||""}"></td>
+    <td><button class="btn-del-row" onclick="delSumiRow('${cid}',${i})">✕</button></td>
+  </tr>`;
+}
+
+let sumiCounts = {};
+function addSumiRow(cid){
+  const tbody = document.getElementById("sumi-tbody-"+cid);
+  if(!sumiCounts[cid]) sumiCounts[cid]=(tbody?.children.length||1);
+  sumiCounts[cid]++;
+  const i = sumiCounts[cid];
+  const tr = document.createElement("tr");
+  tr.id = "sumi-row-"+cid+"-"+i;
+  tr.innerHTML = renderSumiRow(cid,i,{}).replace(/<tr[^>]*>/,"").replace(/<\/tr>/,"");
+  tbody.appendChild(tr);
+}
+function delSumiRow(cid,i){
+  const row = document.getElementById("sumi-row-"+cid+"-"+i);
+  if(row) row.remove();
+}
+
+function toggleProceso(id){
+  const header = document.getElementById("pch-"+id);
+  const body   = document.getElementById("pb-"+id);
+  const isOpen = body.classList.contains("open");
+  // Cerrar todos
+  document.querySelectorAll(".proceso-body").forEach(b=>b.classList.remove("open"));
+  document.querySelectorAll(".proceso-card-header").forEach(h=>h.classList.remove("open"));
+  if(!isOpen){
+    body.classList.add("open");
+    header.classList.add("open");
+  }
+}
+
+function toggleDone(cid, pid){
+  const dot  = document.querySelector(`#pi-${cid}-${pid} .paso-dot`);
+  const name = document.querySelector(`#pi-${cid}-${pid} .paso-nombre`);
+  const skip = document.getElementById("skip-"+cid+"-"+pid);
+  if(skip?.checked) return;
+  const isDone = dot.classList.contains("done");
+  dot.classList.toggle("done",!isDone);
+  dot.textContent = !isDone?"✓":"";
+  name.classList.toggle("done",!isDone);
+  // Si se marca como done, poner fecha de hoy si está vacío
+  const fechaInp = document.getElementById("fecha-"+cid+"-"+pid);
+  if(!isDone && fechaInp && !fechaInp.value){
+    fechaInp.value = new Date().toISOString().split("T")[0];
+  }
+  if(!isDone){
+    const pctInp = document.getElementById("pct-"+cid+"-"+pid);
+    if(pctInp && !pctInp.value) pctInp.value="100";
+  }
+  updateProgresoBar(cid);
+}
+
+function toggleSkip(cid, pid, checked){
+  const dot    = document.querySelector(`#pi-${cid}-${pid} .paso-dot`);
+  const name   = document.querySelector(`#pi-${cid}-${pid} .paso-nombre`);
+  const inputs = document.querySelectorAll(`#pi-${cid}-${pid} input, #pi-${cid}-${pid} textarea`);
+  dot.classList.toggle("skip", checked);
+  dot.classList.toggle("done", false);
+  dot.textContent = checked?"–":"";
+  name.classList.toggle("skip", checked);
+  name.classList.toggle("done", false);
+  inputs.forEach(inp=>{ if(inp.type!=="checkbox") inp.disabled=checked; });
+  updateProgresoBar(cid);
+}
+
+function updateProgresoBar(cid){
+  const c = allClientes.find(x=>x.id===cid);
+  if(!c) return;
+  const pasos = getPasos(c);
+  let done=0, total=0;
+  pasos.forEach(p=>{
+    const skipEl = document.getElementById("skip-"+cid+"-"+p.id);
+    const doneEl = document.querySelector(`#pi-${cid}-${p.id} .paso-dot`);
+    if(skipEl?.checked) return;
+    total++;
+    if(doneEl?.classList.contains("done")) done++;
+  });
+  const pct = total ? Math.round(done/total*100) : 0;
+  const bar = document.getElementById("pf-"+cid);
+  const lbl = document.getElementById("pp-"+cid);
+  if(bar) bar.style.width=pct+"%";
+  if(lbl) lbl.textContent=pct+"%";
+}
+
+async function guardarProceso(cid){
+  try{
+    const data = await loadData();
+    allClientes = data.clientes||[];
+    allUsers    = data.users||[];
+    const idx = allClientes.findIndex(x=>x.id===cid);
+    if(idx<0){toast("Cliente no encontrado","err");return;}
+    const c = allClientes[idx];
+    const pasos = getPasos(c);
+    const prog = {};
+    pasos.forEach(p=>{
+      const skipEl  = document.getElementById("skip-"+cid+"-"+p.id);
+      const doneEl  = document.querySelector(`#pi-${cid}-${p.id} .paso-dot`);
+      const fechaEl = document.getElementById("fecha-"+cid+"-"+p.id);
+      const pctEl   = document.getElementById("pct-"+cid+"-"+p.id);
+      const notasEl = document.getElementById("notas-"+cid+"-"+p.id);
+      prog[p.id+"_skip"]  = skipEl?.checked||false;
+      prog[p.id+"_done"]  = doneEl?.classList.contains("done")||false;
+      prog[p.id+"_fecha"] = fechaEl?.value||"";
+      prog[p.id+"_pct"]   = pctEl?.value||"";
+      prog[p.id+"_notas"] = notasEl?.value||"";
+    });
+    // Suministros
+    const sumiTbody = document.getElementById("sumi-tbody-"+cid);
+    const sumi = [];
+    if(sumiTbody){
+      Array.from(sumiTbody.children).forEach(row=>{
+        const id = row.id.split("-").slice(-1)[0];
+        const insumo = document.getElementById("si-insumo-"+cid+"-"+id)?.value||"";
+        if(!insumo) return;
+        sumi.push({
+          insumo,
+          categoria:   document.getElementById("si-cat-"+cid+"-"+id)?.value||"",
+          proveedor:   document.getElementById("si-prov-"+cid+"-"+id)?.value||"",
+          estado:      document.getElementById("si-estado-"+cid+"-"+id)?.value||"",
+          fechaRecepcion: document.getElementById("si-fecha-"+cid+"-"+id)?.value||"",
+        });
+      });
+    }
+    allClientes[idx].progreso    = prog;
+    allClientes[idx].suministros = sumi;
+    await saveData({users:allUsers, clientes:allClientes});
+    toast("Proceso guardado ✓");
+    // Actualizar barra
+    updateProgresoBar(cid);
+  }catch(e){toast("Error al guardar","err");}
+}
+
+function filtrarProceso(q){
+  const term = q.toLowerCase();
+  document.querySelectorAll(".proceso-card").forEach(card=>{
+    const nombre = card.querySelector(".proceso-cliente-nombre")?.textContent.toLowerCase()||"";
+    card.style.display = nombre.includes(term)?"":"none";
+  });
 }
 
 // ══ RENDER PEDIDOS ══
