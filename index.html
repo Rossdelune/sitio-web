@@ -374,10 +374,15 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 /* print */
 @media print{
   #screen-welcome,#screen-panel,#modal-abono{display:none!important;}
-  .overlay:not(#modal-contrato):not(#modal-nota){display:none!important;}
-  #modal-contrato,#modal-nota{position:static!important;overflow:visible!important;background:#fff!important;}
-  #modal-contrato>div,#modal-nota>div{box-shadow:none!important;padding:0!important;}
-  #modal-contrato button,#modal-nota button{display:none!important;}
+  .overlay:not(#modal-contrato):not(#modal-nota):not(#modal-nota-sencilla){display:none!important;}
+  #modal-contrato,#modal-nota,#modal-nota-sencilla{position:static!important;overflow:visible!important;background:#fff!important;}
+  #modal-contrato>div,#modal-nota>div,#modal-nota-sencilla>div{box-shadow:none!important;padding:0!important;}
+  #modal-contrato button,#modal-nota button,#modal-nota-sencilla button{display:none!important;}
+  .no-print{display:none!important;}
+  @page{margin:.5cm;size:letter;}
+  /* Contrato en una sola hoja */
+  #contrato-content *{font-size:7.5pt!important;line-height:1.3!important;}
+  #contrato-content p{margin-bottom:2pt!important;}
 }
 </style>
 </head>
@@ -436,6 +441,7 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
       <div class="subnav" id="sub-pagos">
         <button class="sub-item" onclick="goSec('pagos-pendientes')">⏳ Pendientes</button>
         <button class="sub-item" onclick="goSec('pagos-historial')">📊 Historial</button>
+        <button class="sub-item" onclick="abrirNotaSencilla()">🧾 Nota sencilla</button>
       </div>
     </div>
 
@@ -863,6 +869,17 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
   </div>
 </div>
 
+<!-- MODAL NOTA SENCILLA -->
+<div class="overlay" id="modal-nota-sencilla" style="z-index:300;align-items:flex-start;padding:0;overflow-y:auto">
+  <div style="background:#fff;width:100%;max-width:780px;margin:0 auto;padding:2rem;position:relative;min-height:100vh">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:.5rem;flex-wrap:wrap">
+      <button onclick="closeNotaSencilla()" style="background:none;border:1px solid #DDD;padding:.4rem .9rem;border-radius:2px;cursor:pointer;font-size:.75rem">✕ Cerrar</button>
+      <button onclick="imprimirNotaSencilla()" style="background:var(--dorado-g);color:#FFF8EC;border:none;padding:.5rem 1.2rem;border-radius:2px;cursor:pointer;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase">🖨️ Imprimir</button>
+    </div>
+    <div id="nota-sencilla-content"></div>
+  </div>
+</div>
+
 <!-- MODAL NOTA DE VENTA -->
 <div class="overlay" id="modal-nota" style="z-index:300;align-items:flex-start;padding:0;overflow-y:auto">
   <div style="background:#fff;width:100%;max-width:780px;margin:0 auto;padding:2rem;position:relative;min-height:100vh">
@@ -905,6 +922,21 @@ async function loadData(){
 }
 async function saveData(d){
   await fetch(BIN_URL,{method:"PUT",headers:{"Content-Type":"application/json","X-Master-Key":MASTER_KEY,"X-Access-Key":ACCESS_KEY},body:JSON.stringify(d)});
+}
+
+// Folio automático — inicia en 0128
+async function getNextFolio(){
+  const data = await loadData();
+  const current = data.folioActual || 127;
+  const next = current + 1;
+  return String(next).padStart(4,"0");
+}
+async function incrementFolio(){
+  const data = await loadData();
+  const current = data.folioActual || 127;
+  data.folioActual = current + 1;
+  await saveData(data);
+  return String(data.folioActual).padStart(4,"0");
 }
 
 // ══ TOAST ══
@@ -1161,11 +1193,13 @@ async function saveCliente(){
   const msg=document.getElementById("cliente-msg");
   msg.textContent="";
   if(!nombre){msg.textContent="El nombre es obligatorio.";return;}
+  // Folio automático
+  const folioAuto = await incrementFolio();
   const colorHex=document.getElementById("color-picker").value;
   const colorName=document.getElementById("c-color-name").value.trim()||colorHex;
   const cliente={
     id:"C"+Date.now(),
-    folio:document.getElementById("c-folio").value.trim(),
+    folio:folioAuto,
     fecha:document.getElementById("c-fecha").value,
     nombre,
     cel:document.getElementById("c-cel").value.trim(),
@@ -1563,6 +1597,554 @@ function verPagos(id){
   goSec("pagos-pendientes");
   renderPagosPendientes();
 }
+
+// ══ NOTA SENCILLA ══
+let notaSencillaItems = [];
+async function abrirNotaSencilla(){
+  closeAllNav();
+  notaSencillaItems = [{desc:"",qty:1,precio:0}];
+  const folio = await getNextFolio();
+  renderNotaSencilla(folio);
+  document.getElementById("modal-nota-sencilla").classList.add("open");
+}
+function closeNotaSencilla(){document.getElementById("modal-nota-sencilla").classList.remove("open");}
+function imprimirNotaSencilla(){window.print();}
+
+function renderNotaSencilla(folio){
+  const hoy = new Date().toLocaleDateString("es-MX",{day:"2-digit",month:"2-digit",year:"numeric"});
+  document.getElementById("nota-sencilla-content").innerHTML = `
+  <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:680px;margin:0 auto;font-size:.85rem">
+
+    <!-- Formulario (solo pantalla, no imprime) -->
+    <div class="no-print" style="background:#FAF6F0;border-radius:4px;padding:1rem;margin-bottom:1rem;border:1px solid #E8DDD0">
+      <div style="font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dorado-d);margin-bottom:.8rem">Datos del cliente</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.8rem">
+        <div><label style="font-size:.66rem;color:#888;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:.2rem">Nombre</label>
+          <input id="ns-nombre" type="text" placeholder="Nombre del cliente" style="width:100%;border:none;border-bottom:1px solid #DDD;padding:.35rem 0;font-size:.85rem;outline:none;background:transparent" oninput="actualizarVistaNotaSencilla('${folio}')">
+        </div>
+        <div><label style="font-size:.66rem;color:#888;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:.2rem">Teléfono</label>
+          <input id="ns-tel" type="tel" placeholder="921 000 0000" style="width:100%;border:none;border-bottom:1px solid #DDD;padding:.35rem 0;font-size:.85rem;outline:none;background:transparent" oninput="actualizarVistaNotaSencilla('${folio}')">
+        </div>
+      </div>
+      <div style="font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dorado-d);margin-bottom:.6rem">Artículos</div>
+      <div id="ns-items-form"></div>
+      <button onclick="addNsItem('${folio}')" style="background:none;border:1px dashed #DDD;padding:.3rem .8rem;border-radius:2px;font-size:.7rem;color:#AAA;cursor:pointer;margin-top:.4rem">+ Agregar artículo</button>
+      <div style="margin-top:.8rem;display:flex;justify-content:flex-end;gap:.5rem">
+        <button onclick="generarEImprimirNotaSencilla('${folio}')" style="background:linear-gradient(135deg,#7A4F2A,#C9A84C);color:#FFF8EC;border:none;padding:.6rem 1.4rem;border-radius:2px;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;cursor:pointer">✅ Confirmar y preparar impresión</button>
+      </div>
+    </div>
+
+    <!-- Vista previa de impresión -->
+    <div id="ns-print-area" style="display:none">
+      <!-- contenido generado -->
+    </div>
+  </div>`;
+
+  renderNsItemsForm(folio);
+  actualizarVistaNotaSencilla(folio);
+}
+
+function renderNsItemsForm(folio){
+  const cont = document.getElementById("ns-items-form");
+  if(!cont) return;
+  cont.innerHTML = notaSencillaItems.map((it,i)=>`
+    <div style="display:grid;grid-template-columns:3fr 1fr 1.2fr auto;gap:.5rem;margin-bottom:.4rem;align-items:center">
+      <input type="text" placeholder="Descripción del artículo" value="${it.desc}"
+        style="border:none;border-bottom:1px solid #DDD;padding:.3rem 0;font-size:.82rem;outline:none;background:transparent"
+        oninput="nsItemChange(${i},'desc',this.value,'${folio}')">
+      <input type="number" placeholder="Cant." value="${it.qty}" min="1"
+        style="border:none;border-bottom:1px solid #DDD;padding:.3rem 0;font-size:.82rem;outline:none;text-align:center;background:transparent"
+        oninput="nsItemChange(${i},'qty',this.value,'${folio}')">
+      <input type="number" placeholder="Precio $" value="${it.precio||""}"
+        style="border:none;border-bottom:1px solid #DDD;padding:.3rem 0;font-size:.82rem;outline:none;text-align:right;background:transparent"
+        oninput="nsItemChange(${i},'precio',this.value,'${folio}')">
+      <button onclick="delNsItem(${i},'${folio}')" style="background:none;border:none;color:#DDD;cursor:pointer;font-size:1rem">✕</button>
+    </div>`).join("");
+}
+
+function nsItemChange(i,field,val,folio){
+  notaSencillaItems[i][field] = field==="desc" ? val : Number(val)||0;
+  actualizarVistaNotaSencilla(folio);
+}
+function addNsItem(folio){
+  notaSencillaItems.push({desc:"",qty:1,precio:0});
+  renderNsItemsForm(folio);
+  actualizarVistaNotaSencilla(folio);
+}
+function delNsItem(i,folio){
+  notaSencillaItems.splice(i,1);
+  renderNsItemsForm(folio);
+  actualizarVistaNotaSencilla(folio);
+}
+function actualizarVistaNotaSencilla(folio){
+  const subtotal = notaSencillaItems.reduce((s,it)=>s+(Number(it.qty)||1)*(Number(it.precio)||0),0);
+  // actualizar totales en el form si hay un resumen visible
+}
+
+async function generarEImprimirNotaSencilla(folio){
+  const nombre  = document.getElementById("ns-nombre")?.value||"—";
+  const tel     = document.getElementById("ns-tel")?.value||"—";
+  const hoy     = new Date().toLocaleDateString("es-MX",{day:"2-digit",month:"2-digit",year:"numeric"});
+  const subtotal= notaSencillaItems.reduce((s,it)=>s+(Number(it.qty)||1)*(Number(it.precio)||0),0);
+
+  let itemsHTML = notaSencillaItems.filter(it=>it.desc).map(it=>`
+    <tr>
+      <td style="border:1px solid #CCC;padding:.4rem;text-align:center">${it.qty||1}</td>
+      <td style="border:1px solid #CCC;padding:.4rem">${it.desc}</td>
+      <td style="border:1px solid #CCC;padding:.4rem;text-align:right">$${(Number(it.precio)||0).toLocaleString()}</td>
+      <td style="border:1px solid #CCC;padding:.4rem;text-align:right">$${((Number(it.qty)||1)*(Number(it.precio)||0)).toLocaleString()}</td>
+    </tr>`).join("");
+
+  // Filas vacías
+  const vacías = Math.max(0,8-notaSencillaItems.filter(it=>it.desc).length);
+  for(let i=0;i<vacías;i++){
+    itemsHTML+=`<tr><td style="border:1px solid #CCC;padding:.4rem;height:22px">&nbsp;</td><td style="border:1px solid #CCC">&nbsp;</td><td style="border:1px solid #CCC">&nbsp;</td><td style="border:1px solid #CCC">&nbsp;</td></tr>`;
+  }
+
+  const printArea = document.getElementById("ns-print-area");
+  printArea.style.display="block";
+  printArea.innerHTML = `
+  <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:680px;margin:0 auto;font-size:.85rem;position:relative">
+
+    <!-- MARCA DE AGUA -->
+    <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-20deg);opacity:.05;pointer-events:none;z-index:0">
+      <img src="data:image/png;base64,${LOGO_VEC}" style="width:480px;height:auto">
+    </div>
+
+    <div style="position:relative;z-index:1">
+    <!-- ENCABEZADO NEGOCIO -->
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #C9A84C;padding-bottom:.6rem;margin-bottom:.5rem">
+      <div>
+        <img src="data:image/png;base64,${LOGO_VEC}" style="height:55px;width:auto">
+      </div>
+      <div style="text-align:right;font-size:.8rem">
+        <div style="font-weight:700;font-size:1rem;color:#7A4F2A">ROSS DE LUNE</div>
+        <div style="color:#888;font-size:.72rem">Novias y Quinceañeras</div>
+        <div>Tel: 921 255 0819</div>
+        <div>Propela 10, Puerto Esmeralda, Coatzacoalcos, Ver.</div>
+      </div>
+    </div>
+
+    <!-- TÍTULO Y FOLIO -->
+    <div style="display:flex;justify-content:space-between;margin-bottom:.5rem">
+      <div style="font-size:1.1rem;font-weight:700">NOTA DE VENTA</div>
+      <div style="font-size:.85rem">Folio: <strong>${folio}</strong> &nbsp;·&nbsp; Fecha: ${hoy}</div>
+    </div>
+
+    <!-- DATOS CLIENTE -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:.4rem;font-size:.82rem">
+      <tr>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;width:20%"><strong>Cliente:</strong></td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;width:40%">${nombre}</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;width:15%"><strong>Tel:</strong></td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem">${tel}</td>
+      </tr>
+    </table>
+
+    <!-- ARTÍCULOS -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:.4rem">
+      <thead>
+        <tr style="background:#F0F0F0">
+          <th style="border:1px solid #CCC;padding:.35rem;width:10%;text-align:center">Cant.</th>
+          <th style="border:1px solid #CCC;padding:.35rem;text-align:left">Descripción</th>
+          <th style="border:1px solid #CCC;padding:.35rem;width:18%;text-align:right">Precio unit.</th>
+          <th style="border:1px solid #CCC;padding:.35rem;width:18%;text-align:right">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>${itemsHTML}</tbody>
+    </table>
+
+    <!-- TOTAL -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:.8rem">
+      <tr>
+        <td style="border:1px solid #CCC;padding:.4rem;text-align:right;font-weight:700;font-size:.95rem" colspan="4">
+          TOTAL: <span style="color:#7A4F2A">$${subtotal.toLocaleString()}</span>
+        </td>
+      </tr>
+    </table>
+
+    <!-- SELLO -->
+    <div style="display:flex;justify-content:flex-end;margin-top:.5rem">
+      <div style="border:2px dashed #CCC;width:120px;height:80px;display:flex;align-items:center;justify-content:center;border-radius:4px">
+        <span style="font-size:.68rem;color:#CCC;letter-spacing:.08em;text-transform:uppercase">DESPACHADO</span>
+      </div>
+    </div>
+    </div>
+  </div>`;
+
+  // Guardar folio en JSONBin
+  try{
+    const data = await loadData();
+    data.folioActual = parseInt(folio);
+    if(!data.notasSencillas) data.notasSencillas=[];
+    data.notasSencillas.push({folio,fecha:new Date().toISOString(),nombre,tel,items:notaSencillaItems,total:subtotal});
+    await saveData(data);
+  }catch(e){console.error("Error guardando folio",e);}
+
+  // Ocultar formulario y mostrar solo impresión
+  document.querySelector("#modal-nota-sencilla .no-print").style.display="none";
+  setTimeout(()=>window.print(),300);
+}
+function verNotaVenta(id){
+  const c = allClientes.find(x=>x.id===id);
+  if(!c){toast("Cliente no encontrado","err");return;}
+  generarNotaVenta(c);
+  document.getElementById("modal-nota").classList.add("open");
+  document.getElementById("modal-nota").scrollTop=0;
+}
+function closeNotaVenta(){document.getElementById("modal-nota").classList.remove("open");}
+function imprimirNota(){window.print();}
+
+function generarNotaVenta(c){
+  const precio    = Number(c.precio||0);
+  const paquete   = Number(c.precioPaquete||0);
+  const extras    = (c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
+  const total     = precio+paquete+extras;
+  const anticipo  = Number(c.anticipo||0);
+  const saldo     = total-anticipo;
+  const tipos     = {"xv":"Quinceañera","novia":"Novia","solo":"Solo vestido","custom":"Personalizado"};
+  const fContrato = c.fecha   ? new Date(c.fecha+"T12:00:00").toLocaleDateString("es-MX",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
+  const fEntrega  = c.entrega ? new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
+  const comps = (c.paquete?.componentes||[]).map(x=>x.name+(x.opcion?" ("+x.opcion+")":"")).join(", ")||"—";
+  const folioNota = (c.folio||"????") + "-A";
+
+  let accesoriosRows = "";
+  if(c.paquete?.tipo && c.paquete.tipo!=="solo"){
+    accesoriosRows += `<tr>
+      <td style="text-align:center;border:1px solid #CCC;padding:.4rem">1</td>
+      <td style="border:1px solid #CCC;padding:.4rem">${c.paquete.tipo==="xv"?"Paquete XV":c.paquete.tipo==="novia"?"Paquete Novia":"Paquete personalizado"} — ${comps}</td>
+      <td style="text-align:right;border:1px solid #CCC;padding:.4rem">$${paquete.toLocaleString()}</td>
+    </tr>`;
+  }
+  (c.paquete?.adicionales||[]).forEach(a=>{
+    accesoriosRows += `<tr>
+      <td style="text-align:center;border:1px solid #CCC;padding:.4rem">1</td>
+      <td style="border:1px solid #CCC;padding:.4rem">${a.nombre}${a.nota?" — "+a.nota:""}</td>
+      <td style="text-align:right;border:1px solid #CCC;padding:.4rem">$${Number(a.precio||0).toLocaleString()}</td>
+    </tr>`;
+  });
+  const filasVacias = Math.max(0,6-(c.paquete?.adicionales?.length||0)-1);
+  for(let i=0;i<filasVacias;i++){
+    accesoriosRows+=`<tr>
+      <td style="border:1px solid #CCC;padding:.4rem;height:22px">&nbsp;</td>
+      <td style="border:1px solid #CCC;padding:.4rem">&nbsp;</td>
+      <td style="border:1px solid #CCC;padding:.4rem">&nbsp;</td>
+    </tr>`;
+  }
+
+  document.getElementById("nota-content").innerHTML = `
+  <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:720px;margin:0 auto;font-size:.85rem;position:relative;">
+
+    <!-- MARCA DE AGUA -->
+    <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-20deg);opacity:.06;pointer-events:none;z-index:0;text-align:center;">
+      <img src="data:image/png;base64,${LOGO_VEC}" style="width:500px;height:auto">
+    </div>
+
+    <div style="position:relative;z-index:1">
+    <!-- ENCABEZADO -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border:2px solid #1a1a1a;padding:.6rem .8rem;margin-bottom:0">
+      <div style="font-size:1.4rem;font-weight:700;letter-spacing:.05em">NOTA DE VENTA</div>
+      <div style="text-align:right">
+        <div>Folio: <strong>${folioNota}</strong></div>
+        <div style="font-size:.75rem;color:#666">Ref. Contrato: ${c.folio||"—"}</div>
+      </div>
+    </div>
+
+    <!-- DATOS -->
+    <table style="width:100%;border-collapse:collapse;border:2px solid #1a1a1a;border-top:none">
+      <tr>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem;width:15%"><strong>Nombre:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem;width:35%">${c.nombre||"—"}</td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem;width:25%"><strong>Fecha de contrato:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem">${fContrato}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Contacto:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem">${c.cel||"—"}</td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Fecha entrega/evento:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem">${fEntrega}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Tipo:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem">${tipos[c.tipo]||"—"}</td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Talla:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem">${c.talla||"—"}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Modelo:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem">${c.modelo||"—"} ${c.marca?"("+c.marca+")":""}</td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Color:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c.color?.hex||"#CCC"};vertical-align:middle;margin-right:4px;border:1px solid #999"></span>
+          ${c.color?.nombre||"—"}
+        </td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Precio:</strong></td>
+        <td colspan="3" style="border:1px solid #CCC;padding:.4rem .6rem"><strong style="color:#7A4F2A">$${total.toLocaleString()}</strong></td>
+      </tr>
+    </table>
+
+    <!-- MEDIDAS -->
+    <table style="width:100%;border-collapse:collapse;border:2px solid #1a1a1a;border-top:none">
+      <tr><td colspan="6" style="background:#F0F0F0;font-weight:700;text-align:center;border:1px solid #CCC;padding:.3rem">Medidas</td></tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;font-weight:600;text-align:center">Busto</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.medidas?.busto||""}</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;font-weight:600;text-align:center">Cintura</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.medidas?.cintura||""}</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;font-weight:600;text-align:center">Cadera</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.medidas?.cadera||""}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;font-weight:600;text-align:center">Copa</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.medidas?.copa||""}</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;font-weight:600;text-align:center">Largo</td>
+        <td colspan="3" style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.medidas?.largo||""}</td>
+      </tr>
+    </table>
+
+    <!-- ACCESORIOS -->
+    <table style="width:100%;border-collapse:collapse;border:2px solid #1a1a1a;border-top:none">
+      <tr><td colspan="3" style="background:#F0F0F0;font-weight:700;text-align:center;border:1px solid #CCC;padding:.3rem">Accesorios</td></tr>
+      <tr>
+        <th style="border:1px solid #CCC;padding:.35rem .5rem;width:12%;background:#F9F9F9">Cantidad</th>
+        <th style="border:1px solid #CCC;padding:.35rem .5rem;background:#F9F9F9">Artículo</th>
+        <th style="border:1px solid #CCC;padding:.35rem .5rem;width:18%;background:#F9F9F9;text-align:right">Monto</th>
+      </tr>
+      ${accesoriosRows}
+      <tr>
+        <td colspan="2" style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right">Precio del vestido:</td>
+        <td style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right">$${precio.toLocaleString()}</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right;font-weight:700">TOTAL:</td>
+        <td style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right;font-weight:700;color:#7A4F2A">$${total.toLocaleString()}</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right;color:#1E8449">Anticipo:</td>
+        <td style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right;color:#1E8449">$${anticipo.toLocaleString()}</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right;font-weight:700;color:#C0392B">Saldo restante:</td>
+        <td style="border:1px solid #CCC;padding:.4rem .5rem;text-align:right;font-weight:700;color:#C0392B">$${saldo.toLocaleString()}</td>
+      </tr>
+    </table>
+
+    <!-- REQUISICIONES ESPECIALES -->
+    <table style="width:100%;border-collapse:collapse;border:2px solid #1a1a1a;border-top:none">
+      <tr>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;font-weight:600;width:30%">Requisiciones especiales</td>
+        <td style="border:1px solid #CCC;padding:.5rem;min-height:40px">${c.observaciones||"&nbsp;"}</td>
+      </tr>
+    </table>
+
+    <!-- FIRMA -->
+    <div style="border:2px solid #1a1a1a;border-top:none;padding:.8rem">
+      <div style="font-style:italic;font-size:.78rem;margin-bottom:1.5rem">
+        El cliente acepta que la información aquí detallada es correcta, incluyendo modelo, color y medidas. Asimismo, está de acuerdo con los términos de pago y las fechas de entrega establecidas.
+      </div>
+      <div style="text-align:center">
+        <div style="border-top:1px solid #333;display:inline-block;width:280px;padding-top:.3rem">NOMBRE Y FIRMA DEL CLIENTE</div>
+      </div>
+    </div>
+    </div>
+  </div>`;
+}
+
+
+function verPagos(id){
+  goSec("pagos-pendientes");
+  renderPagosPendientes();
+}
+
+// ══ NOTA SENCILLA ══
+let notaSencillaItems = [];
+async function abrirNotaSencilla(){
+  closeAllNav();
+  notaSencillaItems = [{desc:"",qty:1,precio:0}];
+  const folio = await getNextFolio();
+  renderNotaSencilla(folio);
+  document.getElementById("modal-nota-sencilla").classList.add("open");
+}
+function closeNotaSencilla(){document.getElementById("modal-nota-sencilla").classList.remove("open");}
+function imprimirNotaSencilla(){window.print();}
+
+function renderNotaSencilla(folio){
+  const hoy = new Date().toLocaleDateString("es-MX",{day:"2-digit",month:"2-digit",year:"numeric"});
+  document.getElementById("nota-sencilla-content").innerHTML = `
+  <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:680px;margin:0 auto;font-size:.85rem">
+
+    <!-- Formulario (solo pantalla, no imprime) -->
+    <div class="no-print" style="background:#FAF6F0;border-radius:4px;padding:1rem;margin-bottom:1rem;border:1px solid #E8DDD0">
+      <div style="font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dorado-d);margin-bottom:.8rem">Datos del cliente</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.8rem">
+        <div><label style="font-size:.66rem;color:#888;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:.2rem">Nombre</label>
+          <input id="ns-nombre" type="text" placeholder="Nombre del cliente" style="width:100%;border:none;border-bottom:1px solid #DDD;padding:.35rem 0;font-size:.85rem;outline:none;background:transparent" oninput="actualizarVistaNotaSencilla('${folio}')">
+        </div>
+        <div><label style="font-size:.66rem;color:#888;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:.2rem">Teléfono</label>
+          <input id="ns-tel" type="tel" placeholder="921 000 0000" style="width:100%;border:none;border-bottom:1px solid #DDD;padding:.35rem 0;font-size:.85rem;outline:none;background:transparent" oninput="actualizarVistaNotaSencilla('${folio}')">
+        </div>
+      </div>
+      <div style="font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dorado-d);margin-bottom:.6rem">Artículos</div>
+      <div id="ns-items-form"></div>
+      <button onclick="addNsItem('${folio}')" style="background:none;border:1px dashed #DDD;padding:.3rem .8rem;border-radius:2px;font-size:.7rem;color:#AAA;cursor:pointer;margin-top:.4rem">+ Agregar artículo</button>
+      <div style="margin-top:.8rem;display:flex;justify-content:flex-end;gap:.5rem">
+        <button onclick="generarEImprimirNotaSencilla('${folio}')" style="background:linear-gradient(135deg,#7A4F2A,#C9A84C);color:#FFF8EC;border:none;padding:.6rem 1.4rem;border-radius:2px;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;cursor:pointer">✅ Confirmar y preparar impresión</button>
+      </div>
+    </div>
+
+    <!-- Vista previa de impresión -->
+    <div id="ns-print-area" style="display:none">
+      <!-- contenido generado -->
+    </div>
+  </div>`;
+
+  renderNsItemsForm(folio);
+  actualizarVistaNotaSencilla(folio);
+}
+
+function renderNsItemsForm(folio){
+  const cont = document.getElementById("ns-items-form");
+  if(!cont) return;
+  cont.innerHTML = notaSencillaItems.map((it,i)=>`
+    <div style="display:grid;grid-template-columns:3fr 1fr 1.2fr auto;gap:.5rem;margin-bottom:.4rem;align-items:center">
+      <input type="text" placeholder="Descripción del artículo" value="${it.desc}"
+        style="border:none;border-bottom:1px solid #DDD;padding:.3rem 0;font-size:.82rem;outline:none;background:transparent"
+        oninput="nsItemChange(${i},'desc',this.value,'${folio}')">
+      <input type="number" placeholder="Cant." value="${it.qty}" min="1"
+        style="border:none;border-bottom:1px solid #DDD;padding:.3rem 0;font-size:.82rem;outline:none;text-align:center;background:transparent"
+        oninput="nsItemChange(${i},'qty',this.value,'${folio}')">
+      <input type="number" placeholder="Precio $" value="${it.precio||""}"
+        style="border:none;border-bottom:1px solid #DDD;padding:.3rem 0;font-size:.82rem;outline:none;text-align:right;background:transparent"
+        oninput="nsItemChange(${i},'precio',this.value,'${folio}')">
+      <button onclick="delNsItem(${i},'${folio}')" style="background:none;border:none;color:#DDD;cursor:pointer;font-size:1rem">✕</button>
+    </div>`).join("");
+}
+
+function nsItemChange(i,field,val,folio){
+  notaSencillaItems[i][field] = field==="desc" ? val : Number(val)||0;
+  actualizarVistaNotaSencilla(folio);
+}
+function addNsItem(folio){
+  notaSencillaItems.push({desc:"",qty:1,precio:0});
+  renderNsItemsForm(folio);
+  actualizarVistaNotaSencilla(folio);
+}
+function delNsItem(i,folio){
+  notaSencillaItems.splice(i,1);
+  renderNsItemsForm(folio);
+  actualizarVistaNotaSencilla(folio);
+}
+function actualizarVistaNotaSencilla(folio){
+  const subtotal = notaSencillaItems.reduce((s,it)=>s+(Number(it.qty)||1)*(Number(it.precio)||0),0);
+  // actualizar totales en el form si hay un resumen visible
+}
+
+async function generarEImprimirNotaSencilla(folio){
+  const nombre  = document.getElementById("ns-nombre")?.value||"—";
+  const tel     = document.getElementById("ns-tel")?.value||"—";
+  const hoy     = new Date().toLocaleDateString("es-MX",{day:"2-digit",month:"2-digit",year:"numeric"});
+  const subtotal= notaSencillaItems.reduce((s,it)=>s+(Number(it.qty)||1)*(Number(it.precio)||0),0);
+
+  let itemsHTML = notaSencillaItems.filter(it=>it.desc).map(it=>`
+    <tr>
+      <td style="border:1px solid #CCC;padding:.4rem;text-align:center">${it.qty||1}</td>
+      <td style="border:1px solid #CCC;padding:.4rem">${it.desc}</td>
+      <td style="border:1px solid #CCC;padding:.4rem;text-align:right">$${(Number(it.precio)||0).toLocaleString()}</td>
+      <td style="border:1px solid #CCC;padding:.4rem;text-align:right">$${((Number(it.qty)||1)*(Number(it.precio)||0)).toLocaleString()}</td>
+    </tr>`).join("");
+
+  // Filas vacías
+  const vacías = Math.max(0,8-notaSencillaItems.filter(it=>it.desc).length);
+  for(let i=0;i<vacías;i++){
+    itemsHTML+=`<tr><td style="border:1px solid #CCC;padding:.4rem;height:22px">&nbsp;</td><td style="border:1px solid #CCC">&nbsp;</td><td style="border:1px solid #CCC">&nbsp;</td><td style="border:1px solid #CCC">&nbsp;</td></tr>`;
+  }
+
+  const printArea = document.getElementById("ns-print-area");
+  printArea.style.display="block";
+  printArea.innerHTML = `
+  <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:680px;margin:0 auto;font-size:.85rem;position:relative">
+
+    <!-- MARCA DE AGUA -->
+    <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-20deg);opacity:.05;pointer-events:none;z-index:0">
+      <img src="data:image/png;base64,${LOGO_VEC}" style="width:480px;height:auto">
+    </div>
+
+    <div style="position:relative;z-index:1">
+    <!-- ENCABEZADO NEGOCIO -->
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #C9A84C;padding-bottom:.6rem;margin-bottom:.5rem">
+      <div>
+        <img src="data:image/png;base64,${LOGO_VEC}" style="height:55px;width:auto">
+      </div>
+      <div style="text-align:right;font-size:.8rem">
+        <div style="font-weight:700;font-size:1rem;color:#7A4F2A">ROSS DE LUNE</div>
+        <div style="color:#888;font-size:.72rem">Novias y Quinceañeras</div>
+        <div>Tel: 921 255 0819</div>
+        <div>Propela 10, Puerto Esmeralda, Coatzacoalcos, Ver.</div>
+      </div>
+    </div>
+
+    <!-- TÍTULO Y FOLIO -->
+    <div style="display:flex;justify-content:space-between;margin-bottom:.5rem">
+      <div style="font-size:1.1rem;font-weight:700">NOTA DE VENTA</div>
+      <div style="font-size:.85rem">Folio: <strong>${folio}</strong> &nbsp;·&nbsp; Fecha: ${hoy}</div>
+    </div>
+
+    <!-- DATOS CLIENTE -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:.4rem;font-size:.82rem">
+      <tr>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;width:20%"><strong>Cliente:</strong></td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;width:40%">${nombre}</td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem;width:15%"><strong>Tel:</strong></td>
+        <td style="border:1px solid #CCC;padding:.35rem .5rem">${tel}</td>
+      </tr>
+    </table>
+
+    <!-- ARTÍCULOS -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:.4rem">
+      <thead>
+        <tr style="background:#F0F0F0">
+          <th style="border:1px solid #CCC;padding:.35rem;width:10%;text-align:center">Cant.</th>
+          <th style="border:1px solid #CCC;padding:.35rem;text-align:left">Descripción</th>
+          <th style="border:1px solid #CCC;padding:.35rem;width:18%;text-align:right">Precio unit.</th>
+          <th style="border:1px solid #CCC;padding:.35rem;width:18%;text-align:right">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>${itemsHTML}</tbody>
+    </table>
+
+    <!-- TOTAL -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:.8rem">
+      <tr>
+        <td style="border:1px solid #CCC;padding:.4rem;text-align:right;font-weight:700;font-size:.95rem" colspan="4">
+          TOTAL: <span style="color:#7A4F2A">$${subtotal.toLocaleString()}</span>
+        </td>
+      </tr>
+    </table>
+
+    <!-- SELLO -->
+    <div style="display:flex;justify-content:flex-end;margin-top:.5rem">
+      <div style="border:2px dashed #CCC;width:120px;height:80px;display:flex;align-items:center;justify-content:center;border-radius:4px">
+        <span style="font-size:.68rem;color:#CCC;letter-spacing:.08em;text-transform:uppercase">DESPACHADO</span>
+      </div>
+    </div>
+    </div>
+  </div>`;
+
+  // Guardar folio en JSONBin
+  try{
+    const data = await loadData();
+    data.folioActual = parseInt(folio);
+    if(!data.notasSencillas) data.notasSencillas=[];
+    data.notasSencillas.push({folio,fecha:new Date().toISOString(),nombre,tel,items:notaSencillaItems,total:subtotal});
+    await saveData(data);
+  }catch(e){console.error("Error guardando folio",e);}
+
+  // Ocultar formulario y mostrar solo impresión
+  document.querySelector("#modal-nota-sencilla .no-print").style.display="none";
+  setTimeout(()=>window.print(),300);
+}
 function verNotaVenta(id){
   const c = allClientes.find(x=>x.id===id);
   if(!c){toast("Cliente no encontrado","err");return;}
@@ -1786,6 +2368,121 @@ function generarNotaVenta(c){
 
   </div>`;
 }
+
+// ══ CONTRATO ══
+function verContrato(id){
+  const c = allClientes.find(x=>x.id===id);
+  if(!c){toast("Cliente no encontrado","err");return;}
+  generarContrato(c);
+  document.getElementById("modal-contrato").classList.add("open");
+  document.getElementById("modal-contrato").scrollTop=0;
+}
+function closeContrato(){document.getElementById("modal-contrato").classList.remove("open");}
+function imprimirContrato(){window.print();}
+
+function generarContrato(c){
+  const precio    = Number(c.precio||0);
+  const paquete   = Number(c.precioPaquete||0);
+  const extras    = (c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
+  const total     = precio+paquete+extras;
+  const anticipo  = Number(c.anticipo||0);
+  const folioNota = (c.folio||"????") + "-A";
+
+  let fechaLimiteCalc = c.fechaLimite;
+  if(!fechaLimiteCalc && c.fecha){
+    const d = new Date(c.fecha+"T12:00:00");
+    d.setMonth(d.getMonth()+2);
+    if(c.proroga && c.prorogaDias) d.setDate(d.getDate()+parseInt(c.prorogaDias));
+    fechaLimiteCalc = d.toISOString().split("T")[0];
+  }
+  const fechaContrato = c.fecha ? new Date(c.fecha+"T12:00:00").toLocaleDateString("es-MX",{day:"2-digit",month:"long",year:"numeric"}) : "___________";
+  const fechaLimite   = fechaLimiteCalc ? new Date(fechaLimiteCalc+"T12:00:00").toLocaleDateString("es-MX",{day:"2-digit",month:"long",year:"numeric"}) : "___________";
+  const fechaEntrega  = c.entrega ? new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX",{day:"2-digit",month:"long",year:"numeric"}) : "___________";
+  const autorizaImagen = c.imagen==="si"?"☑ Sí autorizo":"☑ No autorizo";
+  const parcialidades  = c.parcialidades||30;
+
+  document.getElementById("contrato-content").innerHTML = `
+  <div style="font-family:Arial,sans-serif;color:#1a1a1a;line-height:1.35;max-width:720px;margin:0 auto;font-size:7.5pt">
+
+    <!-- ENCABEZADO -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6pt;border-bottom:1.5pt solid #C9A84C;padding-bottom:5pt">
+      <div>
+        <div style="font-size:11pt;font-weight:700;letter-spacing:.05em;color:#7A4F2A">ROSS DE LUNE</div>
+        <div style="font-size:7pt;color:#999;letter-spacing:.08em">NOVIAS Y QUINCEAÑERAS</div>
+        <div style="font-size:9pt;font-weight:700;margin-top:3pt">CONTRATO DE SERVICIO</div>
+        <div style="font-size:7pt;color:#666;margin-top:2pt">Folio: <strong>${c.folio||"____"}</strong> &nbsp;·&nbsp; Fecha: <strong>${fechaContrato}</strong></div>
+        <div style="font-size:7pt;color:#666">Nota de Venta Anexa: <strong>${folioNota}</strong></div>
+      </div>
+      <img src="data:image/png;base64,${LOGO_VEC}" style="width:70pt;height:auto">
+    </div>
+
+    <!-- PROVEEDOR / CLIENTE -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:6pt;font-size:7pt">
+      <tr>
+        <td style="width:50%;vertical-align:top;padding-right:8pt">
+          <strong style="font-size:7.5pt">Proveedor</strong><br>
+          ROSS DE LUNE · Tel: 921 255 0819<br>
+          rossdelune@hotmail.com<br>
+          Propela 10, Puerto Esmeralda, Coatzacoalcos, Ver.
+        </td>
+        <td style="width:50%;vertical-align:top;border-left:1pt solid #DDD;padding-left:8pt">
+          <strong style="font-size:7.5pt">Cliente</strong><br>
+          ${c.nombre||"—"} · Cel: ${c.cel||"—"}<br>
+          ${c.correo||""} ${c.tel?"· Tel: "+c.tel:""}<br>
+          ${c.domicilio||""}
+        </td>
+      </tr>
+    </table>
+
+    <!-- CLÁUSULAS -->
+    <div style="font-size:7.5pt;font-weight:700;text-align:center;letter-spacing:.08em;margin-bottom:4pt;border-bottom:1pt solid #CCC;padding-bottom:2pt">CLÁUSULAS</div>
+
+    <p style="margin-bottom:3pt"><strong>PRIMERA.- OBJETO DEL CONTRATO.</strong>
+    EL PROVEEDOR se obliga a elaborar y/o proporcionar a LA CLIENTE el vestido y los accesorios cuyas especificaciones técnicas, modelo, medidas, color y precios se detallan en la NOTA DE VENTA Folio <strong>${folioNota}</strong>, anexa al presente contrato.</p>
+
+    <p style="margin-bottom:3pt"><strong>SEGUNDA.- PRECIO Y FORMA DE PAGO.</strong>
+    El precio total es <strong>$${total.toLocaleString()}</strong>. LA CLIENTE se compromete a pagar con anticipo de <strong>$${anticipo.toLocaleString()}</strong> al momento de firmar. Sistema de pago: <strong>${c.sispago2==="parcialidades"?"parcialidades cada "+parcialidades+" días":"liquidado"}</strong>. La entrega solo procederá si el total ha sido liquidado. Al transcurrir más de 30 días sin pagos ni contacto, el contrato se cancelará automáticamente si no cuenta con el 50% de anticipo.</p>
+
+    <p style="margin-bottom:3pt"><strong>SEGUNDA BIS.- FECHA LÍMITE DE PAGO E INTERESES MORATORIOS.</strong>
+    El pago total deberá realizarse a más tardar el <strong>${fechaLimite}</strong> (dos meses desde la firma). Vencido dicho plazo se aplicará un cargo del 10% sobre el precio total, previo a la entrega.</p>
+
+    <p style="margin-bottom:3pt"><strong>TERCERA.- AJUSTES Y MODIFICACIONES.</strong>
+    EL PROVEEDOR realizará los ajustes acordados según fechas de prueba pactadas. Modificaciones adicionales no incluidas previamente podrán generar costo extra. EL PROVEEDOR no está obligado a realizar modificaciones de última hora que alteren significativamente el diseño original.</p>
+
+    <p style="margin-bottom:3pt"><strong>CUARTA.- CONFIDENCIALIDAD Y USO DE IMAGEN.</strong>
+    LA CLIENTA autoriza a EL PROVEEDOR a utilizar imágenes del vestido y/o de su evento para fines de promoción en redes sociales y material publicitario, sin revelar datos personales. ${autorizaImagen}</p>
+
+    <p style="margin-bottom:3pt"><strong>QUINTA.- CANCELACIONES Y DEVOLUCIONES.</strong>
+    EL PROVEEDOR no realizará reembolsos de anticipos, ya que estos cubren materiales, tiempo y personal. Si LA CLIENTE cancela el servicio por cualquier motivo, no se le reembolsará ninguna cantidad abonada.</p>
+
+    <p style="margin-bottom:3pt"><strong>SEXTA.- AJUSTES Y COMPROMISO DE ASISTENCIA.</strong>
+    LA CLIENTE se compromete a acudir a las pruebas en fechas y horarios establecidos con 10 minutos de tolerancia. EL CLIENTE tiene derecho a reagendar una vez sin costo con 24 hrs de anticipación. A partir de la segunda cancelación tardía o inasistencia, cada reprogramación tendrá un costo adicional de $200.00 pagadero al momento de programar.</p>
+
+    <p style="margin-bottom:3pt"><strong>SÉPTIMA.- GARANTÍA Y RESPONSABILIDAD.</strong>
+    EL PROVEEDOR garantiza que el vestido se entregará en buen estado con las medidas acordadas. Una vez entregado, EL PROVEEDOR no se hace responsable por daños, alteraciones o pérdidas. LA CLIENTE debe revisar y aceptar el estado del vestido al momento de la entrega firmando de conformidad. Si transcurren 30 días sin recoger ni liquidar, el contrato se considera cancelado y EL PROVEEDOR podrá disponer del artículo.</p>
+
+    <p style="margin-bottom:6pt"><strong>OCTAVA.- ACEPTACIÓN.</strong>
+    Ambas partes manifiestan haber leído y comprendido el presente contrato, firmando de conformidad en ${fechaContrato}.</p>
+
+    <!-- FIRMAS -->
+    <table style="width:100%;border-collapse:collapse;margin-top:8pt;font-size:7pt;text-align:center">
+      <tr>
+        <td style="width:50%;padding:0 10pt">
+          <div style="border-top:1pt solid #333;padding-top:3pt;margin-top:20pt">NOMBRE Y FIRMA DE LA CLIENTE</div>
+          <div style="color:#666;margin-top:2pt">${c.nombre||"___________________________"}</div>
+        </td>
+        <td style="width:50%;padding:0 10pt">
+          <div style="border-top:1pt solid #333;padding-top:3pt;margin-top:20pt">NOMBRE Y FIRMA DEL PROVEEDOR</div>
+          <div style="color:#666;margin-top:2pt">Ross de Lune</div>
+        </td>
+      </tr>
+    </table>
+    <div style="text-align:center;margin-top:4pt;font-size:6.5pt;color:#AAA">
+      Fecha de entrega acordada: ${fechaEntrega}
+    </div>
+  </div>`;
+}
+
 
 // ══ CONTRATO ══
 function verContrato(id){
