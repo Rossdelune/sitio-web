@@ -534,11 +534,33 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
         <div style="overflow-x:auto;">
           <table class="tbl">
             <thead><tr>
-              <th>#</th><th>Nombre</th><th>Tipo</th><th>Color</th>
-              <th>Entrega</th><th>Precio</th><th>Estatus</th><th></th>
+              <th>Fecha</th>
+              <th>Contrato</th>
+              <th>Nombre</th>
+              <th>Celular</th>
+              <th>Teléfono</th>
+              <th>Correo</th>
+              <th>Domicilio</th>
+              <th>Costo</th>
+              <th>Sist. Pago</th>
+              <th>Plazo</th>
+              <th>Tipo</th>
+              <th>Elaboración</th>
+              <th>Modelo</th>
+              <th>Color</th>
+              <th>Talla</th>
+              <th>Paquete</th>
+              <th>Entrega</th>
+              <th>Anticipo</th>
+              <th>F. Pago</th>
+              <th>F. Vencimiento</th>
+              <th>Estatus</th>
+              <th>Adicionales</th>
+              <th>Sobre pedido</th>
+              <th></th>
             </tr></thead>
             <tbody id="clientes-tbody">
-              <tr><td colspan="8" style="color:#AAA;padding:1.5rem;text-align:center;">Sin clientes registrados aún.</td></tr>
+              <tr><td colspan="24" style="color:#AAA;padding:1.5rem;text-align:center;">Sin clientes registrados aún.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1062,23 +1084,62 @@ async function saveCliente(){
 function renderClientes(){
   const tbody=document.getElementById("clientes-tbody");
   if(!allClientes.length){
-    tbody.innerHTML='<tr><td colspan="8" style="color:#AAA;padding:1.5rem;text-align:center;">Sin clientes registrados aún.</td></tr>';return;
+    tbody.innerHTML='<tr><td colspan="24" style="color:#AAA;padding:1.5rem;text-align:center;">Sin clientes registrados aún.</td></tr>';return;
   }
   const tipos={"xv":"Quinceañera","novia":"Novia","solo":"Solo vestido","custom":"Personalizado","":" — "};
-  tbody.innerHTML=allClientes.map(c=>`
-    <tr>
-      <td style="font-size:.74rem;color:#AAA">${c.folio||"—"}</td>
-      <td><strong style="font-weight:400">${c.nombre}</strong><br><span style="font-size:.72rem;color:#AAA">${c.cel}</span></td>
-      <td style="font-size:.78rem">${tipos[c.tipo]||c.tipo}</td>
-      <td><span class="color-dot" style="background:${c.color?.hex||'#CCC'}"></span><span style="font-size:.76rem">${c.color?.nombre||"—"}</span></td>
-      <td style="font-size:.76rem">${c.entrega?new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX"):"—"}</td>
-      <td style="font-size:.76rem">$${Number(c.precio||0).toLocaleString()}</td>
-      <td><span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}">${c.estatus||"—"}</span></td>
-      <td>
+  const pkgNombre={"xv":"Paquete XV","novia":"Paquete Novia","solo":"Solo vestido","custom":"Personalizado","":" — "};
+  tbody.innerHTML=allClientes.map(c=>{
+    // Calcular costo total
+    const precio=Number(c.precio||0);
+    const paquete=Number(c.precioPaquete||0);
+    const extras=(c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
+    const total=precio+paquete+extras;
+    // Adicionales como lista
+    const adicionales=(c.paquete?.adicionales||[]).map(a=>a.nombre).join(", ")||"—";
+    // Fecha formateada
+    const fContrato=c.fecha?new Date(c.fecha+"T12:00:00").toLocaleDateString("es-MX"):"—";
+    const fEntrega=c.entrega?new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX"):"—";
+    const fVence=c.fechaLimite?new Date(c.fechaLimite+"T12:00:00").toLocaleDateString("es-MX"):"—";
+    // Alerta vencimiento
+    let venceClass="";
+    if(c.fechaLimite){
+      const hoy=new Date();hoy.setHours(0,0,0,0);
+      const vence=new Date(c.fechaLimite+"T12:00:00");
+      const dias=Math.ceil((vence-hoy)/(1000*60*60*24));
+      if(dias<0) venceClass="color:var(--rojo);font-weight:500";
+      else if(dias<=7) venceClass="color:#856404;font-weight:500";
+    }
+    return `<tr>
+      <td style="font-size:.74rem;white-space:nowrap">${fContrato}</td>
+      <td style="font-size:.74rem;color:#888">${c.folio||"—"}</td>
+      <td style="white-space:nowrap"><strong style="font-weight:500;font-size:.82rem">${c.nombre}</strong></td>
+      <td style="font-size:.76rem;white-space:nowrap">${c.cel||"—"}</td>
+      <td style="font-size:.76rem;white-space:nowrap">${c.tel||"—"}</td>
+      <td style="font-size:.74rem">${c.correo||"—"}</td>
+      <td style="font-size:.74rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.domicilio||"—"}</td>
+      <td style="font-size:.76rem;white-space:nowrap">$${total.toLocaleString()}</td>
+      <td style="font-size:.74rem">${c.sispago2==="parcialidades"?"Parcialidades":"Liquidado"}</td>
+      <td style="font-size:.74rem;text-align:center">${c.sispago2==="parcialidades"?(c.parcialidades||30)+" días":"—"}</td>
+      <td style="font-size:.76rem;white-space:nowrap">${tipos[c.tipo]||c.tipo||"—"}</td>
+      <td style="font-size:.74rem">${c.elaboracion||"—"}</td>
+      <td style="font-size:.76rem">${c.modelo||"—"}</td>
+      <td style="white-space:nowrap"><span class="color-dot" style="background:${c.color?.hex||"#CCC"}"></span><span style="font-size:.74rem">${c.color?.nombre||"—"}</span></td>
+      <td style="font-size:.76rem;text-align:center">${c.talla||"—"}</td>
+      <td style="font-size:.74rem">${pkgNombre[c.paquete?.tipo]||"—"}</td>
+      <td style="font-size:.74rem;white-space:nowrap">${fEntrega}</td>
+      <td style="font-size:.76rem;white-space:nowrap;color:var(--verde)">$${Number(c.anticipo||0).toLocaleString()}</td>
+      <td style="font-size:.74rem">${c.fpago||"—"}</td>
+      <td style="font-size:.74rem;white-space:nowrap;${venceClass}">${fVence}</td>
+      <td><span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}" style="white-space:nowrap">${c.estatus||"—"}</span></td>
+      <td style="font-size:.72rem;max-width:160px">${adicionales}</td>
+      <td style="font-size:.74rem">${c.elaboracion==="Sobre pedido"?"✓":"—"}</td>
+      <td style="white-space:nowrap">
         <button class="ic-btn" onclick="verPagos('${c.id}')" title="Pagos">💳</button>
         <button class="ic-btn" onclick="verContrato('${c.id}')" title="Contrato">📄</button>
+        <button class="ic-btn" onclick="verNotaVenta('${c.id}')" title="Nota de venta">🧾</button>
       </td>
-    </tr>`).join("");
+    </tr>`;
+  }).join("");
 }
 function verCliente(id){toast("Expediente completo · próxima fase 🎀","ok");}
 
@@ -1369,6 +1430,9 @@ async function guardarAbono(){
 function verPagos(id){
   goSec("pagos-pendientes");
   renderPagosPendientes();
+}
+function verNotaVenta(id){
+  toast("Nota de Venta · próxima entrega 🎀","ok");
 }
 
 // ══ CONTRATO ══
