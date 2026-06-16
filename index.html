@@ -112,40 +112,33 @@ html,body{min-height:100vh;background:var(--crema);font-family:"Lato",sans-serif
 }
 .nav-bar::-webkit-scrollbar{display:none;}
 
-.nav-item{position:relative;flex-shrink:0;}
 .nav-btn{
   display:flex;align-items:center;gap:.4rem;
   padding:.75rem .9rem;border:none;background:none;
   font-family:"Lato",sans-serif;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;
   color:#AAA;cursor:pointer;border-bottom:2px solid transparent;
-  transition:color .2s,border-color .2s;white-space:nowrap;
+  transition:color .2s,border-color .2s;white-space:nowrap;flex-shrink:0;
 }
-.nav-btn .arrow{font-size:.55rem;transition:transform .2s;}
-.nav-item.open .nav-btn{color:var(--dorado-d);border-color:var(--dorado);}
-.nav-item.open .arrow{transform:rotate(180deg);}
+.nav-btn .arrow{font-size:.55rem;transition:transform .2s;display:inline-block;}
+.nav-btn.open{color:var(--dorado-d);border-color:var(--dorado);}
+.nav-btn.open .arrow{transform:rotate(180deg);}
 .nav-btn:hover{color:var(--dorado-d);}
 
-/* submenú contextual vertical */
-.submenu{
-  display:none;position:absolute;top:100%;left:0;
-  background:#fff;border:1px solid var(--borde);border-radius:3px;
-  box-shadow:0 8px 28px rgba(30,18,8,.14);
-  min-width:200px;z-index:200;
-  animation:sub-in .18s ease;
+/* subnav inline debajo del nav */
+.subnav{
+  display:none;
+  background:#FFFDF9;border-bottom:2px solid var(--dorado);
+  padding:.3rem .5rem;
+  flex-wrap:wrap;gap:.2rem;
 }
-@keyframes sub-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
-.nav-item.open .submenu{display:block;}
+.subnav.open{display:flex;}
 .sub-item{
-  display:block;width:100%;text-align:left;padding:.7rem 1rem;
-  border:none;background:none;font-family:"Lato",sans-serif;
-  font-size:.78rem;color:var(--texto);cursor:pointer;
-  transition:background .15s,color .15s;border-bottom:1px solid #F5F0E8;
-  letter-spacing:.04em;
+  padding:.55rem 1rem;border:none;background:none;
+  font-family:"Lato",sans-serif;font-size:.76rem;color:var(--texto);
+  cursor:pointer;transition:background .15s,color .15s;
+  border-radius:2px;letter-spacing:.04em;white-space:nowrap;
 }
-.sub-item:last-child{border-bottom:none;}
 .sub-item:hover{background:var(--crema);color:var(--dorado-d);}
-.sub-item.active{color:var(--dorado-d);font-weight:400;background:#FDF8F0;}
-.sub-icon{margin-right:.5rem;font-size:.85rem;}
 
 /* contenido */
 .panel-body{flex:1;padding:1.2rem;max-width:960px;width:100%;margin:0 auto;}
@@ -322,61 +315,40 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
     </div>
   </div>
 
-  <!-- NAV con submenús -->
+  <!-- NAV horizontal -->
   <nav class="nav-bar" id="nav-bar">
-
-    <div class="nav-item" id="nav-clientes">
-      <button class="nav-btn" onclick="toggleNav('clientes')">
-        👗 Clientes <span class="arrow">▾</span>
-      </button>
-      <div class="submenu">
-        <button class="sub-item" onclick="goSec('nuevo-cliente')"><span class="sub-icon">➕</span>Nuevo cliente</button>
-        <button class="sub-item" onclick="goSec('lista-clientes')"><span class="sub-icon">📋</span>Lista de clientes</button>
-      </div>
-    </div>
-
-    <div class="nav-item" id="nav-pagos">
-      <button class="nav-btn" onclick="toggleNav('pagos')">
-        💳 Pagos <span class="arrow">▾</span>
-      </button>
-      <div class="submenu">
-        <button class="sub-item" onclick="goSec('pagos-pendientes')"><span class="sub-icon">⏳</span>Pendientes</button>
-        <button class="sub-item" onclick="goSec('pagos-historial')"><span class="sub-icon">📊</span>Historial</button>
-      </div>
-    </div>
-
-    <div class="nav-item" id="nav-progreso">
-      <button class="nav-btn" onclick="toggleNav('progreso')">
-        📦 Progreso <span class="arrow">▾</span>
-      </button>
-      <div class="submenu">
-        <button class="sub-item" onclick="goSec('progreso-pedido')"><span class="sub-icon">🔄</span>Proceso pedido</button>
-        <button class="sub-item" onclick="goSec('progreso-diseno')"><span class="sub-icon">✂️</span>Proceso diseño</button>
-      </div>
-    </div>
-
-    <div class="nav-item" id="nav-inventario">
-      <button class="nav-btn" onclick="toggleNav('inventario')">
-        📦 Inventario <span class="arrow">▾</span>
-      </button>
-      <div class="submenu">
-        <button class="sub-item" onclick="goSec('inv-qr')"><span class="sub-icon">📱</span>Códigos QR</button>
-        <button class="sub-item" onclick="goSec('inv-paquetes')"><span class="sub-icon">🎁</span>Paquetes</button>
-      </div>
-    </div>
-
-    <div class="nav-item" id="nav-config">
-      <button class="nav-btn" onclick="toggleNav('config')">
-        ⚙️ Config <span class="arrow">▾</span>
-      </button>
-      <div class="submenu">
-        <button class="sub-item" onclick="goSec('mi-cuenta')" id="admin-sub-micuenta"><span class="sub-icon">👤</span>Mi cuenta</button>
-        <button class="sub-item" onclick="goSec('colaboradores')" id="admin-sub-colab"><span class="sub-icon">👥</span>Colaboradores</button>
-        <button class="sub-item" onclick="goSec('historial-accesos')" id="admin-sub-hist"><span class="sub-icon">🕐</span>Historial accesos</button>
-      </div>
-    </div>
-
+    <button class="nav-btn" id="nb-clientes"   onclick="toggleNav('clientes')">👗 Clientes <span class="arrow">▾</span></button>
+    <button class="nav-btn" id="nb-pagos"      onclick="toggleNav('pagos')">💳 Pagos <span class="arrow">▾</span></button>
+    <button class="nav-btn" id="nb-pedidos"    onclick="toggleNav('pedidos')">📋 Pedidos <span class="arrow">▾</span></button>
+    <button class="nav-btn" id="nb-progreso"   onclick="toggleNav('progreso')">📦 Progreso <span class="arrow">▾</span></button>
+    <button class="nav-btn" id="nb-inventario" onclick="toggleNav('inventario')">🏷️ Inventario <span class="arrow">▾</span></button>
+    <button class="nav-btn" id="nb-config"     onclick="toggleNav('config')">⚙️ Config <span class="arrow">▾</span></button>
   </nav>
+  <!-- SUBNAVS inline -->
+  <div class="subnav" id="sub-clientes">
+    <button class="sub-item" onclick="goSec('nuevo-cliente')">➕ Nuevo cliente</button>
+    <button class="sub-item" onclick="goSec('lista-clientes')">📋 Lista de clientes</button>
+  </div>
+  <div class="subnav" id="sub-pagos">
+    <button class="sub-item" onclick="goSec('pagos-pendientes')">⏳ Pendientes</button>
+    <button class="sub-item" onclick="goSec('pagos-historial')">📊 Historial</button>
+  </div>
+  <div class="subnav" id="sub-pedidos">
+    <button class="sub-item" onclick="goSec('todos-pedidos')">📋 Todos los pedidos</button>
+  </div>
+  <div class="subnav" id="sub-progreso">
+    <button class="sub-item" onclick="goSec('progreso-pedido')">🔄 Proceso pedido</button>
+    <button class="sub-item" onclick="goSec('progreso-diseno')">✂️ Proceso diseño</button>
+  </div>
+  <div class="subnav" id="sub-inventario">
+    <button class="sub-item" onclick="goSec('inv-qr')">📱 Códigos QR</button>
+    <button class="sub-item" onclick="goSec('inv-paquetes')">🎁 Paquetes</button>
+  </div>
+  <div class="subnav" id="sub-config">
+    <button class="sub-item" onclick="goSec('mi-cuenta')" id="admin-sub-micuenta">👤 Mi cuenta</button>
+    <button class="sub-item" onclick="goSec('colaboradores')" id="admin-sub-colab">👥 Colaboradores</button>
+    <button class="sub-item" onclick="goSec('historial-accesos')" id="admin-sub-hist">🕐 Historial accesos</button>
+  </div>
 
   <div class="panel-body">
 
@@ -408,6 +380,7 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
               <option value="novia">Novia</option>
             </select>
           </div>
+          <div class="fi"><label>Marca</label><input type="text" id="c-marca" placeholder="Ej: Morilee, Jovani..."></div>
           <div class="fi"><label>Modelo</label><input type="text" id="c-modelo" placeholder="Ej: WF2813"></div>
           <div class="fi"><label>Talla</label><input type="text" id="c-talla" placeholder="Ej: Ch, M, 30..."></div>
         </div>
@@ -474,10 +447,10 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
         </div>
         <div class="fg2">
           <div class="fi"><label>Fecha de entrega</label><input type="date" id="c-entrega"></div>
-          <div class="fi"><label>Precio total ($)</label><input type="number" id="c-precio" placeholder="16900"></div>
+          <div class="fi"><label>Precio total ($)</label><input type="number" id="c-precio" placeholder="16900" oninput="calcTotal()"></div>
         </div>
         <div class="fg2">
-          <div class="fi"><label>Anticipo ($)</label><input type="number" id="c-anticipo" placeholder="5000"></div>
+          <div class="fi"><label>Anticipo ($)</label><input type="number" id="c-anticipo" placeholder="5000" oninput="calcTotal()"></div>
           <div class="fi"><label>Forma de pago</label>
             <select id="c-fpago">
               <option value="">Seleccionar...</option>
@@ -506,6 +479,18 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
         </div>
       </div>
 
+      <div class="card" style="background:#FDF8F0;border:1px solid #E8D8B0;">
+        <div class="card-title">Resumen de costos</div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.5rem;">
+          <span>Adicionales:</span><strong id="resumen-extras">$0</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.5rem;">
+          <span>Total (vestido + adicionales):</span><strong id="resumen-total" style="color:var(--dorado-d)">$0</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;border-top:1px solid #E8D8B0;padding-top:.5rem;">
+          <span>Saldo restante:</span><strong id="resumen-saldo" style="color:var(--rojo)">$0</strong>
+        </div>
+      </div>
       <div class="actions-row">
         <button class="btn-save" onclick="saveCliente()">💾 Guardar cliente</button>
         <button class="btn-sec"  onclick="goSec('lista-clientes')">Ver lista</button>
@@ -529,6 +514,28 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
             </tr></thead>
             <tbody id="clientes-tbody">
               <tr><td colspan="8" style="color:#AAA;padding:1.5rem;text-align:center;">Sin clientes registrados aún.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TODOS LOS PEDIDOS ── -->
+    <div class="section" id="sec-todos-pedidos">
+      <div class="sec-title">Todos los Pedidos</div>
+      <div class="card" style="padding:.5rem;">
+        <div class="hdr-row" style="padding:.8rem .6rem .4rem;">
+          <div class="card-title" style="margin:0">Pedidos registrados</div>
+          <button class="btn-new" onclick="goSec('nuevo-cliente')">+ Nuevo</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr>
+              <th>#</th><th>Nombre</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Color</th>
+              <th>Entrega</th><th>Total</th><th>Anticipo</th><th>Saldo</th><th>Estatus</th>
+            </tr></thead>
+            <tbody id="pedidos-tbody">
+              <tr><td colspan="11" style="color:#AAA;padding:1.5rem;text-align:center;">Sin pedidos registrados aún.</td></tr>
             </tbody>
           </table>
         </div>
@@ -625,9 +632,9 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 
 <script>
 // ══ CONFIG ══
-const MASTER_KEY = "$2a$10$3E2kLNvPGqY3lb/WE.4o7uXawL1DYruxuYexxv0RXnagND.XprhAG";
-const ACCESS_KEY = "$2a$10$9VfaQRuaCX9fyS6yiO1dhuh5DeDt89523dzWLH/.6jPYvy3wOcPv.";
-const BIN_ID     = "6a2f95d2da38895dfec1c3bb";
+const MASTER_KEY = "PEGA_AQUI_TU_MASTER_KEY";
+const ACCESS_KEY = "PEGA_AQUI_TU_ACCESS_KEY";
+const BIN_ID     = "PEGA_AQUI_TU_BIN_ID";
 const BIN_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 let currentUser = null, allUsers = [], allClientes = [];
@@ -712,25 +719,26 @@ function doLogout(){
 }
 
 // ══ NAVEGACIÓN ══
+const NAVS=["clientes","pagos","pedidos","progreso","inventario","config"];
 function toggleNav(name){
-  const items=document.querySelectorAll(".nav-item");
-  items.forEach(it=>{
-    if(it.id==="nav-"+name){
-      const isOpen=it.classList.contains("open");
-      it.classList.toggle("open",!isOpen);
-    } else {
-      it.classList.remove("open");
-    }
+  const isOpen=document.getElementById("sub-"+name).classList.contains("open");
+  // cerrar todos
+  NAVS.forEach(n=>{
+    document.getElementById("sub-"+n).classList.remove("open");
+    document.getElementById("nb-"+n).classList.remove("open");
   });
-  // Detener propagación para que no cierre inmediatamente en móvil
-  event.stopPropagation();
+  // abrir este si estaba cerrado
+  if(!isOpen){
+    document.getElementById("sub-"+name).classList.add("open");
+    document.getElementById("nb-"+name).classList.add("open");
+  }
 }
-function closeAllNav(){document.querySelectorAll(".nav-item").forEach(i=>i.classList.remove("open"));}
-
-// Cerrar submenú al tocar fuera — solo en click real, no en toques dentro del nav
-document.addEventListener("click",function(e){
-  if(!e.target.closest(".nav-bar"))closeAllNav();
-});
+function closeAllNav(){
+  NAVS.forEach(n=>{
+    document.getElementById("sub-"+n).classList.remove("open");
+    document.getElementById("nb-"+n).classList.remove("open");
+  });
+}
 
 function goSec(id){
   closeAllNav();
@@ -739,6 +747,7 @@ function goSec(id){
   if(sec)sec.classList.add("active");
   if(id==="colaboradores")loadWorkers();
   if(id==="historial-accesos")loadHistorial();
+  if(id==="todos-pedidos")renderPedidos();
 }
 
 // ══ COLOR PICKER ══
@@ -834,7 +843,7 @@ function initAdicionales(){
       <div class="add-header">
         <input type="checkbox" class="add-check" id="ac-${i}" onchange="toggleAdicional(${i})">
         <label class="add-label" for="ac-${i}">${a}</label>
-        <input type="number" class="add-price" id="ap-${i}" placeholder="$0" min="0">
+        <input type="number" class="add-price" id="ap-${i}" placeholder="$0" min="0" oninput="calcTotal()">
       </div>
       <input class="add-note" id="an-${i}" placeholder="Especificaciones...">
     </div>`).join("");
@@ -842,6 +851,24 @@ function initAdicionales(){
 function toggleAdicional(i){
   const chk=document.getElementById("ac-"+i);
   document.getElementById("ai-"+i).classList.toggle("sel",chk.checked);
+  calcTotal();
+}
+function calcTotal(){
+  let extras=0;
+  ADICIONALES.forEach((_,i)=>{
+    const chk=document.getElementById("ac-"+i);
+    if(chk&&chk.checked){
+      const p=parseFloat(document.getElementById("ap-"+i).value)||0;
+      extras+=p;
+    }
+  });
+  const base=parseFloat(document.getElementById("c-precio").value)||0;
+  const anticipo=parseFloat(document.getElementById("c-anticipo").value)||0;
+  const total=base+extras;
+  const saldo=total-anticipo;
+  document.getElementById("resumen-extras").textContent="$"+extras.toLocaleString();
+  document.getElementById("resumen-total").textContent="$"+total.toLocaleString();
+  document.getElementById("resumen-saldo").textContent="$"+saldo.toLocaleString();
 }
 
 // ══ GUARDAR CLIENTE ══
@@ -882,6 +909,7 @@ async function saveCliente(){
     correo:document.getElementById("c-correo").value.trim(),
     domicilio:document.getElementById("c-domicilio").value.trim(),
     tipo:document.getElementById("c-tipo").value,
+    marca:document.getElementById("c-marca").value.trim(),
     modelo:document.getElementById("c-modelo").value.trim(),
     talla:document.getElementById("c-talla").value.trim(),
     color:{hex:colorHex,nombre:colorName},
@@ -1060,6 +1088,36 @@ async function loadHistorial(){
 
 // inicializar color preview
 document.getElementById("color-preview-box") && (document.getElementById("color-preview-box").style.background=selectedColor);
+
+// ══ RENDER PEDIDOS ══
+function renderPedidos(){
+  const tbody=document.getElementById("pedidos-tbody");
+  if(!tbody)return;
+  if(!allClientes.length){
+    tbody.innerHTML='<tr><td colspan="11" style="color:#AAA;padding:1.5rem;text-align:center;">Sin pedidos registrados aún.</td></tr>';return;
+  }
+  const tipos={"xv":"Quinceañera","novia":"Novia","solo":"Solo vestido","custom":"Personalizado","":" — "};
+  tbody.innerHTML=allClientes.map(c=>{
+    const precio=Number(c.precio||0);
+    const anticipo=Number(c.anticipo||0);
+    const extras=(c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
+    const total=precio+extras;
+    const saldo=total-anticipo;
+    return `<tr>
+      <td style="font-size:.72rem;color:#AAA">${c.folio||"—"}</td>
+      <td><strong style="font-weight:400;font-size:.8rem">${c.nombre}</strong></td>
+      <td style="font-size:.76rem">${tipos[c.tipo]||c.tipo||"—"}</td>
+      <td style="font-size:.76rem">${c.marca||"—"}</td>
+      <td style="font-size:.76rem">${c.modelo||"—"}</td>
+      <td><span class="color-dot" style="background:${c.color?.hex||'#CCC'}"></span><span style="font-size:.74rem">${c.color?.nombre||"—"}</span></td>
+      <td style="font-size:.74rem">${c.entrega?new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX"):"—"}</td>
+      <td style="font-size:.76rem">$${total.toLocaleString()}</td>
+      <td style="font-size:.76rem;color:var(--verde)">$${anticipo.toLocaleString()}</td>
+      <td style="font-size:.76rem;color:var(--rojo)">$${saldo.toLocaleString()}</td>
+      <td><span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}">${c.estatus||"—"}</span></td>
+    </tr>`;
+  }).join("");
+}
 </script>
 </body>
 </html>
