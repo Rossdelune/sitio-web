@@ -264,6 +264,11 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 .log-user{font-size:.8rem;font-weight:400;}
 .log-time{font-size:.72rem;color:#AAA;margin-top:.1rem;}
 
+/* alertas vencimiento */
+.alerta-vence{background:#FEF3CD;color:#856404;}
+.alerta-vencido{background:#FDEDEC;color:var(--rojo);}
+.alerta-ok{background:#D4EDDA;color:#155724;}
+.alerta-interes{background:#F8D7DA;color:#721C24;font-weight:500;}
 /* spinner / toast */
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid #DDD;border-top-color:var(--dorado);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:.4rem;}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -274,6 +279,13 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 
 /* worker modal */
 #modal-worker .modal{max-width:400px;}
+/* print */
+@media print{
+  #screen-welcome,#screen-panel,#modal-abono,.overlay:not(#modal-contrato){display:none!important;}
+  #modal-contrato{position:static!important;overflow:visible!important;background:#fff!important;}
+  #modal-contrato>div{box-shadow:none!important;padding:0!important;}
+  #modal-contrato button{display:none!important;}
+}
 </style>
 </head>
 <body>
@@ -451,10 +463,10 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
         </div>
         <div class="fg2">
           <div class="fi"><label>Fecha de entrega</label><input type="date" id="c-entrega"></div>
-          <div class="fi"><label>Precio total ($)</label><input type="number" id="c-precio" placeholder="0" oninput="calcTotal()"></div>
+          <div class="fi"><label>Precio total ($)</label><input type="number" id="c-precio" placeholder="16900" oninput="calcTotal()"></div>
         </div>
         <div class="fg2">
-          <div class="fi"><label>Anticipo ($)</label><input type="number" id="c-anticipo" placeholder="0" oninput="calcTotal()"></div>
+          <div class="fi"><label>Anticipo ($)</label><input type="number" id="c-anticipo" placeholder="5000" oninput="calcTotal()"></div>
           <div class="fi"><label>Forma de pago</label>
             <select id="c-fpago">
               <option value="">Seleccionar...</option>
@@ -555,14 +567,40 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
       </div>
     </div>
 
-    <!-- ── PAGOS PENDIENTES (placeholder) ── -->
+    <!-- ── PAGOS PENDIENTES ── -->
     <div class="section" id="sec-pagos-pendientes">
       <div class="sec-title">Pagos Pendientes</div>
-      <div class="card"><p style="color:#AAA;font-size:.82rem;font-style:italic;">Módulo en construcción · Fase siguiente 🎀</p></div>
+      <div class="card" style="padding:.5rem">
+        <div style="overflow-x:auto">
+          <table class="tbl" id="tbl-pendientes">
+            <thead><tr>
+              <th>#</th><th>Cliente</th><th>Total</th><th>Pagado</th>
+              <th>Saldo</th><th>Vence</th><th>Estado</th><th></th>
+            </tr></thead>
+            <tbody id="tbody-pendientes">
+              <tr><td colspan="8" style="color:#AAA;padding:1.5rem;text-align:center">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
+
+    <!-- ── HISTORIAL DE PAGOS ── -->
     <div class="section" id="sec-pagos-historial">
       <div class="sec-title">Historial de Pagos</div>
-      <div class="card"><p style="color:#AAA;font-size:.82rem;font-style:italic;">Módulo en construcción · Fase siguiente 🎀</p></div>
+      <div class="card" style="padding:.5rem">
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr>
+              <th>#</th><th>Cliente</th><th>Total</th><th>Anticipo</th>
+              <th>Abonos</th><th>Saldo</th><th>Interés</th><th>Estatus</th>
+            </tr></thead>
+            <tbody id="tbody-historial-pagos">
+              <tr><td colspan="8" style="color:#AAA;padding:1.5rem;text-align:center">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
     <div class="section" id="sec-progreso-pedido">
       <div class="sec-title">Proceso del Pedido</div>
@@ -641,13 +679,66 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
   </div>
 </div>
 
+<!-- MODAL ABONO -->
+<div class="overlay" id="modal-abono">
+  <div class="modal">
+    <button class="btn-close" onclick="closeAbonoModal()">✕</button>
+    <div class="badge" style="background:var(--verde)">Registrar Abono</div>
+    <div class="modal-title" id="abono-cliente-nombre">Cliente</div>
+    <div style="background:#F9F5EF;border-radius:3px;padding:.8rem;margin-bottom:1rem;font-size:.8rem">
+      <div style="display:flex;justify-content:space-between;margin-bottom:.3rem">
+        <span>Total:</span><strong id="abono-total">$0</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:.3rem">
+        <span>Pagado:</span><strong id="abono-pagado" style="color:var(--verde)">$0</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;border-top:1px solid #E8DDD0;padding-top:.3rem">
+        <span>Saldo pendiente:</span><strong id="abono-saldo" style="color:var(--rojo)">$0</strong>
+      </div>
+    </div>
+    <div class="field">
+      <label>Monto del abono ($)</label>
+      <input type="number" id="abono-monto" placeholder="0" min="1">
+    </div>
+    <div class="field">
+      <label>Fecha del abono</label>
+      <input type="date" id="abono-fecha">
+    </div>
+    <div class="field">
+      <label>Método de pago</label>
+      <select id="abono-metodo">
+        <option>Efectivo</option>
+        <option>Transferencia</option>
+        <option>Tarjeta</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Referencia (opcional)</label>
+      <input type="text" id="abono-ref" placeholder="Número de transferencia...">
+    </div>
+    <div class="msg-err" id="abono-msg"></div>
+    <button class="btn-primary" onclick="guardarAbono()" style="background:linear-gradient(135deg,#1E8449,#27AE60)">Registrar abono</button>
+  </div>
+</div>
+
+<!-- MODAL CONTRATO -->
+<div class="overlay" id="modal-contrato" style="z-index:300;align-items:flex-start;padding:0;overflow-y:auto">
+  <div style="background:#fff;width:100%;max-width:780px;margin:0 auto;padding:2rem;position:relative;min-height:100vh">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:.5rem;flex-wrap:wrap">
+      <button onclick="closeContrato()" style="background:none;border:1px solid #DDD;padding:.4rem .9rem;border-radius:2px;cursor:pointer;font-size:.75rem;letter-spacing:.1em">✕ Cerrar</button>
+      <button onclick="imprimirContrato()" style="background:var(--dorado-g);color:#FFF8EC;border:none;padding:.5rem 1.2rem;border-radius:2px;cursor:pointer;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase">🖨️ Imprimir</button>
+    </div>
+    <div id="contrato-content"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 // ══ CONFIG ══
-const MASTER_KEY = "$2a$10$3E2kLNvPGqY3lb/WE.4o7uXawL1DYruxuYexxv0RXnagND.XprhAG";
-const ACCESS_KEY = "$2a$10$9VfaQRuaCX9fyS6yiO1dhuh5DeDt89523dzWLH/.6jPYvy3wOcPv.";
-const BIN_ID     = "6a2f95d2da38895dfec1c3bb";
+const MASTER_KEY = "PEGA_AQUI_TU_MASTER_KEY";
+const ACCESS_KEY = "PEGA_AQUI_TU_ACCESS_KEY";
+const BIN_ID     = "PEGA_AQUI_TU_BIN_ID";
 const BIN_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 let currentUser = null, allUsers = [], allClientes = [];
@@ -761,6 +852,8 @@ function goSec(id){
   if(id==="colaboradores")loadWorkers();
   if(id==="historial-accesos")loadHistorial();
   if(id==="todos-pedidos")renderPedidos();
+  if(id==="pagos-pendientes"){renderPagosPendientes();}
+  if(id==="pagos-historial"){renderHistorialPagos();}
 }
 
 // ══ COLOR PICKER ══
@@ -937,6 +1030,12 @@ async function saveCliente(){
     precio:document.getElementById("c-precio").value,
     anticipo:document.getElementById("c-anticipo").value,
     sispago:document.getElementById("c-sispago").value,
+    sispago2:document.getElementById("c-sispago2").value,
+    parcialidades:document.getElementById("c-parcialidades").value||30,
+    fechaLimite:document.getElementById("c-fecha-limite").value,
+    proroga:document.getElementById("c-proroga").checked,
+    prorogaDias:document.getElementById("c-proroga-dias").value||0,
+    interes:document.getElementById("c-interes").value,
     fpago:document.getElementById("c-fpago").value,
     entrega:document.getElementById("c-entrega").value,
     observaciones:document.getElementById("c-obs").value.trim(),
@@ -975,7 +1074,10 @@ function renderClientes(){
       <td style="font-size:.76rem">${c.entrega?new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX"):"—"}</td>
       <td style="font-size:.76rem">$${Number(c.precio||0).toLocaleString()}</td>
       <td><span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}">${c.estatus||"—"}</span></td>
-      <td><button class="ic-btn" onclick="verCliente('${c.id}')" title="Ver">👁</button></td>
+      <td>
+        <button class="ic-btn" onclick="verPagos('${c.id}')" title="Pagos">💳</button>
+        <button class="ic-btn" onclick="verContrato('${c.id}')" title="Contrato">📄</button>
+      </td>
     </tr>`).join("");
 }
 function verCliente(id){toast("Expediente completo · próxima fase 🎀","ok");}
@@ -1106,6 +1208,292 @@ async function loadHistorial(){
 
 // inicializar color preview
 document.getElementById("color-preview-box") && (document.getElementById("color-preview-box").style.background=selectedColor);
+
+// ══ FECHAS Y PARCIALIDADES ══
+function calcFechaLimite(){
+  const fecha = document.getElementById("c-fecha").value;
+  const proroga = document.getElementById("c-proroga");
+  const prorogaDias = parseInt(document.getElementById("c-proroga-dias")?.value)||0;
+  if(!fecha) return;
+  const d = new Date(fecha+"T12:00:00");
+  d.setMonth(d.getMonth()+2);
+  if(proroga?.checked && prorogaDias>0){
+    d.setDate(d.getDate()+prorogaDias);
+  }
+  document.getElementById("c-fecha-limite").value = d.toISOString().split("T")[0];
+  document.getElementById("fi-proroga").style.display = "grid";
+}
+function toggleParcialidades(){
+  const v = document.getElementById("c-sispago2").value;
+  document.getElementById("fi-parcialidades").style.display = v==="parcialidades"?"block":"none";
+}
+function toggleProrogaDias(){
+  const chk = document.getElementById("c-proroga").checked;
+  document.getElementById("fi-proroga-dias").style.display = chk?"block":"none";
+  if(chk) calcFechaLimite();
+}
+
+// ══ GUARDAR CLIENTE — actualizar para incluir nuevos campos ══
+// (el saveCliente original ya funciona, solo agregamos los nuevos campos al objeto)
+
+// ══ PAGOS ══
+function renderPagosPendientes(){
+  const tbody = document.getElementById("tbody-pendientes");
+  if(!tbody) return;
+  if(!allClientes.length){
+    tbody.innerHTML='<tr><td colspan="8" style="color:#AAA;padding:1.5rem;text-align:center">Sin clientes registrados.</td></tr>';
+    return;
+  }
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const rows = allClientes.filter(c=>c.estatus!=="Entregado").map(c=>{
+    const precio = Number(c.precio||0);
+    const paquete = Number(c.precioPaquete||0);
+    const extras = (c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
+    const total = precio+paquete+extras;
+    const pagado = Number(c.anticipo||0) + (c.pagos||[]).reduce((s,p)=>s+Number(p.monto||0),0);
+    const saldo = total - pagado;
+    const interes = c.interes==="si" ? total*0.1 : 0;
+    const saldoFinal = saldo + interes;
+
+    // Estado de vencimiento
+    let estadoHTML = '';
+    if(c.fechaLimite){
+      const vence = new Date(c.fechaLimite+"T12:00:00");
+      const diasDiff = Math.ceil((vence-hoy)/(1000*60*60*24));
+      if(saldoFinal<=0){
+        estadoHTML = '<span class="status-badge alerta-ok">Liquidado</span>';
+      } else if(diasDiff<0){
+        estadoHTML = '<span class="status-badge alerta-vencido">Vencido '+Math.abs(diasDiff)+' días</span>';
+      } else if(diasDiff<=7){
+        estadoHTML = '<span class="status-badge alerta-vence">Vence en '+diasDiff+' días</span>';
+      } else {
+        estadoHTML = '<span class="status-badge alerta-ok">Al corriente</span>';
+      }
+    } else {
+      estadoHTML = '<span class="status-badge s-pedido">Sin fecha</span>';
+    }
+
+    return `<tr>
+      <td style="font-size:.72rem;color:#AAA">${c.folio||"—"}</td>
+      <td><strong style="font-weight:400;font-size:.8rem">${c.nombre}</strong></td>
+      <td style="font-size:.76rem">$${total.toLocaleString()}</td>
+      <td style="font-size:.76rem;color:var(--verde)">$${pagado.toLocaleString()}</td>
+      <td style="font-size:.76rem;color:var(--rojo);font-weight:${saldoFinal>0?'500':'400'}">$${saldoFinal.toLocaleString()}</td>
+      <td style="font-size:.74rem">${c.fechaLimite?new Date(c.fechaLimite+"T12:00:00").toLocaleDateString("es-MX"):"—"}</td>
+      <td>${estadoHTML}</td>
+      <td><button class="ic-btn" onclick="abrirAbonoModal('${c.id}')" title="Registrar abono">➕</button></td>
+    </tr>`;
+  });
+  tbody.innerHTML = rows.length ? rows.join("") : '<tr><td colspan="8" style="color:#AAA;padding:1.5rem;text-align:center">Todos los pedidos están liquidados 🎀</td></tr>';
+}
+
+function renderHistorialPagos(){
+  const tbody = document.getElementById("tbody-historial-pagos");
+  if(!tbody) return;
+  tbody.innerHTML = allClientes.map(c=>{
+    const precio = Number(c.precio||0);
+    const paquete = Number(c.precioPaquete||0);
+    const extras = (c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
+    const total = precio+paquete+extras;
+    const anticipo = Number(c.anticipo||0);
+    const abonos = (c.pagos||[]).reduce((s,p)=>s+Number(p.monto||0),0);
+    const pagado = anticipo+abonos;
+    const interes = c.interes==="si" ? total*0.1 : 0;
+    const saldo = total+interes-pagado;
+    return `<tr>
+      <td style="font-size:.72rem;color:#AAA">${c.folio||"—"}</td>
+      <td style="font-size:.8rem">${c.nombre}</td>
+      <td style="font-size:.76rem">$${total.toLocaleString()}</td>
+      <td style="font-size:.76rem;color:var(--verde)">$${anticipo.toLocaleString()}</td>
+      <td style="font-size:.76rem;color:var(--verde)">$${abonos.toLocaleString()}</td>
+      <td style="font-size:.76rem;color:${saldo>0?"var(--rojo)":"var(--verde)"}">$${saldo.toLocaleString()}</td>
+      <td style="font-size:.74rem">${interes>0?'<span class="status-badge alerta-interes">+$'+interes.toLocaleString()+'</span>':"—"}</td>
+      <td><span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}">${c.estatus||"—"}</span></td>
+    </tr>`;
+  }).join("");
+}
+
+// ══ MODAL ABONO ══
+let abonoClienteId = null;
+function abrirAbonoModal(id){
+  const c = allClientes.find(x=>x.id===id);
+  if(!c) return;
+  abonoClienteId = id;
+  const precio = Number(c.precio||0);
+  const paquete = Number(c.precioPaquete||0);
+  const extras = (c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
+  const total = precio+paquete+extras;
+  const pagado = Number(c.anticipo||0)+(c.pagos||[]).reduce((s,p)=>s+Number(p.monto||0),0);
+  const interes = c.interes==="si" ? total*0.1 : 0;
+  const saldo = total+interes-pagado;
+  document.getElementById("abono-cliente-nombre").textContent = c.nombre;
+  document.getElementById("abono-total").textContent = "$"+(total+interes).toLocaleString();
+  document.getElementById("abono-pagado").textContent = "$"+pagado.toLocaleString();
+  document.getElementById("abono-saldo").textContent = "$"+saldo.toLocaleString();
+  document.getElementById("abono-monto").value = "";
+  document.getElementById("abono-fecha").value = new Date().toISOString().split("T")[0];
+  document.getElementById("abono-ref").value = "";
+  document.getElementById("abono-msg").textContent = "";
+  document.getElementById("modal-abono").classList.add("open");
+}
+function closeAbonoModal(){document.getElementById("modal-abono").classList.remove("open");}
+
+async function guardarAbono(){
+  const monto = parseFloat(document.getElementById("abono-monto").value);
+  const fecha = document.getElementById("abono-fecha").value;
+  const metodo = document.getElementById("abono-metodo").value;
+  const ref = document.getElementById("abono-ref").value.trim();
+  const msg = document.getElementById("abono-msg");
+  msg.textContent="";
+  if(!monto||monto<=0){msg.textContent="Ingresa un monto válido.";return;}
+  if(!fecha){msg.textContent="Selecciona la fecha del abono.";return;}
+  try{
+    const data = await loadData();
+    allClientes = data.clientes||[];
+    allUsers = data.users||[];
+    const idx = allClientes.findIndex(x=>x.id===abonoClienteId);
+    if(!allClientes[idx].pagos) allClientes[idx].pagos=[];
+    allClientes[idx].pagos.push({
+      monto, fecha, metodo, ref,
+      registradoPor: currentUser.user,
+      registradoEn: new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"})
+    });
+    await saveData({users:allUsers, clientes:allClientes});
+    closeAbonoModal();
+    renderPagosPendientes();
+    renderHistorialPagos();
+    toast("Abono registrado ✓");
+  } catch(e){msg.textContent="Error al guardar.";}
+}
+
+function verPagos(id){
+  goSec("pagos-pendientes");
+  renderPagosPendientes();
+}
+
+// ══ CONTRATO ══
+function verContrato(id){
+  const c = allClientes.find(x=>x.id===id);
+  if(!c){toast("Cliente no encontrado","err");return;}
+  generarContrato(c);
+  document.getElementById("modal-contrato").classList.add("open");
+  document.getElementById("modal-contrato").scrollTop=0;
+}
+function closeContrato(){document.getElementById("modal-contrato").classList.remove("open");}
+function imprimirContrato(){window.print();}
+
+function generarContrato(c){
+  const precio = Number(c.precio||0);
+  const paquete = Number(c.precioPaquete||0);
+  const extras = (c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
+  const total = precio+paquete+extras;
+  const anticipo = Number(c.anticipo||0);
+  const saldo = total-anticipo;
+  const parcialidades = c.parcialidades||30;
+  const fechaContrato = c.fecha ? new Date(c.fecha+"T12:00:00").toLocaleDateString("es-MX",{day:"2-digit",month:"long",year:"numeric"}) : "___________";
+  const fechaLimite = c.fechaLimite ? new Date(c.fechaLimite+"T12:00:00").toLocaleDateString("es-MX",{day:"2-digit",month:"long",year:"numeric"}) : "___________";
+  const fechaEntrega = c.entrega ? new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX",{day:"2-digit",month:"long",year:"numeric"}) : "___________";
+  const autorizaImagen = c.imagen==="si" ? "☑ Sí autorizo" : "☑ No autorizo";
+
+  document.getElementById("contrato-content").innerHTML = `
+  <div style="font-family:'Times New Roman',serif;color:#1a1a1a;line-height:1.7;max-width:720px;margin:0 auto">
+
+    <!-- ENCABEZADO -->
+    <div style="text-align:center;margin-bottom:2rem;border-bottom:2px solid #C9A84C;padding-bottom:1.2rem">
+      <div style="font-size:1.1rem;font-weight:700;letter-spacing:.15em;color:#7A4F2A">ROSS DE LUNE</div>
+      <div style="font-size:.8rem;letter-spacing:.1em;color:#999">NOVIAS Y QUINCEAÑERAS</div>
+      <div style="font-size:1.3rem;font-weight:700;margin-top:.8rem;letter-spacing:.08em">CONTRATO DE SERVICIO</div>
+      <div style="font-size:.85rem;color:#666;margin-top:.3rem">Folio: <strong>${c.folio||"____"}</strong> &nbsp;·&nbsp; Fecha: <strong>${fechaContrato}</strong></div>
+    </div>
+
+    <!-- DATOS CLIENTE -->
+    <div style="margin-bottom:1.5rem;background:#FAF6F0;border-radius:3px;padding:1rem;border-left:3px solid #C9A84C">
+      <div style="font-weight:700;font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;color:#7A4F2A;margin-bottom:.6rem">Datos de la cliente</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;font-size:.88rem">
+        <div><span style="color:#888">Nombre:</span> <strong>${c.nombre||"—"}</strong></div>
+        <div><span style="color:#888">Celular:</span> ${c.cel||"—"}</div>
+        <div><span style="color:#888">Correo:</span> ${c.correo||"—"}</div>
+        <div><span style="color:#888">Domicilio:</span> ${c.domicilio||"—"}</div>
+      </div>
+    </div>
+
+    <!-- DATOS DEL VESTIDO -->
+    <div style="margin-bottom:1.5rem;background:#FAF6F0;border-radius:3px;padding:1rem;border-left:3px solid #C9A84C">
+      <div style="font-weight:700;font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;color:#7A4F2A;margin-bottom:.6rem">Especificaciones del vestido</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;font-size:.88rem">
+        <div><span style="color:#888">Tipo:</span> ${c.tipo==="xv"?"Quinceañera":"Novia"}</div>
+        <div><span style="color:#888">Marca:</span> ${c.marca||"—"}</div>
+        <div><span style="color:#888">Modelo:</span> ${c.modelo||"—"}</div>
+        <div><span style="color:#888">Talla:</span> ${c.talla||"—"}</div>
+        <div><span style="color:#888">Color:</span> <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${c.color?.hex||"#CCC"};vertical-align:middle;margin-right:4px;border:1px solid #DDD"></span>${c.color?.nombre||"—"}</div>
+        <div><span style="color:#888">Elaboración:</span> ${c.elaboracion||"—"}</div>
+      </div>
+      ${c.observaciones?`<div style="margin-top:.5rem;font-size:.84rem"><span style="color:#888">Observaciones:</span> ${c.observaciones}</div>`:""}
+    </div>
+
+    <!-- CLÁUSULAS -->
+    <div style="font-size:.92rem">
+      <div style="font-size:1.1rem;font-weight:700;text-align:center;letter-spacing:.12em;margin-bottom:1.2rem">CLÁUSULAS</div>
+
+      <p style="margin-bottom:1rem"><strong>PRIMERA.- OBJETO DEL CONTRATO</strong><br>
+      EL PROVEEDOR se obliga a elaborar y/o proporcionar a LA CLIENTE el vestido y los accesorios cuyas especificaciones técnicas, modelo, medidas, color y precios se detallan de forma pormenorizada en la NOTA DE VENTA que se encuentra anexa al presente contrato.</p>
+
+      <p style="margin-bottom:1rem"><strong>SEGUNDA.- PRECIO Y FORMA DE PAGO</strong><br>
+      El precio total es la cantidad de <strong>$${total.toLocaleString()}</strong>. LA CLIENTE se compromete a pagar dicho importe con anticipo de <strong>$${anticipo.toLocaleString()}</strong> al momento de firmar el presente contrato.
+      El sistema de pago acordado es <strong>${c.sispago2==="parcialidades"?"en parcialidades":"liquidado"}</strong>${c.sispago2==="parcialidades"?`, cuyos abonos se realizarán en plazos de <strong>${parcialidades} días</strong>`:""}.<br>
+      *La entrega del vestido solo procederá si el total ha sido liquidado.<br>
+      *En caso de que la FECHA LÍMITE DE PAGO llegue a vencer se le cobrará el 10% de interés sobre el precio total.<br>
+      *Al transcurrir más de 30 días naturales sin pagos ni contacto del cliente, a partir de que se realizó su contrato, el mismo se dará por cancelado automáticamente, si no cuenta con el 50% de anticipo del precio total.</p>
+
+      <p style="margin-bottom:1rem"><strong>SEGUNDA BIS.- FECHA LÍMITE DE PAGO E INTERESES MORATORIOS</strong><br>
+      El pago total del servicio deberá realizarse a más tardar en un plazo de dos meses contados a partir de la fecha de firma del presente contrato, es decir, el día <strong>${fechaLimite}</strong>.<br>
+      En caso de no liquidarse el total en dicho plazo, se aplicará un cargo por intereses moratorios equivalente al 10% sobre el precio total acordado, el cual deberá ser cubierto por LA CLIENTE previo a la entrega del vestido.</p>
+
+      <p style="margin-bottom:1rem"><strong>TERCERA.- AJUSTES Y MODIFICACIONES</strong><br>
+      EL PROVEEDOR realizará los ajustes acordados de acuerdo con las fechas de prueba pactadas.<br>
+      *Cualquier solicitud adicional de modificación por parte de LA CLIENTE que no haya sido incluida previamente podrá generar un costo extra, el cual se informará antes de realizarse.<br>
+      *EL PROVEEDOR no está obligado a realizar modificaciones de última hora fuera del margen razonable o que alteren de forma significativa el diseño original.</p>
+
+      <p style="margin-bottom:1rem"><strong>CUARTA.- CONFIDENCIALIDAD Y USO DE IMAGEN</strong><br>
+      LA CLIENTA autoriza a EL PROVEEDOR a utilizar imágenes del vestido y/o de su evento para fines de promoción en redes sociales, página web o material publicitario, sin revelar datos personales.<br>
+      ${autorizaImagen}</p>
+
+      <p style="margin-bottom:1rem"><strong>QUINTA.- CANCELACIONES Y DEVOLUCIONES</strong><br>
+      EL PROVEEDOR no realizará reembolsos de anticipos, ya que estos cubren materiales, tiempo y personal asignado.<br>
+      Si LA CLIENTE cancela el servicio por decisión personal o cualquier otro motivo, no se le reembolsará ninguna cantidad abonada.</p>
+
+      <p style="margin-bottom:1rem"><strong>SEXTA.- AJUSTES Y COMPROMISO DE ASISTENCIA</strong><br>
+      *LA CLIENTE se compromete a acudir a las pruebas programadas, en las fechas definidas y horario establecido. Solo contará con 10 minutos de tolerancia para llegar a su cita, de lo contrario será reprogramada.<br>
+      *El incumplimiento de las pruebas por parte de LA CLIENTE y el retraso en los pagos puede retrasar la entrega del vestido, sin responsabilidad para EL PROVEEDOR.<br>
+      *EL CLIENTE tiene derecho a reagendar una sola vez sin costo, siempre que avise con 24 hrs de anticipación. A partir de la segunda cancelación tardía o inasistencia, cada reprogramación tendrá un costo adicional de $200.00 el cual deberá pagar al momento de programar su cita.</p>
+
+      <p style="margin-bottom:1rem"><strong>SÉPTIMA.- GARANTÍA Y RESPONSABILIDAD</strong><br>
+      EL PROVEEDOR garantiza que el vestido se entregará en buen estado, con las medidas acordadas y la calidad ofrecida.<br>
+      Una vez entregado el vestido, EL PROVEEDOR no se hace responsable por daños, alteraciones o pérdidas.<br>
+      LA CLIENTE debe revisar y aceptar el estado del vestido al momento de la entrega firmando el documento de conformidad.<br>
+      Una vez notificada la disponibilidad del vestido, LA CLIENTE deberá recogerlo en el día y hora acordados; de lo contrario si transcurre 30 días sin recoger ni liquidar se considera cancelación y EL PROVEEDOR podrá disponer del artículo sin la obligación de entregarlo.</p>
+
+      <p style="margin-bottom:2rem"><strong>OCTAVA.- ACEPTACIÓN</strong><br>
+      Ambas partes manifiestan haber leído y comprendido el presente contrato, firmando de conformidad, en la fecha y lugar indicados.</p>
+    </div>
+
+    <!-- FIRMAS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-top:2rem;padding-top:1rem;border-top:1px solid #DDD;font-size:.85rem;text-align:center">
+      <div>
+        <div style="border-top:1px solid #333;padding-top:.5rem;margin-top:3rem">NOMBRE Y FIRMA DE LA CLIENTE</div>
+        <div style="color:#666;margin-top:.3rem">${c.nombre||"___________________________"}</div>
+      </div>
+      <div>
+        <div style="border-top:1px solid #333;padding-top:.5rem;margin-top:3rem">NOMBRE Y FIRMA DEL PROVEEDOR</div>
+        <div style="color:#666;margin-top:.3rem">Ross de Lune</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:2rem;font-size:.72rem;color:#AAA;letter-spacing:.08em">
+      Ross de Lune · Novias y Quinceañeras · Fecha de entrega acordada: ${fechaEntrega}
+    </div>
+  </div>`;
+}
 
 // ══ RENDER PEDIDOS ══
 function renderPedidos(){
