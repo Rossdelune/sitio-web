@@ -1608,7 +1608,7 @@ let notaSencillaItems = [];
 async function abrirNotaSencilla(){
   closeAllNav();
   notaSencillaItems = [{desc:"",qty:1,precio:0}];
-  const folio = await getNextFolio();
+  const folio = await getNextFolio(); // Solo previsualizar, no incrementar aún
   renderNotaSencilla(folio);
   document.getElementById("modal-nota-sencilla").classList.add("open");
 }
@@ -1775,12 +1775,12 @@ async function generarEImprimirNotaSencilla(folio){
     </div>
   </div>`;
 
-  // Guardar folio en JSONBin
+  // Guardar folio en JSONBin — incrementar aquí, al confirmar
   try{
+    const folioReal = await incrementFolio(); // Incrementa y guarda
     const data = await loadData();
-    data.folioActual = parseInt(folio);
     if(!data.notasSencillas) data.notasSencillas=[];
-    data.notasSencillas.push({folio,fecha:new Date().toISOString(),nombre,tel,items:notaSencillaItems,total:subtotal});
+    data.notasSencillas.push({folio:folioReal,fecha:new Date().toISOString(),nombre,tel,items:notaSencillaItems,total:subtotal});
     await saveData(data);
   }catch(e){console.error("Error guardando folio",e);}
 
