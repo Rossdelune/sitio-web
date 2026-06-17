@@ -22,40 +22,6 @@
 }
 html,body{min-height:100vh;background:var(--crema);font-family:"Lato",sans-serif;color:var(--texto);}
 
-@media print {
-    /* Oculta la interfaz y deja solo el contrato */
-    body > *:not(#modal-contrato) {
-        display: none !important;
-    }
-    
-    /* Configura el tamaño del papel */
-    @page {
-        size: A4;
-        margin: 10mm;
-    }
-
-    /* Ajusta el modal para impresión */
-    #modal-contrato {
-        display: block !important;
-        position: static !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    /* Fuerza el tamaño del folio */
-    #contrato-content div[style*="font-size:18pt"] {
-        font-size: 28pt !important;
-        font-weight: bold !important;
-    }
-
-    /* Asegura el tamaño de lectura del contrato */
-    #contrato-content {
-        font-size: 12pt !important;
-        line-height: 1.4 !important;
-    }
-}
-
 /* ══ WELCOME ══ */
 #screen-welcome{
   min-height:100vh;display:flex;flex-direction:column;
@@ -419,9 +385,6 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
   #modal-contrato button,#modal-nota button,#modal-nota-sencilla button,
   .no-print{display:none!important;}
   @page{margin:.4cm;size:letter portrait;}
-  #contrato-content div,#contrato-content p,#contrato-content td,#contrato-content th{
-    font-size:9.5pt!important;line-height:1.35!important;
-  }
   #contrato-content p{margin-bottom:3pt!important;margin-top:0!important;}
   #contrato-content table{margin-bottom:4pt!important;}
 }
@@ -575,7 +538,7 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
             </select>
           </div>
           <div class="fi"><label>Sistema de pago</label>
-            <select id="c-sispago">
+            <select id="c-sispago" onchange="toggleParcialidades()">
               <option value="">Seleccionar...</option>
               <option>Liquidado</option>
               <option>En parcialidades</option>
@@ -626,48 +589,23 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
           </div>
           <div class="fi"><label>Fecha de entrega</label><input type="date" id="c-entrega"></div>
         </div>
-        <div class="fg2">
+        <div class="fg2" id="fi-parcialidades" style="display:none">
           <div class="fi">
-            <label>Sistema de pago</label>
-            <select id="c-sispago2" onchange="toggleParcialidades()">
-              <option value="liquidado">Liquidado</option>
-              <option value="parcialidades">En parcialidades</option>
-            </select>
-          </div>
-          <div class="fi" id="fi-parcialidades" style="display:none">
             <label>Días entre parcialidades</label>
             <input type="number" id="c-parcialidades" value="30" min="1" placeholder="30">
-          </div>
-        </div>
-        <div class="fg2" id="fi-proroga" style="display:none">
-          <div class="fi" style="display:flex;align-items:center;gap:.8rem;padding-top:1rem">
-            <input type="checkbox" id="c-proroga" style="width:16px;height:16px;accent-color:var(--dorado-d)" onchange="toggleProrogaDias()">
-            <label for="c-proroga" style="font-size:.75rem;color:var(--texto);text-transform:none;letter-spacing:0">¿Se otorgó prórroga?</label>
-          </div>
-          <div class="fi" id="fi-proroga-dias" style="display:none">
-            <label>Días de prórroga</label>
-            <input type="number" id="c-proroga-dias" placeholder="15" min="1" max="30" onchange="calcFechaLimite()">
           </div>
         </div>
         <div class="fg2">
           <div class="fi"><label>Precio vestido ($)</label><input type="number" id="c-precio" placeholder="0" oninput="calcTotal()"></div>
           <div class="fi"><label>Anticipo ($)</label><input type="number" id="c-anticipo" placeholder="0" oninput="calcTotal()"></div>
         </div>
-        <div class="fg2">
-          <div class="fi"><label>Forma de pago</label>
-            <select id="c-fpago">
-              <option value="">Seleccionar...</option>
-              <option>Efectivo</option>
-              <option>Transferencia</option>
-              <option>Tarjeta</option>
-            </select>
-          </div>
-          <div class="fi"><label>Interés moratorio aplicado</label>
-            <select id="c-interes">
-              <option value="no">No aplica</option>
-              <option value="si">10% aplicado</option>
-            </select>
-          </div>
+        <div class="fi"><label>Forma de pago</label>
+          <select id="c-fpago">
+            <option value="">Seleccionar...</option>
+            <option>Efectivo</option>
+            <option>Transferencia</option>
+            <option>Tarjeta</option>
+          </select>
         </div>
         <div class="fi"><label>Observaciones / Requisiciones especiales</label><textarea id="c-obs" placeholder="Detalles especiales del pedido..."></textarea></div>
         <div class="fi">
@@ -920,6 +858,24 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
         <span>Saldo pendiente:</span><strong id="abono-saldo" style="color:var(--rojo)">$0</strong>
       </div>
     </div>
+    <div style="border:1px solid #E8DDD0;border-radius:3px;padding:.7rem;margin-bottom:1rem">
+      <div style="font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dorado-d);margin-bottom:.6rem">Gestión de vencimiento</div>
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem">
+        <input type="checkbox" id="abono-proroga" style="width:16px;height:16px;accent-color:var(--dorado-d)" onchange="toggleAbonoProroga()">
+        <label for="abono-proroga" style="font-size:.78rem;color:var(--texto);text-transform:none;letter-spacing:0;font-weight:400">¿Otorgar prórroga?</label>
+      </div>
+      <div class="field" id="fi-abono-proroga-dias" style="display:none;margin-bottom:.6rem">
+        <label>Días de prórroga</label>
+        <input type="number" id="abono-proroga-dias" placeholder="15" min="1" max="30">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>Interés moratorio</label>
+        <select id="abono-interes">
+          <option value="no">No aplica</option>
+          <option value="si">10% sobre el total</option>
+        </select>
+      </div>
+    </div>
     <div class="field">
       <label>Monto del abono ($)</label>
       <input type="number" id="abono-monto" placeholder="0" min="1">
@@ -1121,18 +1077,15 @@ function limpiarFormularioCliente(){
   // Campos de texto, número, fecha, textarea
   const ids=["c-nombre","c-cel","c-correo","c-tel","c-domicilio","c-tipo","c-marca",
     "c-modelo","c-talla","c-color-name","c-elab","c-sispago","m-busto","m-cintura",
-    "m-cadera","m-copa","m-largo","c-precio-paquete","c-folio","c-fecha","c-fecha-limite",
-    "c-entrega","c-sispago2","c-parcialidades","c-proroga-dias","c-precio","c-anticipo",
-    "c-fpago","c-interes","c-obs"];
+    "m-cadera","m-copa","m-largo","c-precio-paquete","c-fecha","c-fecha-limite",
+    "c-entrega","c-parcialidades","c-precio","c-anticipo",
+    "c-fpago","c-obs"];
   ids.forEach(id=>{
     const el=document.getElementById(id);
     if(!el) return;
     if(el.tagName==="SELECT") el.selectedIndex=0;
     else el.value="";
   });
-  // Checkboxes
-  const chkProroga=document.getElementById("c-proroga");
-  if(chkProroga) chkProroga.checked=false;
   // Estatus e imagen vuelven a su default
   const estatus=document.getElementById("c-estatus");
   if(estatus) estatus.selectedIndex=0;
@@ -1156,13 +1109,9 @@ function limpiarFormularioCliente(){
   initPkgComponents("xv");
   // Adicionales: desmarcar todo
   initAdicionales();
-  // Ocultar bloques condicionales
+  // Ocultar bloque de parcialidades
   const fiParc=document.getElementById("fi-parcialidades");
   if(fiParc) fiParc.style.display="none";
-  const fiProroga=document.getElementById("fi-proroga");
-  if(fiProroga) fiProroga.style.display="none";
-  const fiProrogaDias=document.getElementById("fi-proroga-dias");
-  if(fiProrogaDias) fiProrogaDias.style.display="none";
   // Resumen de costos a cero
   calcTotal();
   // Mensaje de error limpio
@@ -1346,12 +1295,11 @@ async function saveCliente(){
     precio:document.getElementById("c-precio").value,
     anticipo:document.getElementById("c-anticipo").value,
     sispago:document.getElementById("c-sispago").value,
-    sispago2:document.getElementById("c-sispago2").value,
     parcialidades:document.getElementById("c-parcialidades").value||30,
     fechaLimite:document.getElementById("c-fecha-limite").value,
-    proroga:document.getElementById("c-proroga").checked,
-    prorogaDias:document.getElementById("c-proroga-dias").value||0,
-    interes:document.getElementById("c-interes").value,
+    proroga:false,
+    prorogaDias:0,
+    interes:"no",
     fpago:document.getElementById("c-fpago").value,
     entrega:document.getElementById("c-entrega").value,
     observaciones:document.getElementById("c-obs").value.trim(),
@@ -1412,8 +1360,8 @@ function renderClientes(){
       <td style="font-size:.74rem">${c.correo||"—"}</td>
       <td style="font-size:.74rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.domicilio||"—"}</td>
       <td style="font-size:.76rem;white-space:nowrap">$${total.toLocaleString()}</td>
-      <td style="font-size:.74rem">${c.sispago2==="parcialidades"?"Parcialidades":"Liquidado"}</td>
-      <td style="font-size:.74rem;text-align:center">${c.sispago2==="parcialidades"?(c.parcialidades||30)+" días":"—"}</td>
+      <td style="font-size:.74rem">${c.sispago==="En parcialidades"?"Parcialidades":"Liquidado"}</td>
+      <td style="font-size:.74rem;text-align:center">${c.sispago==="En parcialidades"?(c.parcialidades||30)+" días":"—"}</td>
       <td style="font-size:.76rem;white-space:nowrap">${tipos[c.tipo]||c.tipo||"—"}</td>
       <td style="font-size:.74rem">${c.elaboracion||"—"}</td>
       <td style="font-size:.76rem">${c.modelo||"—"}</td>
@@ -1567,25 +1515,14 @@ document.getElementById("color-preview-box") && (document.getElementById("color-
 // ══ FECHAS Y PARCIALIDADES ══
 function calcFechaLimite(){
   const fecha = document.getElementById("c-fecha").value;
-  const proroga = document.getElementById("c-proroga");
-  const prorogaDias = parseInt(document.getElementById("c-proroga-dias")?.value)||0;
   if(!fecha) return;
   const d = new Date(fecha+"T12:00:00");
   d.setMonth(d.getMonth()+2);
-  if(proroga?.checked && prorogaDias>0){
-    d.setDate(d.getDate()+prorogaDias);
-  }
   document.getElementById("c-fecha-limite").value = d.toISOString().split("T")[0];
-  document.getElementById("fi-proroga").style.display = "grid";
 }
 function toggleParcialidades(){
-  const v = document.getElementById("c-sispago2").value;
-  document.getElementById("fi-parcialidades").style.display = v==="parcialidades"?"block":"none";
-}
-function toggleProrogaDias(){
-  const chk = document.getElementById("c-proroga").checked;
-  document.getElementById("fi-proroga-dias").style.display = chk?"block":"none";
-  if(chk) calcFechaLimite();
+  const v = document.getElementById("c-sispago").value;
+  document.getElementById("fi-parcialidades").style.display = v==="En parcialidades"?"grid":"none";
 }
 
 // ══ GUARDAR CLIENTE — actualizar para incluir nuevos campos ══
@@ -1689,7 +1626,15 @@ function abrirAbonoModal(id){
   document.getElementById("abono-fecha").value = new Date().toISOString().split("T")[0];
   document.getElementById("abono-ref").value = "";
   document.getElementById("abono-msg").textContent = "";
+  document.getElementById("abono-proroga").checked = !!c.proroga;
+  document.getElementById("abono-proroga-dias").value = c.prorogaDias||"";
+  document.getElementById("fi-abono-proroga-dias").style.display = c.proroga?"block":"none";
+  document.getElementById("abono-interes").value = c.interes||"no";
   document.getElementById("modal-abono").classList.add("open");
+}
+function toggleAbonoProroga(){
+  const chk = document.getElementById("abono-proroga").checked;
+  document.getElementById("fi-abono-proroga-dias").style.display = chk?"block":"none";
 }
 function closeAbonoModal(){document.getElementById("modal-abono").classList.remove("open");}
 
@@ -1698,21 +1643,39 @@ async function guardarAbono(){
   const fecha = document.getElementById("abono-fecha").value;
   const metodo = document.getElementById("abono-metodo").value;
   const ref = document.getElementById("abono-ref").value.trim();
+  const proroga = document.getElementById("abono-proroga").checked;
+  const prorogaDias = parseInt(document.getElementById("abono-proroga-dias").value)||0;
+  const interes = document.getElementById("abono-interes").value;
   const msg = document.getElementById("abono-msg");
   msg.textContent="";
-  if(!monto||monto<=0){msg.textContent="Ingresa un monto válido.";return;}
-  if(!fecha){msg.textContent="Selecciona la fecha del abono.";return;}
+  if(monto && monto>0 && !fecha){msg.textContent="Selecciona la fecha del abono.";return;}
   try{
     const data = await loadData();
     allClientes = data.clientes||[];
     allUsers = data.users||[];
     const idx = allClientes.findIndex(x=>x.id===abonoClienteId);
-    if(!allClientes[idx].pagos) allClientes[idx].pagos=[];
-    allClientes[idx].pagos.push({
-      monto, fecha, metodo, ref,
-      registradoPor: currentUser.user,
-      registradoEn: new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"})
-    });
+    const c = allClientes[idx];
+    if(!c.pagos) c.pagos=[];
+    if(monto && monto>0){
+      c.pagos.push({
+        monto, fecha, metodo, ref,
+        registradoPor: currentUser.user,
+        registradoEn: new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"})
+      });
+    }
+    c.proroga = proroga;
+    c.prorogaDias = prorogaDias;
+    c.interes = interes;
+    if(proroga && prorogaDias>0 && c.fecha){
+      const d = new Date(c.fecha+"T12:00:00");
+      d.setMonth(d.getMonth()+2);
+      d.setDate(d.getDate()+prorogaDias);
+      c.fechaLimite = d.toISOString().split("T")[0];
+    } else if(!proroga && c.fecha){
+      const d = new Date(c.fecha+"T12:00:00");
+      d.setMonth(d.getMonth()+2);
+      c.fechaLimite = d.toISOString().split("T")[0];
+    }
     await saveData({users:allUsers, clientes:allClientes});
     closeAbonoModal();
     renderPagosPendientes();
@@ -2162,7 +2125,7 @@ function generarContrato(c){
     </table>
     <div style="font-weight:700;text-align:center;letter-spacing:.08em;margin-bottom:4pt;border-bottom:1pt solid #CCC;padding-bottom:2pt">CLÁUSULAS</div>
     <p style="margin-bottom:3pt"><strong>PRIMERA.- OBJETO DEL CONTRATO.</strong> EL PROVEEDOR se obliga a elaborar y/o proporcionar a LA CLIENTE el vestido y accesorios especificados en la NOTA DE VENTA Folio <strong>${folioNota}</strong>, anexa al presente contrato.</p>
-    <p style="margin-bottom:3pt"><strong>SEGUNDA.- PRECIO Y FORMA DE PAGO.</strong> Precio total: <strong style="border-bottom: 4pt solid #000;">$${total.toLocaleString()}</strong>. Anticipo: <strong style="border-bottom: 4pt solid #000;">$${anticipo.toLocaleString()}</strong> al firmar. Sistema: <strong>${c.sispago2==="parcialidades"?"parcialidades cada "+parc+" días":"liquidado"}</strong>. La entrega solo procede si el total está liquidado. Sin pagos ni contacto por 30+ días y sin 50% de anticipo, el contrato se cancela automáticamente.</p>
+    <p style="margin-bottom:3pt"><strong>SEGUNDA.- PRECIO Y FORMA DE PAGO.</strong> Precio total: <strong style="border-bottom: 4pt solid #000;">$${total.toLocaleString()}</strong>. Anticipo: <strong style="border-bottom: 4pt solid #000;">$${anticipo.toLocaleString()}</strong> al firmar. Sistema: <strong>${c.sispago==="En parcialidades"?"parcialidades cada "+parc+" días":"liquidado"}</strong>. La entrega solo procede si el total está liquidado. Sin pagos ni contacto por 30+ días y sin 50% de anticipo, el contrato se cancela automáticamente.</p>
     <p style="margin-bottom:3pt"><strong>SEGUNDA BIS.- FECHA LÍMITE DE PAGO E INTERESES MORATORIOS.</strong> El pago total deberá realizarse a más tardar el <strong>${fL}</strong>. Vencido dicho plazo se aplicará un cargo del 10% sobre el precio total, previo a la entrega.</p>
     <p style="margin-bottom:3pt"><strong>TERCERA.- AJUSTES Y MODIFICACIONES.</strong> EL PROVEEDOR realizará ajustes según fechas de prueba pactadas. Modificaciones adicionales podrán generar costo extra. No se realizarán cambios de última hora que alteren significativamente el diseño.</p>
     <p style="margin-bottom:3pt"><strong>CUARTA.- CONFIDENCIALIDAD Y USO DE IMAGEN.</strong> LA CLIENTA autoriza el uso de imágenes del vestido y/o evento para promoción, sin revelar datos personales. ${autImg}</p>
