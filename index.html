@@ -23,13 +23,36 @@
 html,body{min-height:100vh;background:var(--crema);font-family:"Lato",sans-serif;color:var(--texto);}
 
 @media print {
+    /* Oculta la interfaz y deja solo el contrato */
+    body > *:not(#modal-contrato) {
+        display: none !important;
+    }
+    
+    /* Configura el tamaño del papel */
     @page {
         size: A4;
         margin: 10mm;
     }
-    body {
-        margin: 0;
-        font-size: 10pt;
+
+    /* Ajusta el modal para impresión */
+    #modal-contrato {
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Fuerza el tamaño del folio */
+    #contrato-content div[style*="font-size:18pt"] {
+        font-size: 28pt !important;
+        font-weight: bold !important;
+    }
+
+    /* Asegura el tamaño de lectura del contrato */
+    #contrato-content {
+        font-size: 12pt !important;
+        line-height: 1.4 !important;
     }
 }
 
