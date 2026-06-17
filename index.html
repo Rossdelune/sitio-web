@@ -1080,6 +1080,60 @@ function goSec(id){
   if(id==="pagos-pendientes"){renderPagosPendientes();}
   if(id==="pagos-historial"){renderHistorialPagos();}
   if(id==="progreso-pedido"){renderProceso();}
+  if(id==="nuevo-cliente"){limpiarFormularioCliente();}
+}
+
+function limpiarFormularioCliente(){
+  // Campos de texto, número, fecha, textarea
+  const ids=["c-nombre","c-cel","c-correo","c-tel","c-domicilio","c-tipo","c-marca",
+    "c-modelo","c-talla","c-color-name","c-elab","c-sispago","m-busto","m-cintura",
+    "m-cadera","m-copa","m-largo","c-precio-paquete","c-folio","c-fecha","c-fecha-limite",
+    "c-entrega","c-sispago2","c-parcialidades","c-proroga-dias","c-precio","c-anticipo",
+    "c-fpago","c-interes","c-obs"];
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    if(el.tagName==="SELECT") el.selectedIndex=0;
+    else el.value="";
+  });
+  // Checkboxes
+  const chkProroga=document.getElementById("c-proroga");
+  if(chkProroga) chkProroga.checked=false;
+  // Estatus e imagen vuelven a su default
+  const estatus=document.getElementById("c-estatus");
+  if(estatus) estatus.selectedIndex=0;
+  const imagen=document.getElementById("c-imagen");
+  if(imagen) imagen.selectedIndex=0;
+  // Folio display
+  const folioDisp=document.getElementById("c-folio-display");
+  if(folioDisp) folioDisp.textContent="Se asignará al guardar";
+  // Color picker reset
+  selectedColor="#C8A8D0";
+  const colorBox=document.getElementById("color-preview-box");
+  if(colorBox) colorBox.style.background=selectedColor;
+  const colorPicker=document.getElementById("color-picker");
+  if(colorPicker) colorPicker.value=selectedColor;
+  // Paquete: resetear a XV
+  currentPkg="xv";
+  ["xv","novia","solo","custom"].forEach(t=>{
+    const btn=document.getElementById("pb-"+t);
+    if(btn) btn.classList.toggle("active",t==="xv");
+  });
+  initPkgComponents("xv");
+  // Adicionales: desmarcar todo
+  initAdicionales();
+  // Ocultar bloques condicionales
+  const fiParc=document.getElementById("fi-parcialidades");
+  if(fiParc) fiParc.style.display="none";
+  const fiProroga=document.getElementById("fi-proroga");
+  if(fiProroga) fiProroga.style.display="none";
+  const fiProrogaDias=document.getElementById("fi-proroga-dias");
+  if(fiProrogaDias) fiProrogaDias.style.display="none";
+  // Resumen de costos a cero
+  calcTotal();
+  // Mensaje de error limpio
+  const msg=document.getElementById("cliente-msg");
+  if(msg) msg.textContent="";
 }
 
 // ══ COLOR PICKER ══
