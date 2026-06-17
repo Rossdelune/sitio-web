@@ -582,21 +582,56 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
       <div class="card">
         <div class="card-title">Contrato y pagos</div>
         <div class="fg2">
-          <div class="fi"><label># Contrato / Folio</label><input type="text" id="c-folio" placeholder="0127"></div>
-          <div class="fi"><label>Fecha de contrato</label><input type="date" id="c-fecha"></div>
+          <div class="fi"><label># Contrato / Folio</label><div style="padding:.45rem 0;font-size:.95rem;color:var(--dorado-d);font-weight:600" id="c-folio-display">Se asignará al guardar</div></div>
+          <div class="fi"><label>Fecha de contrato</label><input type="date" id="c-fecha" onchange="calcFechaLimite()"></div>
         </div>
         <div class="fg2">
+          <div class="fi">
+            <label>Fecha límite de pago <span style="font-size:.65rem;color:var(--dorado-d)">(auto: +2 meses)</span></label>
+            <input type="date" id="c-fecha-limite">
+          </div>
           <div class="fi"><label>Fecha de entrega</label><input type="date" id="c-entrega"></div>
-          <div class="fi"><label>Precio total ($)</label><input type="number" id="c-precio" placeholder="16900" oninput="calcTotal()"></div>
         </div>
         <div class="fg2">
-          <div class="fi"><label>Anticipo ($)</label><input type="number" id="c-anticipo" placeholder="5000" oninput="calcTotal()"></div>
+          <div class="fi">
+            <label>Sistema de pago</label>
+            <select id="c-sispago2" onchange="toggleParcialidades()">
+              <option value="liquidado">Liquidado</option>
+              <option value="parcialidades">En parcialidades</option>
+            </select>
+          </div>
+          <div class="fi" id="fi-parcialidades" style="display:none">
+            <label>Días entre parcialidades</label>
+            <input type="number" id="c-parcialidades" value="30" min="1" placeholder="30">
+          </div>
+        </div>
+        <div class="fg2" id="fi-proroga" style="display:none">
+          <div class="fi" style="display:flex;align-items:center;gap:.8rem;padding-top:1rem">
+            <input type="checkbox" id="c-proroga" style="width:16px;height:16px;accent-color:var(--dorado-d)" onchange="toggleProrogaDias()">
+            <label for="c-proroga" style="font-size:.75rem;color:var(--texto);text-transform:none;letter-spacing:0">¿Se otorgó prórroga?</label>
+          </div>
+          <div class="fi" id="fi-proroga-dias" style="display:none">
+            <label>Días de prórroga</label>
+            <input type="number" id="c-proroga-dias" placeholder="15" min="1" max="30" onchange="calcFechaLimite()">
+          </div>
+        </div>
+        <div class="fg2">
+          <div class="fi"><label>Precio vestido ($)</label><input type="number" id="c-precio" placeholder="0" oninput="calcTotal()"></div>
+          <div class="fi"><label>Anticipo ($)</label><input type="number" id="c-anticipo" placeholder="0" oninput="calcTotal()"></div>
+        </div>
+        <div class="fg2">
           <div class="fi"><label>Forma de pago</label>
             <select id="c-fpago">
               <option value="">Seleccionar...</option>
               <option>Efectivo</option>
               <option>Transferencia</option>
               <option>Tarjeta</option>
+            </select>
+          </div>
+          <div class="fi"><label>Interés moratorio aplicado</label>
+            <select id="c-interes">
+              <option value="no">No aplica</option>
+              <option value="si">10% aplicado</option>
             </select>
           </div>
         </div>
