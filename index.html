@@ -1011,12 +1011,10 @@ function doLogout(){
 const NAVS=["clientes","pagos","pedidos","progreso","inventario","config"];
 function toggleNav(name){
   const isOpen=document.getElementById("sub-"+name).classList.contains("open");
-  // cerrar todos
   NAVS.forEach(n=>{
     document.getElementById("sub-"+n).classList.remove("open");
     document.getElementById("nb-"+n).classList.remove("open");
   });
-  // abrir este si estaba cerrado
   if(!isOpen){
     document.getElementById("sub-"+name).classList.add("open");
     document.getElementById("nb-"+name).classList.add("open");
@@ -1785,6 +1783,17 @@ async function generarEImprimirNotaSencilla(folio){
   document.querySelector("#modal-nota-sencilla .no-print").style.display="none";
   setTimeout(()=>window.print(),300);
 }
+// ══ CONTRATO ══
+function verContrato(id){
+  const c=allClientes.find(x=>x.id===id);
+  if(!c){toast("Cliente no encontrado","err");return;}
+  generarContrato(c);
+  document.getElementById("modal-contrato").classList.add("open");
+  document.getElementById("modal-contrato").scrollTop=0;
+}
+function closeContrato(){document.getElementById("modal-contrato").classList.remove("open");}
+function imprimirContrato(){window.print();}
+
 function verNotaVenta(id){
   const c = allClientes.find(x=>x.id===id);
   if(!c){toast("Cliente no encontrado","err");return;}
