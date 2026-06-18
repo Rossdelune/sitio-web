@@ -192,6 +192,7 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
   font-family:"Lato",sans-serif;
 }
 .pkg-btn.active{background:var(--dorado-g);color:#FFF8EC;border-color:transparent;}
+.ftab.active{background:var(--dorado-g);color:#FFF8EC;border-color:transparent;}
 
 /* componentes del paquete */
 .pkg-components{margin-top:.8rem;}
@@ -456,6 +457,7 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
       <button class="nav-btn" id="nb-pedidos" onclick="toggleNav('pedidos')">📋 Pedidos <span class="arrow">▾</span></button>
       <div class="subnav" id="sub-pedidos">
         <button class="sub-item" onclick="goSec('todos-pedidos')">📋 Todos los pedidos</button>
+        <button class="sub-item" onclick="goSec('entregas-fecha')">📅 Entregas por fecha</button>
       </div>
     </div>
 
@@ -717,6 +719,66 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
             </tr></thead>
             <tbody id="pedidos-tbody">
               <tr><td colspan="11" style="color:#AAA;padding:1.5rem;text-align:center;">Sin pedidos registrados aún.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ENTREGAS POR FECHA ── -->
+    <div class="section" id="sec-entregas-fecha">
+      <div class="sec-title">Entregas por Fecha</div>
+      <div class="card" style="padding:.5rem;">
+        <div class="hdr-row" style="padding:.8rem .6rem .4rem;">
+          <div class="card-title" style="margin:0">Control de entregas</div>
+          <button class="btn-new" onclick="goSec('nuevo-cliente')">+ Nuevo</button>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:1.1rem;align-items:flex-end;padding:.4rem .6rem 1.1rem;border-bottom:1px solid var(--borde);margin-bottom:.9rem;">
+          <div>
+            <div style="display:flex;gap:.4rem;margin-bottom:.5rem;">
+              <button class="ftab active" id="ftab-mes" onclick="setFiltroEntregasModo('mes')" style="font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;padding:.35rem .8rem;border:1px solid var(--dorado);color:var(--dorado-d);background:transparent;border-radius:20px;cursor:pointer;font-family:'Lato',sans-serif;">Por mes</button>
+              <button class="ftab" id="ftab-rango" onclick="setFiltroEntregasModo('rango')" style="font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;padding:.35rem .8rem;border:1px solid var(--dorado);color:var(--dorado-d);background:transparent;border-radius:20px;cursor:pointer;font-family:'Lato',sans-serif;">Por rango de fechas</button>
+            </div>
+            <div id="filtro-modo-mes" style="display:flex;gap:1.1rem;">
+              <div class="fi" style="width:130px;margin-bottom:0;">
+                <label>Mes</label>
+                <select id="ent-mes">
+                  <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option>
+                  <option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option>
+                  <option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option>
+                  <option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
+                </select>
+              </div>
+              <div class="fi" style="width:90px;margin-bottom:0;">
+                <label>Año</label>
+                <select id="ent-anio"></select>
+              </div>
+            </div>
+            <div id="filtro-modo-rango" style="display:none;gap:1.1rem;">
+              <div class="fi" style="width:140px;margin-bottom:0;">
+                <label>Desde</label>
+                <input type="date" id="ent-desde">
+              </div>
+              <div class="fi" style="width:140px;margin-bottom:0;">
+                <label>Hasta</label>
+                <input type="date" id="ent-hasta">
+              </div>
+            </div>
+          </div>
+          <button class="btn-aplicar" onclick="renderEntregasFecha()" style="background:transparent;border:1px solid var(--dorado);color:var(--dorado-d);padding:.45rem 1.1rem;border-radius:2px;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;font-family:'Lato',sans-serif;height:fit-content;">Filtrar</button>
+          <button class="btn-limpiar" onclick="limpiarFiltroEntregas()" style="background:transparent;border:none;color:#AAA;font-size:.68rem;text-decoration:underline;cursor:pointer;font-family:'Lato',sans-serif;height:fit-content;padding:.45rem 0;">Limpiar filtro</button>
+        </div>
+
+        <div id="entregas-resumen" style="display:flex;gap:1.6rem;padding:.5rem .6rem 1rem;font-size:.78rem;color:#888;flex-wrap:wrap;"></div>
+
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr>
+              <th>#</th><th>Nombre</th><th>Tipo</th><th>Modelo</th><th>Fecha de entrega</th><th>Saldo</th><th>Estatus</th>
+            </tr></thead>
+            <tbody id="entregas-tbody">
+              <tr><td colspan="7" style="color:#AAA;padding:1.5rem;text-align:center;">Selecciona un mes o rango y presiona "Filtrar".</td></tr>
             </tbody>
           </table>
         </div>
@@ -1070,6 +1132,7 @@ function goSec(id){
   if(id==="colaboradores")loadWorkers();
   if(id==="historial-accesos")loadHistorial();
   if(id==="todos-pedidos")renderPedidos();
+  if(id==="entregas-fecha"){initFiltroEntregasAnio();}
   if(id==="pagos-pendientes"){renderPagosPendientes();}
   if(id==="pagos-historial"){renderHistorialPagos();}
   if(id==="progreso-pedido"){renderProceso();}
@@ -2087,6 +2150,120 @@ function renderPedidos(){
       <td style="font-size:.74rem">${c.entrega?new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX"):"—"}</td>
       <td style="font-size:.76rem">$${total.toLocaleString()}</td>
       <td style="font-size:.76rem;color:var(--verde)">$${anticipo.toLocaleString()}</td>
+      <td style="font-size:.76rem;color:var(--rojo)">$${saldo.toLocaleString()}</td>
+      <td><span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}">${c.estatus||"—"}</span></td>
+    </tr>`;
+  }).join("");
+}
+
+// ══ ENTREGAS POR FECHA ══
+function initFiltroEntregasAnio(){
+  const sel=document.getElementById("ent-anio");
+  if(!sel||sel.options.length) return; // ya inicializado
+  const anioActual=new Date().getFullYear();
+  for(let a=anioActual-1; a<=anioActual+2; a++){
+    const opt=document.createElement("option");
+    opt.value=a; opt.textContent=a;
+    if(a===anioActual) opt.selected=true;
+    sel.appendChild(opt);
+  }
+}
+
+function setFiltroEntregasModo(modo){
+  const tabMes=document.getElementById("ftab-mes");
+  const tabRango=document.getElementById("ftab-rango");
+  const bloqueMes=document.getElementById("filtro-modo-mes");
+  const bloqueRango=document.getElementById("filtro-modo-rango");
+  if(modo==="mes"){
+    tabMes.classList.add("active"); tabRango.classList.remove("active");
+    bloqueMes.style.display="flex"; bloqueRango.style.display="none";
+  } else {
+    tabRango.classList.add("active"); tabMes.classList.remove("active");
+    bloqueRango.style.display="flex"; bloqueMes.style.display="none";
+  }
+}
+
+function limpiarFiltroEntregas(){
+  document.getElementById("ent-desde").value="";
+  document.getElementById("ent-hasta").value="";
+  setFiltroEntregasModo("mes");
+  const tbody=document.getElementById("entregas-tbody");
+  if(tbody) tbody.innerHTML='<tr><td colspan="7" style="color:#AAA;padding:1.5rem;text-align:center;">Selecciona un mes o rango y presiona "Filtrar".</td></tr>';
+  const resumen=document.getElementById("entregas-resumen");
+  if(resumen) resumen.innerHTML="";
+}
+
+function renderEntregasFecha(){
+  const tbody=document.getElementById("entregas-tbody");
+  const resumen=document.getElementById("entregas-resumen");
+  if(!tbody) return;
+
+  const modoMes = document.getElementById("ftab-mes").classList.contains("active");
+  let desde, hasta;
+
+  if(modoMes){
+    const mes=parseInt(document.getElementById("ent-mes").value);
+    const anio=parseInt(document.getElementById("ent-anio").value);
+    desde=new Date(anio,mes,1);
+    hasta=new Date(anio,mes+1,0); // último día del mes
+  } else {
+    const vDesde=document.getElementById("ent-desde").value;
+    const vHasta=document.getElementById("ent-hasta").value;
+    if(!vDesde || !vHasta){
+      tbody.innerHTML='<tr><td colspan="7" style="color:#AAA;padding:1.5rem;text-align:center;">Selecciona ambas fechas del rango.</td></tr>';
+      if(resumen) resumen.innerHTML="";
+      return;
+    }
+    desde=new Date(vDesde+"T00:00:00");
+    hasta=new Date(vHasta+"T23:59:59");
+  }
+
+  const tipos={"xv":"Quinceañera","novia":"Novia","solo":"Solo vestido","custom":"Personalizado","":" — "};
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+
+  const filtrados = allClientes.filter(c=>{
+    if(!c.entrega) return false;
+    const fEnt=new Date(c.entrega+"T12:00:00");
+    return fEnt>=desde && fEnt<=hasta;
+  }).sort((a,b)=> new Date(a.entrega) - new Date(b.entrega));
+
+  if(!filtrados.length){
+    tbody.innerHTML='<tr><td colspan="7" style="color:#AAA;padding:1.5rem;text-align:center;">No hay entregas registradas en ese periodo.</td></tr>';
+    if(resumen) resumen.innerHTML="";
+    return;
+  }
+
+  const entregados = filtrados.filter(c=>c.estatus==="Entregado").length;
+  const pendientes = filtrados.length - entregados;
+  if(resumen){
+    resumen.innerHTML = `
+      <span>Entregas encontradas: <strong style="color:var(--dorado-d)">${filtrados.length}</strong></span>
+      <span>Pendientes: <strong style="color:var(--dorado-d)">${pendientes}</strong></span>
+      <span>Entregadas: <strong style="color:var(--dorado-d)">${entregados}</strong></span>`;
+  }
+
+  tbody.innerHTML = filtrados.map(c=>{
+    const precio=Number(c.precio||0);
+    const anticipo=Number(c.anticipo||0);
+    const extras=(c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
+    const abonos=(c.pagos||[]).reduce((s,p)=>s+Number(p.monto||0),0);
+    const total=precio+extras;
+    const saldo=total-anticipo-abonos;
+
+    const fEnt=new Date(c.entrega+"T12:00:00");
+    const fEntCopy=new Date(fEnt); fEntCopy.setHours(0,0,0,0);
+    const esHoy = fEntCopy.getTime()===hoy.getTime();
+    const fechaTxt = fEnt.toLocaleDateString("es-MX",{day:"2-digit",month:"short",year:"numeric"});
+    const fechaHTML = esHoy
+      ? `<span style="color:var(--morado);font-weight:700">${fechaTxt} · hoy</span>`
+      : fechaTxt;
+
+    return `<tr>
+      <td style="font-size:.72rem;color:#AAA">${c.folio||"—"}</td>
+      <td><strong style="font-weight:400;font-size:.8rem">${c.nombre}</strong></td>
+      <td style="font-size:.76rem">${tipos[c.tipo]||c.tipo||"—"}</td>
+      <td style="font-size:.76rem">${c.modelo||"—"}</td>
+      <td style="font-size:.74rem">${fechaHTML}</td>
       <td style="font-size:.76rem;color:var(--rojo)">$${saldo.toLocaleString()}</td>
       <td><span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}">${c.estatus||"—"}</span></td>
     </tr>`;
