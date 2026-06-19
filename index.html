@@ -2107,7 +2107,9 @@ function generarContrato(c){
   const parc=c.parcialidades||30;
   document.getElementById("contrato-content").innerHTML=`
   <div style="font-family:Arial,sans-serif;color:#1a1a1a;line-height:1.35;max-width:720px;margin:0 auto;font-size:10pt">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6pt;border-bottom:1.5pt solid #C9A84C;padding-bottom:6pt">
+    <div style="border-bottom:1pt solid #DDD;margin-bottom:8pt"></div>
+    <div style="font-size:18pt;font-weight:700;margin-bottom:8pt">Folio ${c.folio||"____"}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6pt;border-bottom:1.5pt solid #C9A84C;padding-bottom:6pt">
       <div>
         <div style="font-size:13pt;font-weight:700;color:#7A4F2A">ROSS DE LUNE</div>
         <div style="font-size:7pt;color:#999;letter-spacing:.05em">NOVIAS Y QUINCEAÑERAS</div>
@@ -2117,8 +2119,6 @@ function generarContrato(c){
       </div>
       <img src="logo_contrato.png" style="width:90pt;height:auto;flex-shrink:0">
     </div>
-    <div style="border-bottom:1pt solid #DDD;margin-bottom:8pt"></div>
-    <div style="font-size:18pt;font-weight:700;margin-bottom:8pt">Folio ${c.folio||"____"}</div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:6pt;font-size:7pt">
       <tr>
         <td style="width:50%;vertical-align:top;padding-right:8pt"><strong>Proveedor</strong><br>ROSS DE LUNE · Tel: 921 255 0819<br>rossdelune@hotmail.com<br>Propela 10, Puerto Esmeralda, Coatzacoalcos, Ver.</td>
