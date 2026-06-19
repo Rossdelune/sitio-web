@@ -1012,7 +1012,7 @@ async function doLogin(){
     if(!match.accesos)match.accesos=[];
     match.accesos.unshift(now);if(match.accesos.length>50)match.accesos=match.accesos.slice(0,50);
     const idx=allUsers.findIndex(x=>x.user===u);allUsers[idx]=match;
-    await saveData({users:allUsers,clientes:allClientes});
+    await saveData({...data,users:allUsers,clientes:allClientes});
     currentUser=match;closeLogin();enterPanel();
   }catch(e){err.textContent="Error de conexión. Intenta de nuevo.";btn.innerHTML="Entrar";btn.disabled=false;}
 }
@@ -1273,13 +1273,11 @@ async function saveCliente(){
   const msg=document.getElementById("cliente-msg");
   msg.textContent="";
   if(!nombre){msg.textContent="El nombre es obligatorio.";return;}
-  // Folio automático
-  const folioAuto = await incrementFolio();
   const colorHex=document.getElementById("color-picker").value;
   const colorName=document.getElementById("c-color-name").value.trim()||colorHex;
   const cliente={
     id:"C"+Date.now(),
-    folio:folioAuto,
+    folio:null,
     fecha:document.getElementById("c-fecha").value,
     nombre,
     cel:document.getElementById("c-cel").value.trim(),
@@ -1317,9 +1315,14 @@ async function saveCliente(){
     const data=await loadData();
     allClientes=data.clientes||[];
     allUsers=data.users||[];
+    // Folio automático — se calcula sobre los mismos datos que se van a guardar,
+    // para no pisar folioActual con un saveData posterior incompleto.
+    const current=data.folioActual||127;
+    const folioAuto=String(current+1).padStart(4,"0");
+    cliente.folio=folioAuto;
     allClientes.push(cliente);
-    await saveData({users:allUsers,clientes:allClientes});
-    toast("Cliente guardado ✓");
+    await saveData({...data,users:allUsers,clientes:allClientes,folioActual:current+1});
+    toast("Cliente guardado ✓ — Folio "+folioAuto);
     renderClientes();
     goSec("lista-clientes");
   }catch(e){msg.textContent="Error al guardar. Verifica tu conexión.";}
@@ -1407,7 +1410,7 @@ async function saveMyAccount(){
     allUsers[idx].display=display;allUsers[idx].user=user;
     if(p1)allUsers[idx].pass=p1;
     currentUser=allUsers[idx];
-    await saveData({users:allUsers,clientes:data.clientes||[]});
+    await saveData({...data,users:allUsers,clientes:data.clientes||[]});
     document.getElementById("top-user").textContent="@"+user;
     document.getElementById("my-p1").value="";document.getElementById("my-p2").value="";
     msg.style.color="var(--verde)";msg.textContent="✓ Cambios guardados.";
@@ -1474,7 +1477,7 @@ async function saveWorker(){
       if(allUsers.find(x=>x.user===user)){msg.textContent="Ese usuario ya existe.";return;}
       allUsers.push({user,pass,display,role:"worker",blocked:false,accesos:[]});
     }
-    await saveData({users:allUsers,clientes:data.clientes||[]});
+    await saveData({...data,users:allUsers,clientes:data.clientes||[]});
     closeWorkerModal();renderWorkers();
     toast(editingWorker?"Cuenta actualizada ✓":"Cuenta creada ✓");
   }catch(e){msg.textContent="Error al guardar.";}
@@ -1484,7 +1487,7 @@ async function toggleBlock(username){
     const data=await loadData();allUsers=data.users;
     const idx=allUsers.findIndex(x=>x.user===username);
     allUsers[idx].blocked=!allUsers[idx].blocked;
-    await saveData({users:allUsers,clientes:data.clientes||[]});
+    await saveData({...data,users:allUsers,clientes:data.clientes||[]});
     renderWorkers();toast(allUsers[idx].blocked?"Bloqueado 🔒":"Desbloqueado 🔓");
   }catch(e){toast("Error de conexión","err");}
 }
@@ -1679,7 +1682,7 @@ async function guardarAbono(){
       d.setMonth(d.getMonth()+2);
       c.fechaLimite = d.toISOString().split("T")[0];
     }
-    await saveData({users:allUsers, clientes:allClientes});
+    await saveData({...data,users:allUsers, clientes:allClientes});
     closeAbonoModal();
     renderPagosPendientes();
     renderHistorialPagos();
@@ -2117,7 +2120,7 @@ function generarContrato(c){
         <div style="font-size:7.5pt;color:#666;margin-top:4pt">Folio: <strong>${c.folio||"____"}</strong> · Fecha: <strong>${fC}</strong></div>
         <div style="font-size:7.5pt;color:#666">Nota de Venta Anexa: <strong>${folioNota}</strong></div>
       </div>
-      <!--insertar logo aquit-->
+      <!--aqui pega el logo-->
     </div>
     <div style="border-bottom:1.5pt solid #C9A84C;margin-bottom:6pt"></div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:6pt;font-size:7pt">
@@ -2128,7 +2131,7 @@ function generarContrato(c){
     </table>
     <div style="font-weight:700;text-align:center;letter-spacing:.08em;margin-bottom:4pt;border-bottom:1pt solid #CCC;padding-bottom:2pt">CLÁUSULAS</div>
     <p style="margin-bottom:3pt"><strong>PRIMERA.- OBJETO DEL CONTRATO.</strong> EL PROVEEDOR se obliga a elaborar y/o proporcionar a LA CLIENTE el vestido y accesorios especificados en la NOTA DE VENTA Folio <strong>${folioNota}</strong>, anexa al presente contrato.</p>
-    <p style="margin-bottom: 3pt"><strong>SEGUNDA.- PRECIO Y FORMA DE PAGO.</strong> Precio total: <strong style="border-bottom: 1pt solid #000;">$${total.toLocaleString()}</strong>. Anticipo: <strong style="border-bottom: 1pt solid #000;">$${anticipo.toLocaleString()}</strong> al firmar. Sistema: <strong>${c.sispago==="En parcialidades"?"parcialidades cada "+parc+" días":"liquidado"}</strong>. La entrega solo procede si el total está liquidado. Sin pagos ni contacto por 30+ días y sin 50% de anticipo, el contrato se cancela automáticamente.</p>
+    <p style="margin-bottom:3pt"><strong>SEGUNDA.- PRECIO Y FORMA DE PAGO.</strong> Precio total: <strong style="border-bottom: 4pt solid #000;">$${total.toLocaleString()}</strong>. Anticipo: <strong style="border-bottom: 4pt solid #000;">$${anticipo.toLocaleString()}</strong> al firmar. Sistema: <strong>${c.sispago==="En parcialidades"?"parcialidades cada "+parc+" días":"liquidado"}</strong>. La entrega solo procede si el total está liquidado. Sin pagos ni contacto por 30+ días y sin 50% de anticipo, el contrato se cancela automáticamente.</p>
     <p style="margin-bottom:3pt"><strong>SEGUNDA BIS.- FECHA LÍMITE DE PAGO E INTERESES MORATORIOS.</strong> El pago total deberá realizarse a más tardar el <strong>${fL}</strong>. Vencido dicho plazo se aplicará un cargo del 10% sobre el precio total, previo a la entrega.</p>
     <p style="margin-bottom:3pt"><strong>TERCERA.- AJUSTES Y MODIFICACIONES.</strong> EL PROVEEDOR realizará ajustes según fechas de prueba pactadas. Modificaciones adicionales podrán generar costo extra. No se realizarán cambios de última hora que alteren significativamente el diseño.</p>
     <p style="margin-bottom:3pt"><strong>CUARTA.- CONFIDENCIALIDAD Y USO DE IMAGEN.</strong> LA CLIENTA autoriza el uso de imágenes del vestido y/o evento para promoción, sin revelar datos personales. ${autImg}</p>
