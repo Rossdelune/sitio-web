@@ -986,26 +986,27 @@ let selectedColor = "#C8A8D0";
 
 // ══ JSONBin ══
 async function loadData(){
-  const r = await fetch(BIN_URL+"/latest",{headers:{"X-Master-Key":MASTER_KEY,"X-Access-Key":ACCESS_KEY}});
+  const r = await fetch(BIN_URL+"/latest?t="+Date.now(),{cache:"no-store",headers:{"X-Master-Key":MASTER_KEY,"X-Access-Key":ACCESS_KEY}});
   const j = await r.json(); return j.record;
 }
 async function saveData(d){
   await fetch(BIN_URL,{method:"PUT",headers:{"Content-Type":"application/json","X-Master-Key":MASTER_KEY,"X-Access-Key":ACCESS_KEY},body:JSON.stringify(d)});
 }
 
-// Folio automático — inicia en 0128
+// Folio automático — calcula desde el máximo real en la lista de clientes
 async function getNextFolio(){
   const data = await loadData();
-  const current = data.folioActual || 127;
-  const next = current + 1;
-  return String(next).padStart(4,"0");
+  if(!data.clientes||data.clientes.length===0) return "0128";
+  const foliosNum = data.clientes.map(c=>parseInt(c.folio,10)||127);
+  const maxFolio = Math.max(...foliosNum);
+  return String(maxFolio+1).padStart(4,"0");
 }
 async function incrementFolio(){
   const data = await loadData();
-  const current = data.folioActual || 127;
-  data.folioActual = current + 1;
-  await saveData(data);
-  return String(data.folioActual).padStart(4,"0");
+  if(!data.clientes||data.clientes.length===0) return "0128";
+  const foliosNum = data.clientes.map(c=>parseInt(c.folio,10)||127);
+  const maxFolio = Math.max(...foliosNum);
+  return String(maxFolio+1).padStart(4,"0");
 }
 
 // ══ TOAST ══
@@ -1046,7 +1047,7 @@ async function doLogin(){
     if(!match.accesos)match.accesos=[];
     match.accesos.unshift(now);if(match.accesos.length>50)match.accesos=match.accesos.slice(0,50);
     const idx=allUsers.findIndex(x=>x.user===u);allUsers[idx]=match;
-    await saveData({users:allUsers,clientes:allClientes});
+    await saveData({...data,users:allUsers,clientes:allClientes});
     currentUser=match;closeLogin();enterPanel();
   }catch(e){err.textContent="Error de conexión. Intenta de nuevo.";btn.innerHTML="Entrar";btn.disabled=false;}
 }
@@ -1307,13 +1308,11 @@ async function saveCliente(){
   const msg=document.getElementById("cliente-msg");
   msg.textContent="";
   if(!nombre){msg.textContent="El nombre es obligatorio.";return;}
-  // Folio automático
-  const folioAuto = await incrementFolio();
   const colorHex=document.getElementById("color-picker").value;
   const colorName=document.getElementById("c-color-name").value.trim()||colorHex;
   const cliente={
     id:"C"+Date.now(),
-    folio:folioAuto,
+    folio:null,
     fecha:document.getElementById("c-fecha").value,
     nombre,
     cel:document.getElementById("c-cel").value.trim(),
@@ -1351,9 +1350,13 @@ async function saveCliente(){
     const data=await loadData();
     allClientes=data.clientes||[];
     allUsers=data.users||[];
+    // Folio calculado desde el máximo real de clientes ya guardados
+    const foliosNum=allClientes.map(c=>parseInt(c.folio,10)||127);
+    const maxFolio=allClientes.length?Math.max(...foliosNum):127;
+    cliente.folio=String(maxFolio+1).padStart(4,"0");
     allClientes.push(cliente);
-    await saveData({users:allUsers,clientes:allClientes});
-    toast("Cliente guardado ✓");
+    await saveData({...data,users:allUsers,clientes:allClientes});
+    toast("Cliente guardado ✓ — Folio "+cliente.folio);
     renderClientes();
     goSec("lista-clientes");
   }catch(e){msg.textContent="Error al guardar. Verifica tu conexión.";}
@@ -1441,7 +1444,7 @@ async function saveMyAccount(){
     allUsers[idx].display=display;allUsers[idx].user=user;
     if(p1)allUsers[idx].pass=p1;
     currentUser=allUsers[idx];
-    await saveData({users:allUsers,clientes:data.clientes||[]});
+    await saveData({...data,users:allUsers,clientes:data.clientes||[]});
     document.getElementById("top-user").textContent="@"+user;
     document.getElementById("my-p1").value="";document.getElementById("my-p2").value="";
     msg.style.color="var(--verde)";msg.textContent="✓ Cambios guardados.";
@@ -1508,7 +1511,7 @@ async function saveWorker(){
       if(allUsers.find(x=>x.user===user)){msg.textContent="Ese usuario ya existe.";return;}
       allUsers.push({user,pass,display,role:"worker",blocked:false,accesos:[]});
     }
-    await saveData({users:allUsers,clientes:data.clientes||[]});
+    await saveData({...data,users:allUsers,clientes:data.clientes||[]});
     closeWorkerModal();renderWorkers();
     toast(editingWorker?"Cuenta actualizada ✓":"Cuenta creada ✓");
   }catch(e){msg.textContent="Error al guardar.";}
@@ -1518,7 +1521,7 @@ async function toggleBlock(username){
     const data=await loadData();allUsers=data.users;
     const idx=allUsers.findIndex(x=>x.user===username);
     allUsers[idx].blocked=!allUsers[idx].blocked;
-    await saveData({users:allUsers,clientes:data.clientes||[]});
+    await saveData({...data,users:allUsers,clientes:data.clientes||[]});
     renderWorkers();toast(allUsers[idx].blocked?"Bloqueado 🔒":"Desbloqueado 🔓");
   }catch(e){toast("Error de conexión","err");}
 }
@@ -1713,7 +1716,7 @@ async function guardarAbono(){
       d.setMonth(d.getMonth()+2);
       c.fechaLimite = d.toISOString().split("T")[0];
     }
-    await saveData({users:allUsers, clientes:allClientes});
+    await saveData({...data,users:allUsers, clientes:allClientes});
     closeAbonoModal();
     renderPagosPendientes();
     renderHistorialPagos();
