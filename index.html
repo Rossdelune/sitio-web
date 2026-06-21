@@ -836,6 +836,8 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
     <!-- ── PAGOS PENDIENTES ── -->
     <div class="section" id="sec-pagos-pendientes">
       <div class="sec-title">Pagos Pendientes</div>
+      <!-- Resumen general -->
+      <div id="resumen-pendientes" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.6rem"></div>
       <div class="card" style="padding:.5rem">
         <div style="overflow-x:auto">
           <table class="tbl" id="tbl-pendientes">
@@ -1743,6 +1745,7 @@ function renderPagosPendientes(){
     return;
   }
   const hoy = new Date(); hoy.setHours(0,0,0,0);
+  let sumaTotal=0, sumaPagado=0, sumaSaldo=0;
   const rows = allClientes.filter(c=>c.estatus!=="Entregado").map(c=>{
     const precio = Number(c.precio||0);
     const paquete = Number(c.precioPaquete||0);
@@ -1752,6 +1755,9 @@ function renderPagosPendientes(){
     const saldo = total - pagado;
     const interes = c.interes==="si" ? total*0.1 : 0;
     const saldoFinal = saldo + interes;
+    sumaTotal += total;
+    sumaPagado += pagado;
+    sumaSaldo += saldoFinal>0 ? saldoFinal : 0;
 
     // Estado de vencimiento
     let estadoHTML = '';
@@ -1783,6 +1789,24 @@ function renderPagosPendientes(){
     </tr>`;
   });
   tbody.innerHTML = rows.length ? rows.join("") : '<tr><td colspan="8" style="color:#AAA;padding:1.5rem;text-align:center">Todos los pedidos están liquidados 🎀</td></tr>';
+
+  // Resumen arriba
+  const resumen = document.getElementById("resumen-pendientes");
+  if(resumen){
+    resumen.innerHTML = `
+      <div class="card" style="padding:.7rem .9rem;text-align:center">
+        <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:#AAA;margin-bottom:.3rem">Total facturado</div>
+        <div style="font-size:1.1rem;font-weight:700;color:var(--cafe)">$${sumaTotal.toLocaleString()}</div>
+      </div>
+      <div class="card" style="padding:.7rem .9rem;text-align:center">
+        <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:#AAA;margin-bottom:.3rem">Total cobrado</div>
+        <div style="font-size:1.1rem;font-weight:700;color:var(--verde)">$${sumaPagado.toLocaleString()}</div>
+      </div>
+      <div class="card" style="padding:.7rem .9rem;text-align:center">
+        <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:#AAA;margin-bottom:.3rem">Saldo pendiente</div>
+        <div style="font-size:1.1rem;font-weight:700;color:var(--rojo)">$${sumaSaldo.toLocaleString()}</div>
+      </div>`;
+  }
 }
 
 function renderHistorialPagos(){
