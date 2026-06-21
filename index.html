@@ -1972,8 +1972,12 @@ async function generarEImprimirNotaSencilla(folio){
   }catch(e){console.error("Error guardando folio",e);}
 
   // Ocultar formulario y mostrar solo impresión
-  document.querySelector("#modal-nota-sencilla .no-print").style.display="none";
-  setTimeout(()=>window.print(),300);
+  const noPrintBar = document.querySelector("#modal-nota-sencilla .no-print");
+  if(noPrintBar) noPrintBar.style.display="none";
+  setTimeout(()=>{
+    window.print();
+    if(noPrintBar) noPrintBar.style.display="flex";
+  },300);
 }
 // ══ CONTRATO ══
 function verContrato(id){
