@@ -401,6 +401,7 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
   #contrato-content table{margin-bottom:4pt!important;}
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -480,7 +481,7 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
     <div style="position:relative;flex-shrink:0">
       <button class="nav-btn" id="nb-inventario" onclick="toggleNav('inventario')">🏷️ Inventario <span class="arrow">▾</span></button>
       <div class="subnav" id="sub-inventario">
-        <button class="sub-item" onclick="goSec('inv-qr')">📱 Códigos QR</button>
+        <button class="sub-item" onclick="goSec('inv-qr')">📦 Inventario</button>
         <button class="sub-item" onclick="goSec('inv-paquetes')">🎁 Paquetes</button>
       </div>
     </div>
@@ -529,6 +530,15 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
           <div class="fi"><label>Marca</label><input type="text" id="c-marca" placeholder="Ej: Morilee, Jovani..."></div>
           <div class="fi"><label>Modelo</label><input type="text" id="c-modelo" placeholder="Ej: WF2813"></div>
           <div class="fi"><label>Talla</label><input type="text" id="c-talla" placeholder="Ej: Ch, M, 30..."></div>
+        </div>
+        <!-- Escaneo QR inventario -->
+        <div class="fi" style="margin-bottom:.2rem">
+          <label>📷 Escanear artículo del inventario</label>
+          <div style="display:flex;gap:.5rem;align-items:center">
+            <input type="text" id="inv-scan-input" placeholder="Apunta el escáner aquí y escanea el QR..." style="flex:1" onkeydown="if(event.key==='Enter'){buscarPorQR();event.preventDefault();}">
+            <button class="paso-btn" onclick="buscarPorQR()" style="white-space:nowrap">Buscar</button>
+          </div>
+          <div id="inv-scan-msg" style="font-size:.72rem;margin-top:.25rem;min-height:.9rem"></div>
         </div>
         <!-- Color picker -->
         <div class="fi">
@@ -882,10 +892,78 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
         </div>
       </div>
     </div>
+    <!-- ── INVENTARIO ── -->
     <div class="section" id="sec-inv-qr">
-      <div class="sec-title">Códigos QR</div>
-      <div class="card"><p style="color:#AAA;font-size:.82rem;font-style:italic;">Módulo en construcción · Fase siguiente 🎀</p></div>
+      <div class="sec-title">Inventario</div>
+      <div class="card" style="padding:.8rem 1rem">
+        <div class="proceso-header">
+          <div class="card-title" style="margin:0">Artículos en stock</div>
+          <button class="btn-new" onclick="goSec('inv-nuevo')">+ Agregar</button>
+        </div>
+        <input class="proceso-search" id="inv-search" placeholder="🔍 Buscar por modelo, color, categoría..." oninput="filtrarInventario(this.value)" style="width:100%;margin-bottom:.8rem">
+        <div id="inv-lista">
+          <p style="color:#AAA;font-size:.82rem;padding:.5rem">Cargando inventario...</p>
+        </div>
+      </div>
     </div>
+
+    <!-- ── NUEVO ARTÍCULO ── -->
+    <div class="section" id="sec-inv-nuevo">
+      <div class="sec-title">Nuevo artículo</div>
+      <div class="card">
+        <div class="fg2">
+          <div class="fi">
+            <label>Categoría</label>
+            <select id="inv-categoria">
+              <option value="">Seleccionar...</option>
+              <option>Vestido de novia</option>
+              <option>Vestido de quinceañera</option>
+              <option>Accesorio</option>
+              <option>Artículo</option>
+            </select>
+          </div>
+          <div class="fi"><label>Modelo / Nombre</label><input type="text" id="inv-modelo" placeholder="Ej: wf875, Tiara perla..."></div>
+        </div>
+        <div class="fg2">
+          <div class="fi"><label>Talla</label><input type="text" id="inv-talla" placeholder="XS, S, M, L..."></div>
+          <div class="fi">
+            <label>Color</label>
+            <div style="display:flex;align-items:center;gap:.5rem">
+              <input type="color" id="inv-color-picker" value="#C8A8D0" onchange="document.getElementById('inv-color-nombre').value=this.value">
+              <input type="text" id="inv-color-nombre" placeholder="Nombre del color" style="flex:1">
+            </div>
+          </div>
+        </div>
+        <div class="fg2">
+          <div class="fi"><label>Precio ($)</label><input type="number" id="inv-precio" placeholder="0"></div>
+          <div class="fi"><label>Cantidad en stock</label><input type="number" id="inv-cantidad" placeholder="1" value="1"></div>
+        </div>
+        <div class="fi"><label>Notas / descripción</label><input type="text" id="inv-notas" placeholder="Detalles adicionales..."></div>
+
+        <!-- Foto -->
+        <div style="margin-top:.8rem">
+          <label style="font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--dorado-d);display:block;margin-bottom:.4rem">Foto del artículo</label>
+          <input type="file" id="inv-foto-input" accept="image/*" onchange="previewInvFoto(this)" style="display:none">
+          <button class="paso-btn" onclick="document.getElementById('inv-foto-input').click()">📷 Seleccionar foto</button>
+          <img id="inv-foto-preview" src="" style="display:none;max-width:160px;max-height:160px;object-fit:cover;border-radius:4px;margin-top:.5rem;border:1px solid #EEE">
+        </div>
+
+        <div class="actions-row" style="margin-top:1rem">
+          <button class="btn-save" onclick="guardarArticuloInv()">💾 Guardar artículo</button>
+          <button class="btn-sec" onclick="goSec('inv-qr')">Cancelar</button>
+        </div>
+        <div class="msg-err" id="inv-msg" style="margin-top:.5rem;min-height:1rem"></div>
+      </div>
+    </div>
+
+    <!-- ── QR DETAIL ── -->
+    <div class="section" id="sec-inv-detalle">
+      <div class="sec-title">Detalle de artículo</div>
+      <div class="card" id="inv-detalle-card">
+        <p style="color:#AAA;font-size:.82rem">Selecciona un artículo del inventario.</p>
+      </div>
+    </div>
+
     <div class="section" id="sec-inv-paquetes">
       <div class="sec-title">Paquetes</div>
       <div class="card"><p style="color:#AAA;font-size:.82rem;font-style:italic;">Módulo en construcción · Fase siguiente 🎀</p></div>
@@ -1112,7 +1190,7 @@ async function doLogin(){
   err.textContent="";btn.innerHTML='<span class="spinner"></span>Verificando...';btn.disabled=true;
   try{
     const data=await loadData();
-    allUsers=data.users||[];allClientes=data.clientes||[];
+    allUsers=data.users||[];allClientes=data.clientes||[];window._invData=data.inventario||[];
     const match=allUsers.find(x=>x.user===u&&x.pass===p&&x.role===loginRole);
     if(!match){err.textContent="Usuario o contraseña incorrectos.";btn.innerHTML="Entrar";btn.disabled=false;return;}
     if(match.blocked){err.textContent="Cuenta bloqueada. Contacta al administrador.";btn.innerHTML="Entrar";btn.disabled=false;return;}
@@ -1183,6 +1261,8 @@ function goSec(id){
   if(id==="pagos-historial"){renderHistorialPagos();}
   if(id==="progreso-pedido"){renderProceso();}
   if(id==="progreso-diseno"){renderDiseno();}
+  if(id==="inv-qr"){renderInventario();}
+  if(id==="inv-nuevo"){limpiarFormInv();}
   if(id==="nuevo-cliente"){limpiarFormularioCliente();}
 }
 
@@ -2161,6 +2241,216 @@ async function togglePasoDiseno(clienteId, pasoId){
     await saveData({...data, users:allUsers, clientes:allClientes});
     renderDiseno();
   }catch(e){toast("Error al guardar","err");}
+}
+
+// ══ INVENTARIO ══
+// QR: se usa la librería QRCode.js cargada desde CDN
+
+function renderInventario(){
+  const lista = document.getElementById("inv-lista");
+  if(!lista) return;
+  const inv = (window._invData||[]);
+  if(!inv.length){
+    lista.innerHTML='<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin artículos registrados. Presiona "+ Agregar" para comenzar.</p>';
+    return;
+  }
+  lista.innerHTML = inv.map(a => buildInvCard(a)).join("");
+}
+
+function filtrarInventario(q){
+  const lista = document.getElementById("inv-lista");
+  if(!lista) return;
+  const txt = q.toLowerCase();
+  const inv = (window._invData||[]);
+  const filtrados = txt ? inv.filter(a =>
+    (a.modelo||"").toLowerCase().includes(txt) ||
+    (a.categoria||"").toLowerCase().includes(txt) ||
+    (a.colorNombre||"").toLowerCase().includes(txt)
+  ) : inv;
+  if(!filtrados.length){
+    lista.innerHTML='<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin resultados.</p>';
+    return;
+  }
+  lista.innerHTML = filtrados.map(a => buildInvCard(a)).join("");
+}
+
+function buildInvCard(a){
+  const foto = a.foto
+    ? `<img src="${a.foto}" style="width:64px;height:64px;object-fit:cover;border-radius:3px;border:1px solid #EEE;flex-shrink:0">`
+    : `<div style="width:64px;height:64px;background:#F5F0E8;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">👗</div>`;
+  return `<div class="proceso-card" style="display:flex;gap:.8rem;align-items:flex-start">
+    ${foto}
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
+        <div>
+          <div class="proceso-nombre">${a.modelo||"Sin nombre"}</div>
+          <div class="proceso-meta">${a.categoria||"—"} · Talla ${a.talla||"—"} · <span style="display:inline-block;width:10px;height:10px;background:${a.colorHex||'#CCC'};border-radius:50%;vertical-align:middle"></span> ${a.colorNombre||"—"}</div>
+          <div class="proceso-meta" style="margin-top:.2rem">Stock: <strong>${a.cantidad||1}</strong> · $${Number(a.precio||0).toLocaleString()}</div>
+          ${a.notas?`<div class="proceso-meta" style="margin-top:.2rem;font-style:italic">${a.notas}</div>`:""}
+        </div>
+        <div style="display:flex;gap:.4rem;flex-shrink:0">
+          <button class="paso-btn" onclick="verQR('${a.id}')" title="Ver QR">🔲 QR</button>
+          <button class="paso-btn" onclick="eliminarArticulo('${a.id}')" title="Eliminar" style="color:#C0392B;border-color:#C0392B">✕</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function verQR(artId){
+  const a = (window._invData||[]).find(x=>x.id===artId);
+  if(!a) return;
+  goSec("inv-detalle");
+  const card = document.getElementById("inv-detalle-card");
+  card.innerHTML = `
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start">
+      ${a.foto?`<img src="${a.foto}" style="width:120px;height:120px;object-fit:cover;border-radius:4px;border:1px solid #EEE">`:""}
+      <div style="flex:1;min-width:180px">
+        <div class="proceso-nombre" style="font-size:1rem;margin-bottom:.3rem">${a.modelo||"Sin nombre"}</div>
+        <div class="proceso-meta">${a.categoria||"—"}</div>
+        <div class="proceso-meta">Talla: <strong>${a.talla||"—"}</strong></div>
+        <div class="proceso-meta">Color: <span style="display:inline-block;width:10px;height:10px;background:${a.colorHex||'#CCC'};border-radius:50%;vertical-align:middle"></span> <strong>${a.colorNombre||"—"}</strong></div>
+        <div class="proceso-meta">Precio: <strong>$${Number(a.precio||0).toLocaleString()}</strong></div>
+        <div class="proceso-meta">Stock: <strong>${a.cantidad||1}</strong></div>
+        ${a.notas?`<div class="proceso-meta" style="margin-top:.3rem;font-style:italic">${a.notas}</div>`:""}
+      </div>
+    </div>
+    <div style="margin-top:1rem;border-top:1px solid #F0E8D8;padding-top:.8rem">
+      <div style="font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--dorado-d);margin-bottom:.5rem">Código QR</div>
+      <div id="qr-render-${artId}"></div>
+      <div style="font-size:.68rem;color:#BBB;margin-top:.4rem">ID: ${artId}</div>
+    </div>
+    <div class="actions-row" style="margin-top:.8rem">
+      <button class="paso-btn" onclick="imprimirQR('${artId}')">🖨️ Imprimir QR</button>
+      <button class="btn-sec" onclick="goSec('inv-qr')">← Volver</button>
+    </div>`;
+  // Generar QR
+  setTimeout(()=>{
+    const el = document.getElementById("qr-render-"+artId);
+    if(el && window.QRCode){
+      el.innerHTML="";
+      new QRCode(el,{text:artId,width:160,height:160,colorDark:"#3a2a1a",colorLight:"#ffffff"});
+    }
+  },100);
+}
+
+function imprimirQR(artId){
+  const a = (window._invData||[]).find(x=>x.id===artId);
+  if(!a) return;
+  const qrDiv = document.getElementById("qr-render-"+artId);
+  const qrHTML = qrDiv ? qrDiv.innerHTML : "";
+  const w = window.open("","_blank","width=400,height=500");
+  w.document.write(`<!DOCTYPE html><html><head><title>QR ${a.modelo||artId}</title>
+  <style>body{font-family:Arial,sans-serif;text-align:center;padding:2rem;color:#1a1a1a}
+  h2{font-size:1rem;margin-bottom:.3rem} p{font-size:.8rem;color:#666;margin:.1rem 0}
+  .qr{margin:1rem auto;display:inline-block}</style></head><body>
+  <h2>${a.modelo||"Artículo"}</h2>
+  <p>${a.categoria||""} · Talla ${a.talla||"—"} · ${a.colorNombre||""}</p>
+  <p>$${Number(a.precio||0).toLocaleString()}</p>
+  <div class="qr">${qrHTML}</div>
+  <p style="font-size:.65rem;color:#AAA;margin-top:.5rem">ID: ${artId}</p>
+  <script>window.onload=()=>{window.print();window.close()}<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
+function previewInvFoto(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById("inv-foto-preview");
+    img.src = e.target.result;
+    img.style.display="block";
+  };
+  reader.readAsDataURL(file);
+}
+
+function limpiarFormInv(){
+  ["inv-categoria","inv-modelo","inv-talla","inv-color-nombre","inv-precio","inv-cantidad","inv-notas"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.value = id==="inv-cantidad"?"1":"";
+  });
+  document.getElementById("inv-color-picker").value="#C8A8D0";
+  const prev=document.getElementById("inv-foto-preview");
+  prev.src="";prev.style.display="none";
+  document.getElementById("inv-foto-input").value="";
+  document.getElementById("inv-msg").textContent="";
+}
+
+async function guardarArticuloInv(){
+  const msg = document.getElementById("inv-msg");
+  msg.textContent="";
+  const modelo = document.getElementById("inv-modelo").value.trim();
+  const categoria = document.getElementById("inv-categoria").value;
+  if(!modelo){msg.textContent="El modelo o nombre es obligatorio.";return;}
+  if(!categoria){msg.textContent="Selecciona una categoría.";return;}
+
+  const fotoPreview = document.getElementById("inv-foto-preview");
+  const foto = fotoPreview.style.display!=="none" ? fotoPreview.src : "";
+
+  const articulo = {
+    id: "INV"+Date.now(),
+    categoria,
+    modelo,
+    talla: document.getElementById("inv-talla").value.trim(),
+    colorHex: document.getElementById("inv-color-picker").value,
+    colorNombre: document.getElementById("inv-color-nombre").value.trim(),
+    precio: document.getElementById("inv-precio").value,
+    cantidad: document.getElementById("inv-cantidad").value||1,
+    notas: document.getElementById("inv-notas").value.trim(),
+    foto,
+    creadoEn: new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"})
+  };
+
+  try{
+    const data = await loadData();
+    const inv = data.inventario||[];
+    inv.push(articulo);
+    await saveData({...data, inventario:inv});
+    window._invData = inv;
+    toast("Artículo guardado ✓");
+    goSec("inv-qr");
+  }catch(e){msg.textContent="Error al guardar. Verifica tu conexión.";}
+}
+
+async function eliminarArticulo(artId){
+  if(!confirm("¿Eliminar este artículo del inventario?")) return;
+  try{
+    const data = await loadData();
+    const inv = (data.inventario||[]).filter(x=>x.id!==artId);
+    await saveData({...data, inventario:inv});
+    window._invData = inv;
+    renderInventario();
+    toast("Artículo eliminado ✓");
+  }catch(e){toast("Error al eliminar","err");}
+}
+
+function buscarPorQR(){
+  const input = document.getElementById("inv-scan-input");
+  const msg = document.getElementById("inv-scan-msg");
+  const id = (input.value||"").trim();
+  msg.textContent="";
+  if(!id) return;
+  const inv = window._invData||[];
+  const art = inv.find(x=>x.id===id);
+  if(!art){
+    msg.style.color="var(--rojo)";
+    msg.textContent="✕ Artículo no encontrado en inventario.";
+    return;
+  }
+  // Autocompletar campos del formulario
+  document.getElementById("c-modelo").value = art.modelo||"";
+  document.getElementById("c-talla").value = art.talla||"";
+  document.getElementById("c-color-name").value = art.colorNombre||"";
+  document.getElementById("color-picker").value = art.colorHex||"#C8A8D0";
+  if(art.precio) document.getElementById("c-precio").value = art.precio;
+  // Actualizar el color visualmente si existe la función
+  if(typeof onColorChange==="function") onColorChange(art.colorHex||"#C8A8D0");
+  if(typeof onColorNameInput==="function") onColorNameInput(art.colorNombre||"");
+  msg.style.color="var(--dorado-d)";
+  msg.textContent="✓ "+art.categoria+" · "+art.modelo+" · Talla "+art.talla+" · "+art.colorNombre;
+  input.value="";
 }
 
 // ══ CONTRATO ══
