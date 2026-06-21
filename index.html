@@ -284,6 +284,15 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 .proceso-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;}
 .proceso-search{border:none;border-bottom:1px solid #DDD;padding:.4rem .2rem;font-family:"Lato",sans-serif;font-size:.82rem;outline:none;width:220px;background:transparent;}
 .proceso-search:focus{border-color:var(--dorado);}
+.proceso-card{border:1px solid var(--borde);border-radius:4px;padding:.75rem .9rem;margin-bottom:.7rem;background:#FFF;}
+.proceso-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;flex-wrap:wrap;gap:.3rem;}
+.proceso-nombre{font-size:.88rem;font-weight:600;color:var(--cafe);}
+.proceso-meta{font-size:.72rem;color:#AAA;letter-spacing:.03em;}
+.proceso-steps{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem;}
+.paso-btn{display:flex;align-items:center;gap:.35rem;padding:.32rem .7rem;border-radius:20px;border:1.5px solid #DDD;background:#FFF;font-size:.7rem;font-family:"Lato",sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .2s;color:#888;}
+.paso-btn.done{border-color:var(--dorado);background:var(--dorado-g);color:#FFF8EC;}
+.paso-btn .paso-check{font-size:.8rem;}
+.proceso-entrega{font-size:.72rem;color:var(--dorado-d);margin-top:.5rem;border-top:1px solid #F0E8D8;padding-top:.4rem;}
 
 .proceso-card{background:#fff;border-radius:4px;box-shadow:0 2px 10px rgba(122,79,42,.07);margin-bottom:1rem;overflow:hidden;}
 .proceso-card-header{
@@ -846,11 +855,12 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
       </div>
     </div>
     <!-- ── PROCESO DE ELABORACIÓN ── -->
+    <!-- ── PROCESO PEDIDO (Ajustes) ── -->
     <div class="section" id="sec-progreso-pedido">
-      <div class="sec-title">Proceso de Elaboración</div>
+      <div class="sec-title">Proceso de Pedido</div>
       <div class="card" style="padding:.8rem 1rem">
         <div class="proceso-header">
-          <div class="card-title" style="margin:0">Pedidos activos</div>
+          <div class="card-title" style="margin:0">Registro de ajustes</div>
           <input class="proceso-search" id="proceso-search" placeholder="🔍 Buscar cliente..." oninput="filtrarProceso(this.value)">
         </div>
         <div id="proceso-lista">
@@ -858,9 +868,19 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
         </div>
       </div>
     </div>
+
+    <!-- ── PROCESO DISEÑO (Elaboración propia) ── -->
     <div class="section" id="sec-progreso-diseno">
       <div class="sec-title">Proceso de Diseño</div>
-      <div class="card"><p style="color:#AAA;font-size:.82rem;font-style:italic;">Módulo en construcción · Fase siguiente 🎀</p></div>
+      <div class="card" style="padding:.8rem 1rem">
+        <div class="proceso-header">
+          <div class="card-title" style="margin:0">Elaboración sobre diseño / pedido</div>
+          <input class="proceso-search" id="diseno-search" placeholder="🔍 Buscar cliente..." oninput="filtrarDiseno(this.value)">
+        </div>
+        <div id="diseno-lista">
+          <p style="color:#AAA;font-size:.82rem;padding:.5rem">Cargando...</p>
+        </div>
+      </div>
     </div>
     <div class="section" id="sec-inv-qr">
       <div class="sec-title">Códigos QR</div>
@@ -1162,6 +1182,7 @@ function goSec(id){
   if(id==="pagos-pendientes"){renderPagosPendientes();}
   if(id==="pagos-historial"){renderHistorialPagos();}
   if(id==="progreso-pedido"){renderProceso();}
+  if(id==="progreso-diseno"){renderDiseno();}
   if(id==="nuevo-cliente"){limpiarFormularioCliente();}
 }
 
@@ -1979,6 +2000,169 @@ async function generarEImprimirNotaSencilla(folio){
     if(noPrintBar) noPrintBar.style.display="flex";
   },300);
 }
+// ══ PROCESO PEDIDO (Ajustes) ══
+const PASOS_PEDIDO = [
+  {id:"ajuste1", label:"1er Ajuste"},
+  {id:"ajuste2", label:"2do Ajuste"},
+  {id:"ajuste3", label:"3er Ajuste"},
+  {id:"entregado", label:"Entrega"}
+];
+
+function renderProceso(){
+  const lista = document.getElementById("proceso-lista");
+  if(!lista) return;
+  // Mostrar todos excepto entregados
+  const activos = allClientes.filter(c => c.estatus !== "Entregado");
+  if(!activos.length){
+    lista.innerHTML='<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin pedidos activos.</p>';
+    return;
+  }
+  lista.innerHTML = activos.map(c => buildProcesoCard(c)).join("");
+}
+
+function filtrarProceso(q){
+  const lista = document.getElementById("proceso-lista");
+  if(!lista) return;
+  const txt = q.toLowerCase();
+  const filtrados = allClientes.filter(c =>
+    c.estatus !== "Entregado" &&
+    (c.nombre.toLowerCase().includes(txt) || (c.folio||"").includes(txt))
+  );
+  if(!filtrados.length){
+    lista.innerHTML='<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin resultados.</p>';
+    return;
+  }
+  lista.innerHTML = filtrados.map(c => buildProcesoCard(c)).join("");
+}
+
+function buildProcesoCard(c){
+  const prog = c.progreso?.pedido || {};
+  const entrega = c.entrega ? new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX") : "—";
+  const pasos = PASOS_PEDIDO.map(p => {
+    const done = !!prog[p.id];
+    return `<button class="paso-btn ${done?"done":""}" onclick="togglePasoPedido('${c.id}','${p.id}')">
+      <span class="paso-check">${done?"✓":"○"}</span>${p.label}
+    </button>`;
+  }).join("");
+  return `<div class="proceso-card" id="pcard-${c.id}">
+    <div class="proceso-card-header">
+      <div>
+        <div class="proceso-nombre">${c.nombre}</div>
+        <div class="proceso-meta">Folio ${c.folio||"—"} · ${c.tipo==="xv"?"Quinceañera":"Novia"} · ${c.modelo||"—"}</div>
+      </div>
+      <span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}">${c.estatus||"—"}</span>
+    </div>
+    <div class="proceso-steps">${pasos}</div>
+    <div class="proceso-entrega">📅 Entrega: <strong>${entrega}</strong></div>
+  </div>`;
+}
+
+async function togglePasoPedido(clienteId, pasoId){
+  const c = allClientes.find(x=>x.id===clienteId);
+  if(!c) return;
+  if(!c.progreso) c.progreso={};
+  if(!c.progreso.pedido) c.progreso.pedido={};
+  c.progreso.pedido[pasoId] = !c.progreso.pedido[pasoId];
+  // Si marcan Entrega, actualizar estatus
+  if(pasoId==="entregado" && c.progreso.pedido[pasoId]) c.estatus="Entregado";
+  try{
+    const data = await loadData();
+    allClientes = data.clientes||[];
+    const idx = allClientes.findIndex(x=>x.id===clienteId);
+    if(idx>-1){
+      allClientes[idx].progreso = c.progreso;
+      if(pasoId==="entregado" && c.progreso.pedido[pasoId]) allClientes[idx].estatus="Entregado";
+    }
+    await saveData({...data, users:allUsers, clientes:allClientes});
+    renderProceso();
+  }catch(e){toast("Error al guardar","err");}
+}
+
+// ══ PROCESO DISEÑO (Elaboración propia) ══
+const PASOS_DISENO = [
+  {id:"bocetaje",  label:"Bocetaje"},
+  {id:"insumos",   label:"Insumos"},
+  {id:"corte",     label:"Corte"},
+  {id:"confeccion",label:"Confección"},
+  {id:"bordado",   label:"Bordado"},
+  {id:"ajuste1",   label:"1er Ajuste"},
+  {id:"ajuste2",   label:"2do Ajuste"},
+  {id:"ajuste3",   label:"3er Ajuste"},
+  {id:"entregado", label:"Entrega"}
+];
+
+function renderDiseno(){
+  const lista = document.getElementById("diseno-lista");
+  if(!lista) return;
+  const activos = allClientes.filter(c =>
+    (c.elaboracion==="Sobre diseño"||c.elaboracion==="Sobre pedido") &&
+    c.estatus !== "Entregado"
+  );
+  if(!activos.length){
+    lista.innerHTML='<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin vestidos en proceso de diseño.</p>';
+    return;
+  }
+  lista.innerHTML = activos.map(c => buildDisenoCard(c)).join("");
+}
+
+function filtrarDiseno(q){
+  const lista = document.getElementById("diseno-lista");
+  if(!lista) return;
+  const txt = q.toLowerCase();
+  const filtrados = allClientes.filter(c =>
+    (c.elaboracion==="Sobre diseño"||c.elaboracion==="Sobre pedido") &&
+    c.estatus !== "Entregado" &&
+    (c.nombre.toLowerCase().includes(txt)||(c.folio||"").includes(txt))
+  );
+  if(!filtrados.length){
+    lista.innerHTML='<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin resultados.</p>';
+    return;
+  }
+  lista.innerHTML = filtrados.map(c => buildDisenoCard(c)).join("");
+}
+
+function buildDisenoCard(c){
+  const prog = c.progreso?.diseno || {};
+  const entrega = c.entrega ? new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX") : "—";
+  const pasos = PASOS_DISENO.map(p => {
+    const done = !!prog[p.id];
+    return `<button class="paso-btn ${done?"done":""}" onclick="togglePasoDiseno('${c.id}','${p.id}')">
+      <span class="paso-check">${done?"✓":"○"}</span>${p.label}
+    </button>`;
+  }).join("");
+  return `<div class="proceso-card" id="dcard-${c.id}">
+    <div class="proceso-card-header">
+      <div>
+        <div class="proceso-nombre">${c.nombre}</div>
+        <div class="proceso-meta">Folio ${c.folio||"—"} · ${c.elaboracion} · ${c.modelo||"—"}</div>
+      </div>
+      <span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}">${c.estatus||"—"}</span>
+    </div>
+    <div class="proceso-steps">${pasos}</div>
+    <div class="proceso-entrega">📅 Entrega: <strong>${entrega}</strong></div>
+  </div>`;
+}
+
+async function togglePasoDiseno(clienteId, pasoId){
+  const c = allClientes.find(x=>x.id===clienteId);
+  if(!c) return;
+  if(!c.progreso) c.progreso={};
+  if(!c.progreso.diseno) c.progreso.diseno={};
+  c.progreso.diseno[pasoId] = !c.progreso.diseno[pasoId];
+  if(pasoId==="entregado" && c.progreso.diseno[pasoId]) c.estatus="Entregado";
+  try{
+    const data = await loadData();
+    allClientes = data.clientes||[];
+    const idx = allClientes.findIndex(x=>x.id===clienteId);
+    if(idx>-1){
+      allClientes[idx].progreso = c.progreso;
+      if(pasoId==="entregado" && c.progreso.diseno[pasoId]) allClientes[idx].estatus="Entregado";
+    }
+    await saveData({...data, users:allUsers, clientes:allClientes});
+    renderDiseno();
+  }catch(e){toast("Error al guardar","err");}
+}
+
 // ══ CONTRATO ══
 function verContrato(id){
   const c=allClientes.find(x=>x.id===id);
