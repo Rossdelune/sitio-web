@@ -428,8 +428,8 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
   </div>
   <div class="divider"></div>
   <div class="access-buttons">
-    <button class="btn-access btn-admin"  onclick="openLogin('admin')">👑 &nbsp;Acceso Administrador</button>
-    <button class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
+    <button type="button" class="btn-access btn-admin"  onclick="openLogin('admin')">👑 &nbsp;Acceso Administrador</button>
+    <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
 <p class="footer-tag">Ross de Lune · Novias y Quinceañeras</p>
@@ -443,7 +443,7 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
     <div class="field"><label>Usuario</label><input type="text" id="inp-u" placeholder="tu usuario" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div class="field"><label>Contraseña</label><input type="password" id="inp-p" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div class="msg-err" id="login-err"></div>
-    <button class="btn-primary" id="btn-login" onclick="doLogin()">Entrar</button>
+    <button type="button" class="btn-primary" id="btn-login" onclick="doLogin()">Entrar</button>
   </div>
 </div>
 
