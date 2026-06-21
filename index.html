@@ -1210,6 +1210,7 @@ function toast(msg,type="ok"){
 
 // ══ LOGIN ══
 let loginRole="admin";
+let _desbloqueosTemp = new Set(); // secciones desbloqueadas por supervisor en esta sesión
 function openLogin(role){
   loginRole=role;
   const a=role==="admin";
@@ -1253,12 +1254,23 @@ function enterPanel(){
     document.getElementById("admin-sub-permisos").style.display="none";
     document.getElementById("admin-sub-hist").style.display="none";
     document.getElementById("admin-sub-micuenta").style.display="none";
-    // Ocultar botones de nav según permisos del worker
+    // Mostrar botones del nav — bloqueados con 🔒, permitidos normal
     const permisos = currentUser.permisos||{};
     SECCIONES_CTRL.forEach(s=>{
-      const permitido = permisos[s.id]!==false;
       const nb = document.getElementById("nb-"+s.id);
-      if(nb) nb.style.display = permitido?"":"none";
+      if(!nb) return;
+      const permitido = permisos[s.id]!==false;
+      nb.style.display="";
+      if(!permitido){
+        // Reemplazar el onclick por solicitud de auth, agregar candado visual
+        nb.dataset.bloqueado="true";
+        const textoOriginal = nb.innerHTML.replace(/🔒\s*/g,"");
+        nb.innerHTML = "🔒 " + textoOriginal;
+        nb.style.opacity="0.55";
+      } else {
+        nb.dataset.bloqueado="";
+        nb.style.opacity="";
+      }
     });
   }
   document.getElementById("my-display").value=currentUser.display||"";
@@ -1271,7 +1283,7 @@ function enterPanel(){
 }
 
 function doLogout(){
-  currentUser=null;allUsers=[];allClientes=[];loginRole=null;window._invData=[];
+  currentUser=null;allUsers=[];allClientes=[];loginRole=null;window._invData=[];_desbloqueosTemp=new Set();
   document.getElementById("screen-panel").classList.remove("show");
   document.getElementById("screen-welcome").style.display="flex";
   document.getElementById("ov-login").classList.remove("open");
@@ -1306,7 +1318,22 @@ function closeAllNav(){
 function goSec(id){
   // Verificar permiso — si el worker no tiene acceso, pedir auth supervisor
   if(currentUser && currentUser.role==="worker" && !tienePermiso(id)){
-    solicitarAuthSuper(()=>goSec(id));
+    solicitarAuthSuper(()=>{
+      // Registrar desbloqueo temporal para esta sección y su grupo
+      _desbloqueosTemp.add(id);
+      const seccion = SECCIONES_CTRL.find(s=>s.subs.includes(id)||s.id===id);
+      if(seccion){
+        _desbloqueosTemp.add(seccion.id);
+        // Quitar candado visual del botón nav
+        const nb = document.getElementById("nb-"+seccion.id);
+        if(nb && nb.dataset.bloqueado){
+          nb.innerHTML = nb.innerHTML.replace(/🔒\s*/g,"");
+          nb.style.opacity="";
+          nb.dataset.bloqueado="";
+        }
+      }
+      goSec(id);
+    });
     return;
   }
   closeAllNav();
@@ -2529,8 +2556,10 @@ async function guardarPermisos(){
 // Verifica si el usuario actual (worker) tiene permiso para una sección
 function tienePermiso(secId){
   if(!currentUser || currentUser.role==="admin") return true;
+  if(_desbloqueosTemp.has(secId)) return true;
   const seccion = SECCIONES_CTRL.find(s=>s.subs.includes(secId)||s.id===secId);
   if(!seccion) return true;
+  if(_desbloqueosTemp.has(seccion.id)) return true;
   const permisos = currentUser.permisos||{};
   return permisos[seccion.id] !== false;
 }
