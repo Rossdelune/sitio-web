@@ -290,6 +290,12 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 .proceso-meta{font-size:.72rem;color:#AAA;letter-spacing:.03em;}
 .proceso-steps{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem;}
 .paso-btn{display:flex;align-items:center;gap:.35rem;padding:.32rem .7rem;border-radius:20px;border:1.5px solid #DDD;background:#FFF;font-size:.7rem;font-family:"Lato",sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .2s;color:#888;}
+.toggle-switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:#DDD;border-radius:24px;transition:.2s}
+.toggle-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:#FFF;border-radius:50%;transition:.2s}
+.toggle-switch input:checked+.toggle-slider{background:var(--dorado-g)}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(18px)}
 .paso-btn.done{border-color:var(--dorado);background:var(--dorado-g);color:#FFF8EC;}
 .paso-btn .paso-check{font-size:.8rem;}
 .proceso-entrega{font-size:.72rem;color:var(--dorado-d);margin-top:.5rem;border-top:1px solid #F0E8D8;padding-top:.4rem;}
@@ -501,6 +507,7 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
       <div class="subnav" id="sub-config">
         <button class="sub-item" onclick="goSec('mi-cuenta')" id="admin-sub-micuenta">👤 Mi cuenta</button>
         <button class="sub-item" onclick="goSec('colaboradores')" id="admin-sub-colab">👥 Colaboradores</button>
+        <button class="sub-item" onclick="goSec('permisos')" id="admin-sub-permisos">🔐 Permisos</button>
         <button class="sub-item" onclick="goSec('historial-accesos')" id="admin-sub-hist">🕐 Historial accesos</button>
       </div>
     </div>
@@ -1017,6 +1024,27 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
     </div>
 
     <!-- ── HISTORIAL ── -->
+    <!-- ── PERMISOS ── -->
+    <div class="section" id="sec-permisos">
+      <div class="sec-title">Permisos de Colaboradores</div>
+      <div class="card">
+        <div class="hdr-row">
+          <div class="card-title" style="margin:0">Selecciona un colaborador</div>
+        </div>
+        <div id="permisos-worker-list" style="margin-bottom:.8rem;display:flex;flex-wrap:wrap;gap:.4rem"></div>
+        <div id="permisos-panel" style="display:none">
+          <div style="font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--dorado-d);margin-bottom:.6rem">
+            Acceso a secciones — <span id="permisos-worker-nombre" style="color:var(--cafe)"></span>
+          </div>
+          <div id="permisos-toggles"></div>
+          <div style="margin-top:.8rem;display:flex;gap:.6rem">
+            <button class="btn-save" onclick="guardarPermisos()">💾 Guardar permisos</button>
+          </div>
+          <div id="permisos-msg" style="font-size:.74rem;margin-top:.4rem;min-height:.9rem"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="section" id="sec-historial-accesos">
       <div class="sec-title">Historial de Accesos</div>
       <div class="card">
@@ -1222,6 +1250,16 @@ function enterPanel(){
   document.getElementById("top-user").textContent="@"+currentUser.user;
   if(currentUser.role!=="admin"){
     document.getElementById("admin-sub-colab").style.display="none";
+    document.getElementById("admin-sub-permisos").style.display="none";
+    document.getElementById("admin-sub-hist").style.display="none";
+    document.getElementById("admin-sub-micuenta").style.display="none";
+    // Ocultar botones de nav según permisos del worker
+    const permisos = currentUser.permisos||{};
+    SECCIONES_CTRL.forEach(s=>{
+      const permitido = permisos[s.id]!==false;
+      const nb = document.getElementById("nb-"+s.id);
+      if(nb) nb.style.display = permitido?"":"none";
+    });
   }
   document.getElementById("my-display").value=currentUser.display||"";
   document.getElementById("my-user").value=currentUser.user||"";
@@ -1229,7 +1267,6 @@ function enterPanel(){
   initColorPicker();
   initAdicionales();
   initPkgComponents("xv");
-  // Mostrar lista de clientes por defecto al entrar
   goSec("lista-clientes");
 }
 
@@ -1261,12 +1298,18 @@ function closeAllNav(){
 }
 
 function goSec(id){
+  // Verificar permiso — si el worker no tiene acceso, pedir auth supervisor
+  if(currentUser && currentUser.role==="worker" && !tienePermiso(id)){
+    solicitarAuthSuper(()=>goSec(id));
+    return;
+  }
   closeAllNav();
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
   const sec=document.getElementById("sec-"+id);
   if(sec)sec.classList.add("active");
   if(id==="colaboradores")loadWorkers();
   if(id==="historial-accesos")loadHistorial();
+  if(id==="permisos"){_permisosWorkerActual=null;renderPermisos();}
   if(id==="todos-pedidos"){renderPedidos();initFiltroEntregasAnio();}
   if(id==="entregas-fecha"){initFiltroEntregasAnio();}
   if(id==="pagos-pendientes"){renderPagosPendientes();}
@@ -2408,6 +2451,116 @@ async function eliminarSuministro(clienteId, idx_sumi){
   }catch(e){toast("Error al guardar","err");}
 }
 
+// ══ PERMISOS ══
+const SECCIONES_CTRL = [
+  {id:"clientes",       label:"👗 Clientes",          subs:["nuevo-cliente","lista-clientes"]},
+  {id:"pagos",          label:"💳 Pagos",              subs:["pagos-pendientes","historial-pagos","nota-sencilla"]},
+  {id:"pedidos",        label:"📋 Pedidos",            subs:["todos-pedidos","entregas-fecha"]},
+  {id:"progreso",       label:"📦 Progreso",           subs:["progreso-pedido","progreso-diseno"]},
+  {id:"inventario",     label:"🏷️ Inventario",         subs:["inv-qr","inv-paquetes"]},
+];
+
+let _permisosWorkerActual = null;
+
+function renderPermisos(){
+  const lista = document.getElementById("permisos-worker-list");
+  const panel = document.getElementById("permisos-panel");
+  if(!lista) return;
+  const workers = allUsers.filter(u=>u.role==="worker");
+  if(!workers.length){
+    lista.innerHTML='<p style="color:#AAA;font-size:.82rem">No hay colaboradores registrados.</p>';
+    return;
+  }
+  lista.innerHTML = workers.map(u=>`
+    <button class="paso-btn" onclick="seleccionarWorkerPermisos('${u.user}')"
+      style="${_permisosWorkerActual===u.user?'background:var(--dorado-g);color:#FFF8EC;border-color:transparent':''}">
+      ${u.display}
+    </button>`).join("");
+  if(!_permisosWorkerActual) panel.style.display="none";
+}
+
+function seleccionarWorkerPermisos(username){
+  _permisosWorkerActual = username;
+  const u = allUsers.find(x=>x.user===username);
+  if(!u) return;
+  document.getElementById("permisos-worker-nombre").textContent = u.display;
+  document.getElementById("permisos-panel").style.display="block";
+  const permisos = u.permisos || {};
+  const toggles = document.getElementById("permisos-toggles");
+  toggles.innerHTML = SECCIONES_CTRL.map(s=>{
+    const activo = permisos[s.id]!==false; // default: acceso permitido
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid #F5F0E8">
+      <span style="font-size:.84rem">${s.label}</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="perm-${s.id}" ${activo?"checked":""}>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>`;
+  }).join("");
+  renderPermisos(); // re-render para resaltar el seleccionado
+}
+
+async function guardarPermisos(){
+  const msg = document.getElementById("permisos-msg");
+  msg.textContent="";
+  if(!_permisosWorkerActual) return;
+  const permisos = {};
+  SECCIONES_CTRL.forEach(s=>{
+    permisos[s.id] = document.getElementById("perm-"+s.id)?.checked !== false;
+  });
+  try{
+    const data = await loadData();
+    allUsers = data.users||[];
+    const idx = allUsers.findIndex(x=>x.user===_permisosWorkerActual);
+    if(idx>-1) allUsers[idx].permisos = permisos;
+    await saveData({...data, users:allUsers, clientes:data.clientes||[]});
+    msg.style.color="var(--verde)";
+    msg.textContent="✓ Permisos guardados";
+    toast("Permisos actualizados ✓");
+  }catch(e){msg.style.color="var(--rojo)";msg.textContent="Error al guardar.";}
+}
+
+// Verifica si el usuario actual (worker) tiene permiso para una sección
+function tienePermiso(secId){
+  if(!currentUser || currentUser.role==="admin") return true;
+  const seccion = SECCIONES_CTRL.find(s=>s.subs.includes(secId)||s.id===secId);
+  if(!seccion) return true;
+  const permisos = currentUser.permisos||{};
+  return permisos[seccion.id] !== false;
+}
+
+// ══ AUTORIZACIÓN SUPERVISOR ══
+let _authSuperCallback = null;
+
+function solicitarAuthSuper(callback){
+  _authSuperCallback = callback;
+  document.getElementById("auth-super-user").value="";
+  document.getElementById("auth-super-pass").value="";
+  document.getElementById("auth-super-err").textContent="";
+  const modal = document.getElementById("modal-auth-super");
+  modal.style.display="flex";
+  setTimeout(()=>document.getElementById("auth-super-user").focus(),80);
+}
+
+function cerrarAuthSuper(){
+  document.getElementById("modal-auth-super").style.display="none";
+  _authSuperCallback=null;
+}
+
+async function verificarAuthSuper(){
+  const u = document.getElementById("auth-super-user").value.trim().toLowerCase();
+  const p = document.getElementById("auth-super-pass").value;
+  const err = document.getElementById("auth-super-err");
+  err.textContent="";
+  try{
+    const data = await loadData();
+    const admin = (data.users||[]).find(x=>x.user===u&&x.pass===p&&x.role==="admin"&&!x.blocked);
+    if(!admin){err.textContent="Credenciales incorrectas.";return;}
+    cerrarAuthSuper();
+    if(_authSuperCallback) _authSuperCallback();
+  }catch(e){err.textContent="Error de conexión.";}
+}
+
 // ══ INVENTARIO ══
 // QR: se usa la librería QRCode.js cargada desde CDN
 
@@ -3010,6 +3163,21 @@ function generarContrato(c){
 
 
 </script>
+
+<!-- ══ MODAL AUTORIZACIÓN SUPERVISOR ══ -->
+<div id="modal-auth-super" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;align-items:center;justify-content:center">
+  <div style="background:#FFF;border-radius:8px;padding:1.5rem;max-width:300px;width:90%">
+    <div style="font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dorado-d);margin-bottom:.3rem">Autorización requerida</div>
+    <div style="font-size:.88rem;color:var(--cafe);margin-bottom:.8rem">Ingresa la clave de un administrador para continuar.</div>
+    <div class="fi"><label>Usuario admin</label><input type="text" id="auth-super-user" placeholder="usuario"></div>
+    <div class="fi"><label>Contraseña</label><input type="password" id="auth-super-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')verificarAuthSuper()"></div>
+    <div id="auth-super-err" style="font-size:.74rem;color:var(--rojo);min-height:.9rem;margin-top:.3rem"></div>
+    <div style="display:flex;gap:.6rem;margin-top:.8rem">
+      <button class="btn-save" onclick="verificarAuthSuper()">✓ Autorizar</button>
+      <button class="btn-sec" onclick="cerrarAuthSuper()">Cancelar</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ MODAL IMPRESIÓN QR ══ -->
 <div id="modal-qr-print" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center">
