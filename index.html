@@ -387,6 +387,12 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 @media print{
   body > *:not(.overlay){display:none!important;}
   .overlay{display:none!important;}
+  #modal-qr-print.printing{
+    display:flex!important;position:fixed!important;
+    inset:0!important;background:#fff!important;z-index:9999!important;
+    align-items:center!important;justify-content:center!important;
+  }
+  #modal-qr-print.printing .no-print{display:none!important;}
   #modal-contrato.open,#modal-nota.open,#modal-nota-sencilla.open{
     display:block!important;position:fixed!important;
     inset:0!important;overflow:auto!important;
@@ -1202,7 +1208,7 @@ async function doLogin(){
     if(match.blocked){err.textContent="Cuenta bloqueada. Contacta al administrador.";btn.innerHTML="Entrar";btn.disabled=false;return;}
     const now=new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"});
     if(!match.accesos)match.accesos=[];
-    match.accesos.unshift(now);if(match.accesos.length>50)match.accesos=match.accesos.slice(0,50);
+    match.accesos.unshift(now);
     const idx=allUsers.findIndex(x=>x.user===u);allUsers[idx]=match;
     await saveData({...data,users:allUsers,clientes:allClientes});
     currentUser=match;closeLogin();enterPanel();
@@ -2498,21 +2504,33 @@ function verQR(artId){
 function imprimirQR(artId){
   const a = (window._invData||[]).find(x=>x.id===artId);
   if(!a) return;
-  const qrDiv = document.getElementById("qr-render-"+artId);
-  const qrHTML = qrDiv ? qrDiv.innerHTML : "";
-  const w = window.open("","_blank","width=400,height=500");
-  w.document.write(`<!DOCTYPE html><html><head><title>QR ${a.modelo||artId}</title>
-  <style>body{font-family:Arial,sans-serif;text-align:center;padding:2rem;color:#1a1a1a}
-  h2{font-size:1rem;margin-bottom:.3rem} p{font-size:.8rem;color:#666;margin:.1rem 0}
-  .qr{margin:1rem auto;display:inline-block}</style></head><body>
-  <h2>${a.modelo||"Artículo"}</h2>
-  <p>${a.categoria||""} · Talla ${a.talla||"—"} · ${a.colorNombre||""}</p>
-  <p>$${Number(a.precio||0).toLocaleString()}</p>
-  <div class="qr">${qrHTML}</div>
-  <p style="font-size:.65rem;color:#AAA;margin-top:.5rem">ID: ${artId}</p>
-  <script>window.onload=()=>{window.print();window.close()}<\/script>
-  </body></html>`);
-  w.document.close();
+  // Llenar el modal
+  document.getElementById("qr-print-nombre").textContent = a.modelo||"Artículo";
+  document.getElementById("qr-print-meta").textContent = (a.categoria||"") + " · Talla " + (a.talla||"—") + " · " + (a.colorNombre||"");
+  document.getElementById("qr-print-precio").textContent = "$" + Number(a.precio||0).toLocaleString();
+  document.getElementById("qr-print-id").textContent = "ID: " + artId;
+  // Generar QR en el modal
+  const qrEl = document.getElementById("qr-print-img");
+  qrEl.innerHTML = "";
+  if(window.QRCode){
+    new QRCode(qrEl,{text:artId,width:180,height:180,colorDark:"#3a2a1a",colorLight:"#ffffff"});
+  }
+  const modal = document.getElementById("modal-qr-print");
+  modal.style.display = "flex";
+}
+
+function ejecutarImpresionQR(){
+  const modal = document.getElementById("modal-qr-print");
+  modal.classList.add("printing");
+  setTimeout(()=>{
+    window.print();
+    modal.classList.remove("printing");
+  }, 200);
+}
+
+function cerrarModalQR(){
+  document.getElementById("modal-qr-print").style.display = "none";
+  document.getElementById("qr-print-img").innerHTML = "";
 }
 
 function previewInvFoto(input){
@@ -2992,5 +3010,20 @@ function generarContrato(c){
 
 
 </script>
+
+<!-- ══ MODAL IMPRESIÓN QR ══ -->
+<div id="modal-qr-print" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center">
+  <div id="qr-print-inner" style="background:#FFF;border-radius:8px;padding:1.5rem;max-width:320px;width:90%;text-align:center">
+    <div id="qr-print-img" style="margin:0 auto .8rem"></div>
+    <div id="qr-print-nombre" style="font-size:.95rem;font-weight:600;color:#1a1a1a;margin-bottom:.2rem"></div>
+    <div id="qr-print-meta" style="font-size:.75rem;color:#888;margin-bottom:.2rem"></div>
+    <div id="qr-print-precio" style="font-size:.85rem;font-weight:600;color:#7A4F2A;margin-bottom:.2rem"></div>
+    <div id="qr-print-id" style="font-size:.62rem;color:#BBB;margin-top:.3rem"></div>
+    <div class="no-print" style="display:flex;gap:.6rem;justify-content:center;margin-top:1rem">
+      <button class="paso-btn" onclick="ejecutarImpresionQR()">🖨️ Imprimir</button>
+      <button class="btn-sec" onclick="cerrarModalQR()">Cerrar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
