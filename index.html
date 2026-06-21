@@ -293,6 +293,10 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 .paso-btn.done{border-color:var(--dorado);background:var(--dorado-g);color:#FFF8EC;}
 .paso-btn .paso-check{font-size:.8rem;}
 .proceso-entrega{font-size:.72rem;color:var(--dorado-d);margin-top:.5rem;border-top:1px solid #F0E8D8;padding-top:.4rem;}
+.paso-row{margin-bottom:.7rem;padding-bottom:.7rem;border-bottom:1px solid #F5F0E8;}
+.paso-row:last-child{border-bottom:none;margin-bottom:0;}
+.paso-nota-input{width:100%;border:none;border-bottom:1px dashed #DDD;padding:.3rem 0;font-family:"Lato",sans-serif;font-size:.76rem;color:var(--texto);background:transparent;outline:none;resize:none;transition:border-color .2s;}
+.paso-nota-input:focus{border-color:var(--dorado);}
 
 .proceso-card{background:#fff;border-radius:4px;box-shadow:0 2px 10px rgba(122,79,42,.07);margin-bottom:1rem;overflow:hidden;}
 .proceso-card-header{
@@ -2091,7 +2095,6 @@ const PASOS_PEDIDO = [
 function renderProceso(){
   const lista = document.getElementById("proceso-lista");
   if(!lista) return;
-  // Mostrar todos excepto entregados
   const activos = allClientes.filter(c => c.estatus !== "Entregado");
   if(!activos.length){
     lista.innerHTML='<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin pedidos activos.</p>';
@@ -2120,9 +2123,16 @@ function buildProcesoCard(c){
   const entrega = c.entrega ? new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX") : "—";
   const pasos = PASOS_PEDIDO.map(p => {
     const done = !!prog[p.id];
-    return `<button class="paso-btn ${done?"done":""}" onclick="togglePasoPedido('${c.id}','${p.id}')">
-      <span class="paso-check">${done?"✓":"○"}</span>${p.label}
-    </button>`;
+    const nota = prog[p.id+"_nota"]||"";
+    return `<div class="paso-row">
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem">
+        <button class="paso-btn ${done?"done":""}" onclick="togglePasoPedido('${c.id}','${p.id}')">
+          <span class="paso-check">${done?"✓":"○"}</span>${p.label}
+        </button>
+      </div>
+      <textarea class="paso-nota-input" placeholder="Observaciones del ${p.label}..." rows="2"
+        onblur="guardarNotaPedido('${c.id}','${p.id+"_nota"}',this.value)">${nota}</textarea>
+    </div>`;
   }).join("");
   return `<div class="proceso-card" id="pcard-${c.id}">
     <div class="proceso-card-header">
@@ -2132,7 +2142,7 @@ function buildProcesoCard(c){
       </div>
       <span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}">${c.estatus||"—"}</span>
     </div>
-    <div class="proceso-steps">${pasos}</div>
+    <div style="margin-top:.5rem">${pasos}</div>
     <div class="proceso-entrega">📅 Entrega: <strong>${entrega}</strong></div>
   </div>`;
 }
@@ -2143,7 +2153,6 @@ async function togglePasoPedido(clienteId, pasoId){
   if(!c.progreso) c.progreso={};
   if(!c.progreso.pedido) c.progreso.pedido={};
   c.progreso.pedido[pasoId] = !c.progreso.pedido[pasoId];
-  // Si marcan Entrega, actualizar estatus
   if(pasoId==="entregado" && c.progreso.pedido[pasoId]) c.estatus="Entregado";
   try{
     const data = await loadData();
@@ -2158,17 +2167,28 @@ async function togglePasoPedido(clienteId, pasoId){
   }catch(e){toast("Error al guardar","err");}
 }
 
+async function guardarNotaPedido(clienteId, campo, valor){
+  const data = await loadData();
+  allClientes = data.clientes||[];
+  const idx = allClientes.findIndex(x=>x.id===clienteId);
+  if(idx<0) return;
+  if(!allClientes[idx].progreso) allClientes[idx].progreso={};
+  if(!allClientes[idx].progreso.pedido) allClientes[idx].progreso.pedido={};
+  allClientes[idx].progreso.pedido[campo] = valor;
+  await saveData({...data, users:allUsers, clientes:allClientes});
+}
+
 // ══ PROCESO DISEÑO (Elaboración propia) ══
 const PASOS_DISENO = [
-  {id:"bocetaje",  label:"Bocetaje"},
-  {id:"insumos",   label:"Insumos"},
-  {id:"corte",     label:"Corte"},
-  {id:"confeccion",label:"Confección"},
-  {id:"bordado",   label:"Bordado"},
-  {id:"ajuste1",   label:"1er Ajuste"},
-  {id:"ajuste2",   label:"2do Ajuste"},
-  {id:"ajuste3",   label:"3er Ajuste"},
-  {id:"entregado", label:"Entrega"}
+  {id:"bocetaje",   label:"Diseño — Bocetaje y medidas"},
+  {id:"insumos",    label:"Adquisición de insumos"},
+  {id:"corte",      label:"Corte"},
+  {id:"confeccion", label:"Confección"},
+  {id:"bordado",    label:"Bordado / Decoración"},
+  {id:"ajuste1",    label:"1er Ajuste"},
+  {id:"ajuste2",    label:"2do Ajuste"},
+  {id:"ajuste3",    label:"3er Ajuste"},
+  {id:"entregado",  label:"Preparación y entrega"}
 ];
 
 function renderDiseno(){
@@ -2204,12 +2224,41 @@ function filtrarDiseno(q){
 function buildDisenoCard(c){
   const prog = c.progreso?.diseno || {};
   const entrega = c.entrega ? new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX") : "—";
+  const fechaInicio = prog.fechaInicio||"";
+
   const pasos = PASOS_DISENO.map(p => {
     const done = !!prog[p.id];
-    return `<button class="paso-btn ${done?"done":""}" onclick="togglePasoDiseno('${c.id}','${p.id}')">
-      <span class="paso-check">${done?"✓":"○"}</span>${p.label}
-    </button>`;
+    const nota = prog[p.id+"_nota"]||"";
+    return `<div class="paso-row">
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem">
+        <button class="paso-btn ${done?"done":""}" onclick="togglePasoDiseno('${c.id}','${p.id}')">
+          <span class="paso-check">${done?"✓":"○"}</span>${p.label}
+        </button>
+      </div>
+      <textarea class="paso-nota-input" placeholder="Observaciones..." rows="2"
+        onblur="guardarNotaDiseno('${c.id}','${p.id+"_nota"}',this.value)">${nota}</textarea>
+    </div>`;
   }).join("");
+
+  // Tabla de suministros
+  const sumi = prog.suministros||[{insumo:"",categoria:"",proveedor:"",estado:"",fechaRecepcion:""}];
+  const sumiRows = sumi.map((s,i)=>`
+    <tr>
+      <td><input class="sumi-input" value="${s.insumo||""}" placeholder="Tela, hilo..." onblur="guardarSuministro('${c.id}',${i},'insumo',this.value)"></td>
+      <td><input class="sumi-input" value="${s.categoria||""}" placeholder="Categoría" onblur="guardarSuministro('${c.id}',${i},'categoria',this.value)"></td>
+      <td><input class="sumi-input" value="${s.proveedor||""}" placeholder="Proveedor" onblur="guardarSuministro('${c.id}',${i},'proveedor',this.value)"></td>
+      <td>
+        <select class="sumi-input" onblur="guardarSuministro('${c.id}',${i},'estado',this.value)" onchange="guardarSuministro('${c.id}',${i},'estado',this.value)">
+          <option value="" ${!s.estado?"selected":""}>—</option>
+          <option value="Pendiente" ${s.estado==="Pendiente"?"selected":""}>Pendiente</option>
+          <option value="Solicitado" ${s.estado==="Solicitado"?"selected":""}>Solicitado</option>
+          <option value="Recibido" ${s.estado==="Recibido"?"selected":""}>Recibido</option>
+        </select>
+      </td>
+      <td><input class="sumi-input" type="date" value="${s.fechaRecepcion||""}" onblur="guardarSuministro('${c.id}',${i},'fechaRecepcion',this.value)"></td>
+      <td><button class="btn-del-row" onclick="eliminarSuministro('${c.id}',${i})">✕</button></td>
+    </tr>`).join("");
+
   return `<div class="proceso-card" id="dcard-${c.id}">
     <div class="proceso-card-header">
       <div>
@@ -2218,8 +2267,39 @@ function buildDisenoCard(c){
       </div>
       <span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}">${c.estatus||"—"}</span>
     </div>
-    <div class="proceso-steps">${pasos}</div>
-    <div class="proceso-entrega">📅 Entrega: <strong>${entrega}</strong></div>
+
+    <!-- Fechas -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin:.6rem 0;font-size:.78rem">
+      <div>
+        <div style="font-size:.66rem;color:#AAA;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.2rem">Fecha inicio elaboración</div>
+        <input type="date" class="sumi-input" style="width:100%" value="${fechaInicio}"
+          onblur="guardarNotaDiseno('${c.id}','fechaInicio',this.value)">
+      </div>
+      <div>
+        <div style="font-size:.66rem;color:#AAA;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.2rem">Fecha de entrega</div>
+        <div style="padding:.3rem 0;font-weight:600;color:var(--dorado-d)">${entrega}</div>
+      </div>
+    </div>
+
+    <!-- Etapas -->
+    <div style="border-top:1px solid #F0E8D8;padding-top:.7rem;margin-bottom:.7rem">
+      <div style="font-size:.66rem;color:var(--dorado-d);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem">Etapas de elaboración</div>
+      ${pasos}
+    </div>
+
+    <!-- Suministros -->
+    <div style="border-top:1px solid #F0E8D8;padding-top:.7rem">
+      <div style="font-size:.66rem;color:var(--dorado-d);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.4rem">Suministros</div>
+      <div style="overflow-x:auto">
+        <table class="sumi-tabla">
+          <thead><tr>
+            <th>Insumo</th><th>Categoría</th><th>Proveedor</th><th>Estado</th><th>Fecha recepción</th><th></th>
+          </tr></thead>
+          <tbody id="sumi-tbody-${c.id}">${sumiRows}</tbody>
+        </table>
+      </div>
+      <button class="btn-add-row" onclick="agregarSuministro('${c.id}')">+ Agregar insumo</button>
+    </div>
   </div>`;
 }
 
@@ -2238,6 +2318,61 @@ async function togglePasoDiseno(clienteId, pasoId){
       allClientes[idx].progreso = c.progreso;
       if(pasoId==="entregado" && c.progreso.diseno[pasoId]) allClientes[idx].estatus="Entregado";
     }
+    await saveData({...data, users:allUsers, clientes:allClientes});
+    renderDiseno();
+  }catch(e){toast("Error al guardar","err");}
+}
+
+async function guardarNotaDiseno(clienteId, campo, valor){
+  try{
+    const data = await loadData();
+    allClientes = data.clientes||[];
+    const idx = allClientes.findIndex(x=>x.id===clienteId);
+    if(idx<0) return;
+    if(!allClientes[idx].progreso) allClientes[idx].progreso={};
+    if(!allClientes[idx].progreso.diseno) allClientes[idx].progreso.diseno={};
+    allClientes[idx].progreso.diseno[campo] = valor;
+    await saveData({...data, users:allUsers, clientes:allClientes});
+  }catch(e){toast("Error al guardar","err");}
+}
+
+async function guardarSuministro(clienteId, idx_sumi, campo, valor){
+  try{
+    const data = await loadData();
+    allClientes = data.clientes||[];
+    const idx = allClientes.findIndex(x=>x.id===clienteId);
+    if(idx<0) return;
+    if(!allClientes[idx].progreso) allClientes[idx].progreso={};
+    if(!allClientes[idx].progreso.diseno) allClientes[idx].progreso.diseno={};
+    if(!allClientes[idx].progreso.diseno.suministros) allClientes[idx].progreso.diseno.suministros=[];
+    if(!allClientes[idx].progreso.diseno.suministros[idx_sumi]) allClientes[idx].progreso.diseno.suministros[idx_sumi]={};
+    allClientes[idx].progreso.diseno.suministros[idx_sumi][campo] = valor;
+    await saveData({...data, users:allUsers, clientes:allClientes});
+  }catch(e){toast("Error al guardar","err");}
+}
+
+async function agregarSuministro(clienteId){
+  try{
+    const data = await loadData();
+    allClientes = data.clientes||[];
+    const idx = allClientes.findIndex(x=>x.id===clienteId);
+    if(idx<0) return;
+    if(!allClientes[idx].progreso) allClientes[idx].progreso={};
+    if(!allClientes[idx].progreso.diseno) allClientes[idx].progreso.diseno={};
+    if(!allClientes[idx].progreso.diseno.suministros) allClientes[idx].progreso.diseno.suministros=[];
+    allClientes[idx].progreso.diseno.suministros.push({insumo:"",categoria:"",proveedor:"",estado:"",fechaRecepcion:""});
+    await saveData({...data, users:allUsers, clientes:allClientes});
+    renderDiseno();
+  }catch(e){toast("Error al guardar","err");}
+}
+
+async function eliminarSuministro(clienteId, idx_sumi){
+  try{
+    const data = await loadData();
+    allClientes = data.clientes||[];
+    const idx = allClientes.findIndex(x=>x.id===clienteId);
+    if(idx<0) return;
+    allClientes[idx].progreso.diseno.suministros.splice(idx_sumi,1);
     await saveData({...data, users:allUsers, clientes:allClientes});
     renderDiseno();
   }catch(e){toast("Error al guardar","err");}
@@ -2275,11 +2410,12 @@ function filtrarInventario(q){
 }
 
 function buildInvCard(a){
-  const foto = a.foto
-    ? `<img src="${a.foto}" style="width:64px;height:64px;object-fit:cover;border-radius:3px;border:1px solid #EEE;flex-shrink:0">`
+  const foto = a.tieneFoto ? (localStorage.getItem("foto_"+a.id)||"") : "";
+  const fotoHTML = foto
+    ? `<img src="${foto}" style="width:64px;height:64px;object-fit:cover;border-radius:3px;border:1px solid #EEE;flex-shrink:0">`
     : `<div style="width:64px;height:64px;background:#F5F0E8;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">👗</div>`;
   return `<div class="proceso-card" style="display:flex;gap:.8rem;align-items:flex-start">
-    ${foto}
+    ${fotoHTML}
     <div style="flex:1;min-width:0">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
         <div>
@@ -2301,10 +2437,11 @@ function verQR(artId){
   const a = (window._invData||[]).find(x=>x.id===artId);
   if(!a) return;
   goSec("inv-detalle");
+  const fotoDetalle = a.tieneFoto ? (localStorage.getItem("foto_"+a.id)||"") : "";
   const card = document.getElementById("inv-detalle-card");
   card.innerHTML = `
     <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start">
-      ${a.foto?`<img src="${a.foto}" style="width:120px;height:120px;object-fit:cover;border-radius:4px;border:1px solid #EEE">`:""}
+      ${fotoDetalle?`<img src="${fotoDetalle}" style="width:120px;height:120px;object-fit:cover;border-radius:4px;border:1px solid #EEE">`:""}
       <div style="flex:1;min-width:180px">
         <div class="proceso-nombre" style="font-size:1rem;margin-bottom:.3rem">${a.modelo||"Sin nombre"}</div>
         <div class="proceso-meta">${a.categoria||"—"}</div>
@@ -2387,10 +2524,16 @@ async function guardarArticuloInv(){
   if(!categoria){msg.textContent="Selecciona una categoría.";return;}
 
   const fotoPreview = document.getElementById("inv-foto-preview");
-  const foto = fotoPreview.style.display!=="none" ? fotoPreview.src : "";
+  const fotoBase64 = fotoPreview.style.display!=="none" ? fotoPreview.src : "";
+  const artId = "INV"+Date.now();
+
+  // Foto se guarda en localStorage (no en JSONBin para no exceder el límite de tamaño)
+  if(fotoBase64){
+    try{ localStorage.setItem("foto_"+artId, fotoBase64); }catch(e){}
+  }
 
   const articulo = {
-    id: "INV"+Date.now(),
+    id: artId,
     categoria,
     modelo,
     talla: document.getElementById("inv-talla").value.trim(),
@@ -2399,7 +2542,7 @@ async function guardarArticuloInv(){
     precio: document.getElementById("inv-precio").value,
     cantidad: document.getElementById("inv-cantidad").value||1,
     notas: document.getElementById("inv-notas").value.trim(),
-    foto,
+    tieneFoto: !!fotoBase64,
     creadoEn: new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"})
   };
 
