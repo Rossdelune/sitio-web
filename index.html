@@ -1271,9 +1271,15 @@ function enterPanel(){
 }
 
 function doLogout(){
-  currentUser=null;allUsers=[];allClientes=[];loginRole=null;
+  currentUser=null;allUsers=[];allClientes=[];loginRole=null;window._invData=[];
   document.getElementById("screen-panel").classList.remove("show");
   document.getElementById("screen-welcome").style.display="flex";
+  document.getElementById("ov-login").classList.remove("open");
+  document.getElementById("inp-u").value="";
+  document.getElementById("inp-p").value="";
+  document.getElementById("login-err").textContent="";
+  document.getElementById("btn-login").innerHTML="Entrar";
+  document.getElementById("btn-login").disabled=false;
   closeAllNav();
 }
 
