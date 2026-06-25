@@ -1033,6 +1033,13 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
     <!-- ── WHATSAPP CONFIG ── -->
     <div class="section" id="sec-whatsapp-config">
       <div class="sec-title">WhatsApp — Recordatorios</div>
+      <!-- BOTÓN TEMPORAL DE MIGRACIÓN — eliminar después de migrar -->
+      <div class="card" style="border:2px solid var(--dorado);margin-bottom:.6rem">
+        <div class="card-title" style="color:var(--dorado-d)">⚠️ Migración JSONBin → Firestore</div>
+        <p style="font-size:.76rem;color:#888;margin-bottom:.8rem">Usa este botón UNA SOLA VEZ para copiar todos los datos de JSONBin a Firestore. Después de usarlo puedes ignorarlo.</p>
+        <button class="btn-save" id="btn-migrar" onclick="migrarAFirestore()">🔄 Migrar datos ahora</button>
+        <div id="migrar-msg" style="font-size:.74rem;margin-top:.4rem;min-height:.9rem"></div>
+      </div>
       <div class="card">
         <div class="card-title">Credenciales Twilio</div>
         <p style="font-size:.76rem;color:#AAA;margin-bottom:.8rem">Ingresa las credenciales cuando tengas el número configurado en Twilio.</p>
@@ -1201,12 +1208,12 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 // Firebase Console → ⚙️ Configuración del proyecto → Tus apps
 // ─────────────────────────────────────────────────────────────────
 const firebaseConfig = {
-  apiKey:            "AIzaSyB4l-GtmZb9BosHYnJbMkiEGxVwoqzA-6o",
-  authDomain:        "rossdelune-6b174.firebaseapp.com",
-  projectId:         "rossdelune-6b174",
-  storageBucket:     "rossdelune-6b174.firebasestorage.app",
-  messagingSenderId: "790374471279",
-  appId:             "1:790374471279:web:472dea69a62aeb5c21df9a"
+  apiKey:            "REEMPLAZAR_API_KEY",
+  authDomain:        "REEMPLAZAR_AUTH_DOMAIN",
+  projectId:         "REEMPLAZAR_PROJECT_ID",
+  storageBucket:     "REEMPLAZAR_STORAGE_BUCKET",
+  messagingSenderId: "REEMPLAZAR_MESSAGING_SENDER_ID",
+  appId:             "REEMPLAZAR_APP_ID"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -2890,6 +2897,39 @@ function buscarPorQR(){
 // ─────────────────────────────────────────────────────────────────
 // CONFIGURACIÓN — llenar cuando se tenga el número de Twilio
 // ─────────────────────────────────────────────────────────────────
+// ══ MIGRACIÓN JSONBIN → FIRESTORE (usar una sola vez) ══
+const JSONBIN_URL = "https://api.jsonbin.io/v3/b/6a2f95d2da38895dfec1c3bb/latest";
+const JSONBIN_MASTER_KEY = "$2a$10$3E2kLNvPGqY3lb/WE.4o7uXawL1DYruxuYexxv0RXnagND.XprhAG";
+const JSONBIN_ACCESS_KEY = "$2a$10$9VfaQRuaCX9fyS6yiO1dhuh5DeDt89523dzWLH/.6jPYvy3wOcPv.";
+
+async function migrarAFirestore(){
+  const btn = document.getElementById("btn-migrar");
+  const msg = document.getElementById("migrar-msg");
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Migrando...';
+  msg.textContent="";
+  try{
+    // Leer datos de JSONBin
+    const r = await fetch(JSONBIN_URL+"?t="+Date.now(),{
+      cache:"no-store",
+      headers:{"X-Master-Key":JSONBIN_MASTER_KEY,"X-Access-Key":JSONBIN_ACCESS_KEY}
+    });
+    const j = await r.json();
+    const data = j.record;
+    if(!data){msg.style.color="var(--rojo)";msg.textContent="No se encontraron datos en JSONBin.";btn.disabled=false;btn.innerHTML="🔄 Migrar datos ahora";return;}
+    // Escribir en Firestore
+    await DOC_REF.set(data);
+    allUsers=data.users||[];allClientes=data.clientes||[];window._invData=data.inventario||[];
+    msg.style.color="var(--verde)";
+    msg.textContent=`✓ Migración completa — ${allClientes.length} clientes, ${allUsers.length} usuarios, ${(data.inventario||[]).length} artículos.`;
+    toast("Migración completada ✓");
+    btn.innerHTML="✓ Ya migrado";
+  }catch(e){
+    msg.style.color="var(--rojo)";
+    msg.textContent="Error: "+e.message;
+    btn.disabled=false;btn.innerHTML="🔄 Migrar datos ahora";
+  }
+}
+
 // ══ WHATSAPP — META GRAPH API (envío directo, sin intermediarios) ══
 // ─────────────────────────────────────────────────────────────────
 // CREDENCIALES — reemplazar localmente antes de subir a GitHub
