@@ -418,6 +418,10 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 </head>
 <body>
 
@@ -1190,23 +1194,38 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 <div class="toast" id="toast"></div>
 
 <script>
-// ══ CONFIG ══
-const MASTER_KEY = "$2a$10$3E2kLNvPGqY3lb/WE.4o7uXawL1DYruxuYexxv0RXnagND.XprhAG";
-const ACCESS_KEY = "$2a$10$9VfaQRuaCX9fyS6yiO1dhuh5DeDt89523dzWLH/.6jPYvy3wOcPv.";
-const BIN_ID     = "6a2f95d2da38895dfec1c3bb";
-const BIN_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+// ══ CONFIG FIREBASE ══
+// ─────────────────────────────────────────────────────────────────
+// Reemplaza los valores REEMPLAZAR_* con tu firebaseConfig real
+// antes de subir a GitHub. Encuéntralos en:
+// Firebase Console → ⚙️ Configuración del proyecto → Tus apps
+// ─────────────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyB4l-GtmZb9BosHYnJbMkiEGxVwoqzA-6o",
+  authDomain:        "rossdelune-6b174.firebaseapp.com",
+  projectId:         "rossdelune-6b174",
+  storageBucket:     "rossdelune-6b174.firebasestorage.app",
+  messagingSenderId: "790374471279",
+  appId:             "1:790374471279:web:472dea69a62aeb5c21df9a"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db      = firebase.firestore();
+const auth    = firebase.auth();
+const storage = firebase.storage();
+const DOC_REF = db.collection("rossdelune").doc("data");
 
 let currentUser = null, allUsers = [], allClientes = [];
 let editingWorker = null;
 let selectedColor = "#C8A8D0";
 
-// ══ JSONBin ══
+// ══ FIRESTORE — reemplaza JSONBin ══
 async function loadData(){
-  const r = await fetch(BIN_URL+"/latest?t="+Date.now(),{cache:"no-store",headers:{"X-Master-Key":MASTER_KEY,"X-Access-Key":ACCESS_KEY}});
-  const j = await r.json(); return j.record;
+  const snap = await DOC_REF.get();
+  return snap.exists ? snap.data() : {};
 }
 async function saveData(d){
-  await fetch(BIN_URL,{method:"PUT",headers:{"Content-Type":"application/json","X-Master-Key":MASTER_KEY,"X-Access-Key":ACCESS_KEY},body:JSON.stringify(d)});
+  await DOC_REF.set(d);
 }
 
 // Folio automático — calcula desde el máximo real en la lista de clientes
@@ -1260,6 +1279,9 @@ async function doLogin(){
     const match=allUsers.find(x=>x.user===u&&x.pass===p&&x.role===loginRole);
     if(!match){err.textContent="Usuario o contraseña incorrectos.";btn.innerHTML="Entrar";btn.disabled=false;return;}
     if(match.blocked){err.textContent="Cuenta bloqueada. Contacta al administrador.";btn.innerHTML="Entrar";btn.disabled=false;return;}
+    // Autenticar con Firebase Auth usando el correo interno del usuario
+    const email = u+"@rossdelune.app";
+    await auth.signInWithEmailAndPassword(email, p);
     const now=new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"});
     if(!match.accesos)match.accesos=[];
     match.accesos.unshift(now);
@@ -1309,6 +1331,7 @@ function enterPanel(){
 }
 
 function doLogout(){
+  auth.signOut();
   currentUser=null;allUsers=[];allClientes=[];loginRole=null;window._invData=[];_desbloqueosTemp=new Set();
   document.getElementById("screen-panel").classList.remove("show");
   document.getElementById("screen-welcome").style.display="flex";
@@ -2622,9 +2645,15 @@ async function verificarAuthSuper(){
     const data = await loadData();
     const admin = (data.users||[]).find(x=>x.user===u&&x.pass===p&&x.role==="admin"&&!x.blocked);
     if(!admin){err.textContent="Credenciales incorrectas.";return;}
+    // Verificar también con Firebase Auth
+    const email = u+"@rossdelune.app";
+    await auth.signInWithEmailAndPassword(email, p);
+    // Restaurar sesión del worker
+    const workerEmail = currentUser.user+"@rossdelune.app";
+    await auth.signInWithEmailAndPassword(workerEmail, currentUser.pass);
     cerrarAuthSuper();
     if(_authSuperCallback) _authSuperCallback();
-  }catch(e){err.textContent="Error de conexión.";}
+  }catch(e){err.textContent="Credenciales incorrectas.";}
 }
 
 // ══ INVENTARIO ══
@@ -2861,46 +2890,48 @@ function buscarPorQR(){
 // ─────────────────────────────────────────────────────────────────
 // CONFIGURACIÓN — llenar cuando se tenga el número de Twilio
 // ─────────────────────────────────────────────────────────────────
-const WA_CONFIG = {
-  TWILIO_SID:   "",          // Account SID de Twilio
-  TWILIO_TOKEN: "",          // Auth Token de Twilio
-  WHATSAPP_FROM: "",         // Número Twilio ej: "whatsapp:+14155238886"
-};
+// ══ WHATSAPP — META GRAPH API (envío directo, sin intermediarios) ══
+// ─────────────────────────────────────────────────────────────────
+// CREDENCIALES — reemplazar localmente antes de subir a GitHub
+// ─────────────────────────────────────────────────────────────────
+const WA_PHONE_NUMBER_ID  = "REEMPLAZAR_CON_PHONE_NUMBER_ID";   // ← pega aquí tu Phone Number ID de Meta
+const WA_ACCESS_TOKEN     = "REEMPLAZAR_CON_ACCESS_TOKEN";       // ← pega aquí tu Access Token de Meta (revoca el anterior)
+const WA_NUMERO_SOPORTE   = "REEMPLAZAR_CON_NUMERO_SOPORTE";     // ← número actual de Kateryn ej: 521XXXXXXXXXX
 
 // ─────────────────────────────────────────────────────────────────
 // DÍAS DE ANTELACIÓN para enviar recordatorio
 // Modificar este arreglo para cambiar cuándo se envían los avisos
 // ─────────────────────────────────────────────────────────────────
-const WA_DIAS_AVISO = [15, 7, 3, 1]; // días antes de la fecha límite
+const WA_DIAS_AVISO = [15, 7, 3, 1]; // días antes de la fecha límite de pago
 
-// Plantilla del mensaje — usa {nombre}, {monto}, {fecha}
+// Construye el mensaje de recordatorio
 function waPlantilla(nombre, monto, fecha){
-  return `Hola ${nombre} 👋, te recordamos que tienes un pago pendiente de *$${monto}* con fecha límite el *${fecha}*. Por favor realiza tu pago a tiempo para evitar cargos adicionales. — Ross de Lune 🌙`;
+  return `Hola ${nombre} 👋, te recordamos que tienes un pago pendiente de *$${monto}* con fecha límite el *${fecha}*.\n\nPor favor realiza tu pago a tiempo para evitar cargos adicionales.\n\n¿Tienes dudas? Escríbenos: https://wa.me/${WA_NUMERO_SOPORTE}\n\n— Ross de Lune 🌙`;
 }
 
-// Envía un mensaje WhatsApp vía Twilio
+// Envía un mensaje de texto directo a la Graph API de Meta
 async function waSendMessage(to, body){
-  if(!WA_CONFIG.TWILIO_SID || !WA_CONFIG.TWILIO_TOKEN || !WA_CONFIG.WHATSAPP_FROM){
-    console.warn("WhatsApp no configurado — faltan credenciales de Twilio.");
+  if(!WA_PHONE_NUMBER_ID || WA_PHONE_NUMBER_ID.startsWith("REEMPLAZAR")){
+    console.warn("WhatsApp no configurado — reemplaza las credenciales en el código.");
     return false;
   }
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${WA_CONFIG.TWILIO_SID}/Messages.json`;
-  const params = new URLSearchParams({
-    From: WA_CONFIG.WHATSAPP_FROM,
-    To:   "whatsapp:"+to,
-    Body: body
-  });
+  const url = `https://graph.facebook.com/v19.0/${WA_PHONE_NUMBER_ID}/messages`;
   try{
     const r = await fetch(url,{
       method:"POST",
       headers:{
-        "Authorization":"Basic "+btoa(WA_CONFIG.TWILIO_SID+":"+WA_CONFIG.TWILIO_TOKEN),
-        "Content-Type":"application/x-www-form-urlencoded"
+        "Authorization":"Bearer "+WA_ACCESS_TOKEN,
+        "Content-Type":"application/json"
       },
-      body: params
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: to,
+        type: "text",
+        text: { body }
+      })
     });
     const j = await r.json();
-    return j.sid ? true : false;
+    return j.messages ? true : false;
   }catch(e){
     console.error("Error enviando WhatsApp:",e);
     return false;
@@ -2911,20 +2942,14 @@ async function waSendMessage(to, body){
 async function waRevisarRecordatorios(){
   const hoy = new Date(); hoy.setHours(0,0,0,0);
   let enviados = 0, errores = 0;
-
   for(const c of allClientes){
     if(c.estatus==="Entregado") continue;
     if(!c.fechaLimite) continue;
-
     const tel = (c.cel||c.tel||"").replace(/\D/g,"");
     if(!tel) continue;
-
     const vence = new Date(c.fechaLimite+"T12:00:00");
     const diasRestantes = Math.ceil((vence-hoy)/(1000*60*60*24));
-
     if(!WA_DIAS_AVISO.includes(diasRestantes)) continue;
-
-    // Calcular saldo pendiente
     const precio = Number(c.precio||0);
     const paquete = Number(c.precioPaquete||0);
     const extras = (c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
@@ -2932,7 +2957,6 @@ async function waRevisarRecordatorios(){
     const pagado = Number(c.anticipo||0)+(c.pagos||[]).reduce((s,p)=>s+Number(p.monto||0),0);
     const saldo = total - pagado;
     if(saldo<=0) continue;
-
     const fechaStr = vence.toLocaleDateString("es-MX",{day:"2-digit",month:"long",year:"numeric"});
     const msg = waPlantilla(c.nombre, saldo.toLocaleString(), fechaStr);
     const ok = await waSendMessage(tel, msg);
@@ -2949,36 +2973,12 @@ async function waEnviarRecordatoriosManual(){
   if(res) res.textContent="";
   const {enviados,errores} = await waRevisarRecordatorios();
   if(btn){btn.disabled=false;btn.innerHTML='📤 Enviar recordatorios ahora';}
-  if(res) res.textContent = `✓ ${enviados} enviado${enviados!==1?"s":""} · ${errores} error${errores!==1?"es":""}`;
+  if(res) res.textContent=`✓ ${enviados} enviado${enviados!==1?"s":""} · ${errores} error${errores!==1?"es":""}`;
   toast(`WhatsApp: ${enviados} enviados`);
 }
 
-// Guarda credenciales Twilio en JSONBin
-async function waGuardarConfig(){
-  const msg = document.getElementById("wa-config-msg");
-  const sid   = document.getElementById("wa-sid").value.trim();
-  const token = document.getElementById("wa-token").value.trim();
-  const from  = document.getElementById("wa-from").value.trim();
-  if(!sid||!token||!from){msg.style.color="var(--rojo)";msg.textContent="Completa todos los campos.";return;}
-  try{
-    const data = await loadData();
-    data.waConfig = {sid,token,from};
-    await saveData({...data});
-    WA_CONFIG.TWILIO_SID   = sid;
-    WA_CONFIG.TWILIO_TOKEN = token;
-    WA_CONFIG.WHATSAPP_FROM = from;
-    msg.style.color="var(--verde)";msg.textContent="✓ Credenciales guardadas.";
-    toast("Credenciales WhatsApp guardadas ✓");
-  }catch(e){msg.style.color="var(--rojo)";msg.textContent="Error al guardar.";}
-}
-
-// Carga credenciales Twilio desde el bin al iniciar sesión
-function waCargarConfig(data){
-  if(!data.waConfig) return;
-  WA_CONFIG.TWILIO_SID    = data.waConfig.sid||"";
-  WA_CONFIG.TWILIO_TOKEN  = data.waConfig.token||"";
-  WA_CONFIG.WHATSAPP_FROM = data.waConfig.from||"";
-}
+// Las credenciales van directo en el código — no se guardan en el bin
+function waCargarConfig(data){ /* no-op */ }
 
 // ══ CONTRATO ══
 function verContrato(id){
