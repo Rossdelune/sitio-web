@@ -1288,7 +1288,7 @@ async function doLogin(){
     if(!match){err.textContent="Usuario o contraseña incorrectos.";btn.innerHTML="Entrar";btn.disabled=false;return;}
     if(match.blocked){err.textContent="Cuenta bloqueada. Contacta al administrador.";btn.innerHTML="Entrar";btn.disabled=false;return;}
     // Autenticar con Firebase Auth usando el correo interno del usuario
-    const email = u+"@rossdelune.app";
+    const email = u+"@rossdelune.com";
     await auth.signInWithEmailAndPassword(email, p);
     const now=new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"});
     if(!match.accesos)match.accesos=[];
@@ -2654,10 +2654,10 @@ async function verificarAuthSuper(){
     const admin = (data.users||[]).find(x=>x.user===u&&x.pass===p&&x.role==="admin"&&!x.blocked);
     if(!admin){err.textContent="Credenciales incorrectas.";return;}
     // Verificar también con Firebase Auth
-    const email = u+"@rossdelune.app";
+    const email = u+"@rossdelune.com";
     await auth.signInWithEmailAndPassword(email, p);
     // Restaurar sesión del worker
-    const workerEmail = currentUser.user+"@rossdelune.app";
+    const workerEmail = currentUser.user+"@rossdelune.com";
     await auth.signInWithEmailAndPassword(workerEmail, currentUser.pass);
     cerrarAuthSuper();
     if(_authSuperCallback) _authSuperCallback();
