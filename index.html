@@ -3413,8 +3413,7 @@ function generarNotaVenta(c){
         El cliente acepta que la información aquí detallada es correcta, incluyendo modelo, color y medidas. Asimismo, está de acuerdo con los términos de pago y las fechas de entrega establecidas.
       </div>
       <div style="text-align:center">
-        <div style="border-top:1px solid #333;display:inline-block;width:280px;padding-top:.3rem">NOMBRE Y FIRMA DEL CLIENTE</div>
-      </div>
+<div style="border-top:1px solid #333;display:inline-block;width:280px;padding-top:.3rem;margin-top:60px">NOMBRE Y FIRMA DEL CLIENTE</div>      </div>
     </div>
     </div>
   </div>`;
@@ -3588,8 +3587,8 @@ function generarContrato(c){
     </div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:6pt;font-size:7pt">
       <tr>
-        <td style="width:50%;vertical-align:top;padding-right:8pt"><strong>Proveedor</strong><br>ROSS DE LUNE · Tel: 921 255 0819<br>rossdelune@hotmail.com<br>Propela 10, Puerto Esmeralda, Coatzacoalcos, Ver.</td>
-        <td style="width:50%;vertical-align:top;border-left:1pt solid #DDD;padding-left:8pt"><strong>Cliente</strong><br>${c.nombre||"—"} · Cel: ${c.cel||"—"}<br>${c.correo||""} ${c.tel?"· Tel: "+c.tel:""}<br>${c.domicilio||""}</td>
+        <td style="width:50%;vertical-align:top;padding-right:8pt;font-size:10pt"><strong>Proveedor</strong><br>ROSS DE LUNE · Tel: 921 255 0819<br>rossdelune@hotmail.com<br>Propela 10, Puerto Esmeralda, Coatzacoalcos, Ver.</td>
+        <td style="width:50%;vertical-align:top;border-left:1pt solid #DDD;padding-left:8pt;font-size:10pt"><strong>Cliente</strong><br>${c.nombre||"—"} · Cel: ${c.cel||"—"}<br>${c.correo||""} ${c.tel?"· Tel: "+c.tel:""}<br>${c.domicilio||""}</td>
       </tr>
     </table>
     <div style="font-weight:700;text-align:center;letter-spacing:.08em;margin-bottom:4pt;border-bottom:1pt solid #CCC;padding-bottom:2pt">CLÁUSULAS</div>
@@ -3604,8 +3603,8 @@ function generarContrato(c){
     <p style="margin-bottom:6pt"><strong>OCTAVA.- ACEPTACIÓN.</strong> Ambas partes manifiestan haber leído y comprendido el presente contrato, firmando de conformidad en ${fC}.</p>
     <table style="width:100%;border-collapse:collapse;margin-top:8pt;font-size:7pt;text-align:center">
       <tr>
-        <td style="width:50%;padding:0 10pt"><div style="border-top:1pt solid #333;padding-top:3pt;margin-top:20pt">NOMBRE Y FIRMA DE LA CLIENTE</div><div style="color:#666;margin-top:2pt">${c.nombre||"___________________________"}</div></td>
-        <td style="width:50%;padding:0 10pt"><div style="border-top:1pt solid #333;padding-top:3pt;margin-top:20pt">NOMBRE Y FIRMA DEL PROVEEDOR</div><div style="color:#666;margin-top:2pt">Ross de Lune</div></td>
+        <td style="width:50%;padding:0 10pt"><div style="border-top:1pt solid #333;padding-top:3pt;margin-top:60pt">NOMBRE Y FIRMA DE LA CLIENTE</div><div style="color:#666;margin-top:2pt">${c.nombre||"___________________________"}</div></td>
+        <td style="width:50%;padding:0 10pt"><div style="border-top:1pt solid #333;padding-top:3pt;margin-top:60pt">NOMBRE Y FIRMA DEL PROVEEDOR</div><div style="color:#666;margin-top:2pt">Ross de Lune</div></td>
       </tr>
     </table>
     <div style="text-align:center;margin-top:4pt;font-size:6.5pt;color:#AAA">Fecha de entrega acordada: ${fE}</div>
