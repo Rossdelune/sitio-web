@@ -1054,12 +1054,8 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
     <div class="section" id="sec-whatsapp-config">
       <div class="sec-title">WhatsApp — Recordatorios</div>
       <div class="card">
-        <div class="card-title">Credenciales Twilio</div>
-        <p style="font-size:.76rem;color:#AAA;margin-bottom:.8rem">Ingresa las credenciales cuando tengas el número configurado en Twilio.</p>
-        <div class="fi"><label>Account SID</label><input type="text" id="wa-sid" placeholder="ACxxxxxxxxxxxxxxx"></div>
-        <div class="fi"><label>Auth Token</label><input type="password" id="wa-token" placeholder="••••••••••••••••"></div>
-        <div class="fi"><label>Número WhatsApp From</label><input type="text" id="wa-from" placeholder="whatsapp:+52XXXXXXXXXX"></div>
-        <button class="btn-save" onclick="waGuardarConfig()" style="margin-top:.5rem">💾 Guardar credenciales</button>
+        <div class="card-title">WhatsApp Business API</div>
+        <p style="font-size:.76rem;color:#AAA;margin-bottom:.8rem">La integración se realiza directamente con la API de WhatsApp Business (Meta Graph API). Configura las credenciales en el código cuando tengas el número activado.</p>
         <div id="wa-config-msg" style="font-size:.74rem;margin-top:.4rem;min-height:.9rem"></div>
       </div>
       <div class="card" style="margin-top:.6rem">
@@ -1394,9 +1390,7 @@ function goSec(id){
   if(id==="historial-accesos")loadHistorial();
   if(id==="permisos"){_permisosWorkerActual=null;renderPermisos();}
   if(id==="whatsapp-config"){
-    document.getElementById("wa-sid").value   = WA_CONFIG.TWILIO_SID||"";
-    document.getElementById("wa-token").value = WA_CONFIG.TWILIO_TOKEN||"";
-    document.getElementById("wa-from").value  = WA_CONFIG.WHATSAPP_FROM||"";
+    // WhatsApp Business API — sin credenciales en UI (configurar en código)
   }
   if(id==="todos-pedidos"){renderPedidos();initFiltroEntregasAnio();}
   if(id==="entregas-fecha"){initFiltroEntregasAnio();}
@@ -3121,12 +3115,12 @@ function buscarPorQR(){
 
 // ══ WHATSAPP RECORDATORIOS ══
 // ─────────────────────────────────────────────────────────────────
-// CONFIGURACIÓN — llenar cuando se tenga el número de Twilio
+// CONFIGURACIÓN — Meta Graph API (WhatsApp Business directo)
+// Llenar cuando se tenga el número aprobado en Meta Business Suite
 // ─────────────────────────────────────────────────────────────────
 const WA_CONFIG = {
-  TWILIO_SID:   "",          // Account SID de Twilio
-  TWILIO_TOKEN: "",          // Auth Token de Twilio
-  WHATSAPP_FROM: "",         // Número Twilio ej: "whatsapp:+14155238886"
+  PHONE_NUMBER_ID: "REEMPLAZAR_PHONE_NUMBER_ID", // ID del número en Meta
+  ACCESS_TOKEN:    "REEMPLAZAR_WA_ACCESS_TOKEN", // Token permanente de la app
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -3140,31 +3134,31 @@ function waPlantilla(nombre, monto, fecha){
   return `Hola ${nombre} 👋, te recordamos que tienes un pago pendiente de *$${monto}* con fecha límite el *${fecha}*. Por favor realiza tu pago a tiempo para evitar cargos adicionales. — Ross de Lune 🌙`;
 }
 
-// Envía un mensaje WhatsApp vía Twilio
+// Envía un mensaje WhatsApp vía Meta Graph API
 async function waSendMessage(to, body){
-  if(!WA_CONFIG.TWILIO_SID || !WA_CONFIG.TWILIO_TOKEN || !WA_CONFIG.WHATSAPP_FROM){
-    console.warn("WhatsApp no configurado — faltan credenciales de Twilio.");
+  if(!WA_CONFIG.PHONE_NUMBER_ID || WA_CONFIG.PHONE_NUMBER_ID.startsWith("REEMPLAZAR")){
+    console.warn("WhatsApp no configurado — reemplaza PHONE_NUMBER_ID y ACCESS_TOKEN en WA_CONFIG.");
     return false;
   }
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${WA_CONFIG.TWILIO_SID}/Messages.json`;
-  const params = new URLSearchParams({
-    From: WA_CONFIG.WHATSAPP_FROM,
-    To:   "whatsapp:"+to,
-    Body: body
-  });
+  const url = `https://graph.facebook.com/v19.0/${WA_CONFIG.PHONE_NUMBER_ID}/messages`;
   try{
-    const r = await fetch(url,{
-      method:"POST",
-      headers:{
-        "Authorization":"Basic "+btoa(WA_CONFIG.TWILIO_SID+":"+WA_CONFIG.TWILIO_TOKEN),
-        "Content-Type":"application/x-www-form-urlencoded"
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + WA_CONFIG.ACCESS_TOKEN,
+        "Content-Type": "application/json"
       },
-      body: params
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: to,
+        type: "text",
+        text: { body: body }
+      })
     });
     const j = await r.json();
-    return j.sid ? true : false;
+    return j.messages ? true : false;
   }catch(e){
-    console.error("Error enviando WhatsApp:",e);
+    console.error("Error enviando WhatsApp:", e);
     return false;
   }
 }
@@ -3215,31 +3209,10 @@ async function waEnviarRecordatoriosManual(){
   toast(`WhatsApp: ${enviados} enviados`);
 }
 
-// Guarda credenciales Twilio en JSONBin
-async function waGuardarConfig(){
-  const msg = document.getElementById("wa-config-msg");
-  const sid   = document.getElementById("wa-sid").value.trim();
-  const token = document.getElementById("wa-token").value.trim();
-  const from  = document.getElementById("wa-from").value.trim();
-  if(!sid||!token||!from){msg.style.color="var(--rojo)";msg.textContent="Completa todos los campos.";return;}
-  try{
-    const data = await loadData();
-    data.waConfig = {sid,token,from};
-    await saveData({...data});
-    WA_CONFIG.TWILIO_SID   = sid;
-    WA_CONFIG.TWILIO_TOKEN = token;
-    WA_CONFIG.WHATSAPP_FROM = from;
-    msg.style.color="var(--verde)";msg.textContent="✓ Credenciales guardadas.";
-    toast("Credenciales WhatsApp guardadas ✓");
-  }catch(e){msg.style.color="var(--rojo)";msg.textContent="Error al guardar.";}
-}
-
-// Carga credenciales Twilio desde el bin al iniciar sesión
+// waCargarConfig — se conserva por compatibilidad con datos existentes en JSONBin
+// Las credenciales ahora van directamente en WA_CONFIG arriba (no se guardan en el bin)
 function waCargarConfig(data){
-  if(!data.waConfig) return;
-  WA_CONFIG.TWILIO_SID    = data.waConfig.sid||"";
-  WA_CONFIG.TWILIO_TOKEN  = data.waConfig.token||"";
-  WA_CONFIG.WHATSAPP_FROM = data.waConfig.from||"";
+  // Sin acción — credenciales en WA_CONFIG
 }
 
 // ══ CONTRATO ══
