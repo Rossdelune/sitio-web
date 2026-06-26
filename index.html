@@ -415,6 +415,27 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
   @page{margin:.4cm;size:letter portrait;}
   #contrato-content p{margin-bottom:3pt!important;margin-top:0!important;}
   #contrato-content table{margin-bottom:4pt!important;}
+  /* Lote QR */
+  #modal-lote-print.printing{
+    display:block!important;position:fixed!important;
+    inset:0!important;background:#fff!important;z-index:9999!important;
+  }
+  #modal-lote-print.printing .no-print{display:none!important;}
+  #lote-grid{
+    display:grid!important;
+    grid-template-columns:repeat(4,1fr)!important;
+    gap:4mm!important;
+    padding:4mm!important;
+  }
+  .lote-celda{
+    border:1px solid #DDD!important;
+    border-radius:3px!important;
+    padding:3mm!important;
+    text-align:center!important;
+    page-break-inside:avoid!important;
+    break-inside:avoid!important;
+  }
+  .lote-celda canvas,.lote-celda img{width:100%!important;height:auto!important;display:block!important;}
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -918,7 +939,10 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
       <div class="card" style="padding:.8rem 1rem">
         <div class="proceso-header">
           <div class="card-title" style="margin:0">Artículos en stock</div>
-          <button class="btn-new" onclick="goSec('inv-nuevo')">+ Agregar</button>
+          <div style="display:flex;gap:.5rem">
+            <button class="btn-sec" id="btn-lote-flotante" onclick="abrirModalLote()" style="display:none;font-size:.78rem">🖨️ Lote (<span id="lote-count">0</span>)</button>
+            <button class="btn-new" onclick="goSec('inv-nuevo')">+ Agregar</button>
+          </div>
         </div>
         <input class="proceso-search" id="inv-search" placeholder="🔍 Buscar por modelo, color, categoría..." oninput="filtrarInventario(this.value)" style="width:100%;margin-bottom:.8rem">
         <div id="inv-lista">
@@ -1309,7 +1333,7 @@ function enterPanel(){
 }
 
 function doLogout(){
-  currentUser=null;allUsers=[];allClientes=[];loginRole=null;window._invData=[];_desbloqueosTemp=new Set();
+  currentUser=null;allUsers=[];allClientes=[];loginRole=null;window._invData=[];_desbloqueosTemp=new Set();window._lotePrint=[];
   document.getElementById("screen-panel").classList.remove("show");
   document.getElementById("screen-welcome").style.display="flex";
   document.getElementById("ov-login").classList.remove("open");
@@ -1643,6 +1667,144 @@ async function saveCliente(){
   }
 }
 
+// ══ EDITAR CLIENTE ══
+let _editClienteId = null;
+
+function abrirEditarCliente(id){
+  const c = allClientes.find(x=>x.id===id);
+  if(!c){toast("Cliente no encontrado","err");return;}
+  _editClienteId = id;
+  const msg = document.getElementById("edit-cliente-msg");
+  if(msg) msg.textContent="";
+
+  document.getElementById("edit-cliente-titulo").textContent = c.nombre||"Cliente";
+  document.getElementById("edit-folio").value        = c.folio||"";
+  document.getElementById("edit-fecha").value        = c.fecha||"";
+  document.getElementById("edit-nombre").value       = c.nombre||"";
+  document.getElementById("edit-cel").value          = c.cel||"";
+  document.getElementById("edit-tel").value          = c.tel||"";
+  document.getElementById("edit-correo").value       = c.correo||"";
+  document.getElementById("edit-domicilio").value    = c.domicilio||"";
+  document.getElementById("edit-tipo").value         = c.tipo||"";
+  document.getElementById("edit-elab").value         = c.elaboracion||"Sobre pedido";
+  document.getElementById("edit-marca").value        = c.marca||"";
+  document.getElementById("edit-modelo").value       = c.modelo||"";
+  document.getElementById("edit-talla").value        = c.talla||"";
+  document.getElementById("edit-color-nombre").value = c.color?.nombre||"";
+  const hex = c.color?.hex||"#C8A8D0";
+  document.getElementById("edit-color-picker").value  = hex;
+  document.getElementById("edit-color-preview").style.background = hex;
+  document.getElementById("edit-busto").value        = c.medidas?.busto||"";
+  document.getElementById("edit-cintura").value      = c.medidas?.cintura||"";
+  document.getElementById("edit-cadera").value       = c.medidas?.cadera||"";
+  document.getElementById("edit-copa").value         = c.medidas?.copa||"";
+  document.getElementById("edit-largo").value        = c.medidas?.largo||"";
+  document.getElementById("edit-precio").value       = c.precio||"";
+  document.getElementById("edit-precio-paquete").value = c.precioPaquete||"";
+  document.getElementById("edit-anticipo").value     = c.anticipo||"";
+  document.getElementById("edit-fpago").value        = c.fpago||"";
+  document.getElementById("edit-sispago").value      = c.sispago||"En parcialidades";
+  document.getElementById("edit-parcialidades").value= c.parcialidades||"30";
+  document.getElementById("edit-fecha-limite").value = c.fechaLimite||"";
+  document.getElementById("edit-entrega").value      = c.entrega||"";
+  document.getElementById("edit-estatus").value      = c.estatus||"En proceso";
+  document.getElementById("edit-obs").value          = c.observaciones||"";
+
+  editToggleParcialidades();
+  document.getElementById("modal-editar-cliente").classList.add("open");
+}
+
+function cerrarEditarCliente(){
+  document.getElementById("modal-editar-cliente").classList.remove("open");
+  _editClienteId = null;
+}
+
+function editColorChange(hex){
+  document.getElementById("edit-color-preview").style.background = hex;
+}
+
+function editToggleParcialidades(){
+  const v = document.getElementById("edit-sispago").value;
+  document.getElementById("edit-fi-parcialidades").style.display = v==="En parcialidades"?"block":"none";
+}
+
+async function guardarEdicionCliente(){
+  const msg = document.getElementById("edit-cliente-msg");
+  const btn = document.getElementById("btn-guardar-edicion");
+  msg.textContent="";
+
+  const nombre = document.getElementById("edit-nombre").value.trim();
+  if(!nombre){msg.textContent="El nombre es obligatorio.";return;}
+
+  const folioRaw = document.getElementById("edit-folio").value.trim();
+  if(!folioRaw){msg.textContent="El folio es obligatorio.";return;}
+  // Normalizar a 4 dígitos con ceros a la izquierda
+  const folioNum = parseInt(folioRaw, 10);
+  if(isNaN(folioNum)||folioNum<1){msg.textContent="El folio debe ser un número válido.";return;}
+  const folioNormalizado = String(folioNum).padStart(4,"0");
+
+  // Validar duplicado (ignorar el cliente que se está editando)
+  const duplicado = allClientes.find(x=>x.folio===folioNormalizado && x.id!==_editClienteId);
+  if(duplicado){msg.textContent=`El folio ${folioNormalizado} ya está en uso por: ${duplicado.nombre}`;return;}
+
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Guardando...';
+
+  try{
+    const data = await loadData();
+    allClientes = data.clientes||[];
+    const idx = allClientes.findIndex(x=>x.id===_editClienteId);
+    if(idx===-1){msg.textContent="Error: cliente no encontrado.";btn.disabled=false;btn.innerHTML='💾 Guardar cambios';return;}
+
+    const original = allClientes[idx];
+    const hex = document.getElementById("edit-color-picker").value;
+
+    allClientes[idx] = {
+      ...original,
+      folio:       folioNormalizado,
+      fecha:       document.getElementById("edit-fecha").value,
+      nombre,
+      cel:         document.getElementById("edit-cel").value.trim(),
+      tel:         document.getElementById("edit-tel").value.trim(),
+      correo:      document.getElementById("edit-correo").value.trim(),
+      domicilio:   document.getElementById("edit-domicilio").value.trim(),
+      tipo:        document.getElementById("edit-tipo").value,
+      elaboracion: document.getElementById("edit-elab").value,
+      marca:       document.getElementById("edit-marca").value.trim(),
+      modelo:      document.getElementById("edit-modelo").value.trim(),
+      talla:       document.getElementById("edit-talla").value.trim(),
+      color:       {hex, nombre: document.getElementById("edit-color-nombre").value.trim()||hex},
+      medidas:     {
+        busto:   document.getElementById("edit-busto").value,
+        cintura: document.getElementById("edit-cintura").value,
+        cadera:  document.getElementById("edit-cadera").value,
+        copa:    document.getElementById("edit-copa").value,
+        largo:   document.getElementById("edit-largo").value
+      },
+      precio:        document.getElementById("edit-precio").value,
+      precioPaquete: document.getElementById("edit-precio-paquete").value,
+      anticipo:      document.getElementById("edit-anticipo").value,
+      fpago:         document.getElementById("edit-fpago").value.trim(),
+      sispago:       document.getElementById("edit-sispago").value,
+      parcialidades: document.getElementById("edit-parcialidades").value||30,
+      fechaLimite:   document.getElementById("edit-fecha-limite").value,
+      entrega:       document.getElementById("edit-entrega").value,
+      estatus:       document.getElementById("edit-estatus").value,
+      observaciones: document.getElementById("edit-obs").value.trim(),
+      editadoPor:    currentUser.user,
+      editadoEn:     new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"})
+    };
+
+    await saveData({...data, clientes:allClientes});
+    toast("Cliente actualizado ✓ — Folio "+folioNormalizado);
+    cerrarEditarCliente();
+    renderClientes();
+  }catch(e){
+    msg.textContent="Error al guardar. Verifica tu conexión.";
+  }finally{
+    btn.disabled=false; btn.innerHTML='💾 Guardar cambios';
+  }
+}
+
 // ══ RENDER CLIENTES ══
 function renderClientes(){
   const tbody=document.getElementById("clientes-tbody");
@@ -1700,6 +1862,7 @@ function renderClientes(){
         <button class="ic-btn" onclick="verPagos('${c.id}')" title="Pagos">💳</button>
         <button class="ic-btn" onclick="verContrato('${c.id}')" title="Contrato">📄</button>
         <button class="ic-btn" onclick="verNotaVenta('${c.id}')" title="Nota de venta">🧾</button>
+        ${currentUser.role==="admin"?`<button class="ic-btn" onclick="abrirEditarCliente('${c.id}')" title="Editar cliente">✏️</button>`:""}
       </td>
     </tr>`;
   }).join("");
@@ -2674,6 +2837,7 @@ function buildInvCard(a){
           ${a.notas?`<div class="proceso-meta" style="margin-top:.2rem;font-style:italic">${a.notas}</div>`:""}
         </div>
         <div style="display:flex;gap:.4rem;flex-shrink:0">
+          <button class="paso-btn" onclick="agregarAlLote('${a.id}')" id="btn-lote-${a.id}" title="Agregar al lote de impresión">＋ Lote</button>
           <button class="paso-btn" onclick="verQR('${a.id}')" title="Ver QR">🔲 QR</button>
           <button class="paso-btn" onclick="eliminarArticulo('${a.id}')" title="Eliminar" style="color:#C0392B;border-color:#C0392B">✕</button>
         </div>
@@ -2719,6 +2883,104 @@ function verQR(artId){
     }
   },100);
 }
+
+// ── LOTE DE IMPRESIÓN QR ──────────────────────────────────────────────
+window._lotePrint = [];
+
+function actualizarUILote(){
+  const n = window._lotePrint.length;
+  const cnt = document.getElementById("lote-count");
+  const btn = document.getElementById("btn-lote-flotante");
+  if(cnt) cnt.textContent = n;
+  if(btn) btn.style.display = n > 0 ? "inline-flex" : "none";
+}
+
+function agregarAlLote(artId){
+  const lote = window._lotePrint;
+  const btnEl = document.getElementById("btn-lote-"+artId);
+  if(lote.includes(artId)){
+    // Si ya está, lo quitamos (toggle)
+    window._lotePrint = lote.filter(x=>x!==artId);
+    if(btnEl){ btnEl.textContent="＋ Lote"; btnEl.style.background=""; btnEl.style.color=""; }
+  } else {
+    if(lote.length >= 8){
+      alert("El lote ya tiene 8 artículos (máximo por hoja). Imprime primero o vacía el lote.");
+      return;
+    }
+    window._lotePrint.push(artId);
+    if(btnEl){ btnEl.textContent="✔ En lote"; btnEl.style.background="#e8f5e9"; btnEl.style.color="#2e7d32"; }
+  }
+  actualizarUILote();
+}
+
+function abrirModalLote(){
+  const lote = window._lotePrint;
+  if(!lote.length){ alert("El lote está vacío. Agrega artículos con el botón \"＋ Lote\"."); return; }
+  const grid = document.getElementById("lote-grid");
+  const info = document.getElementById("lote-info-texto");
+  if(info) info.textContent = lote.length + " artículo" + (lote.length===1?"":"s") + " · máx. 8 por hoja";
+  grid.innerHTML = "";
+  lote.forEach((artId, i) => {
+    const a = (window._invData||[]).find(x=>x.id===artId);
+    if(!a) return;
+    const celda = document.createElement("div");
+    celda.className = "lote-celda";
+    celda.style.cssText = "border:1px solid #DDD;border-radius:4px;padding:6px;text-align:center;position:relative;";
+    celda.innerHTML = `
+      <div id="lote-qr-${artId}" style="display:flex;justify-content:center;margin-bottom:4px"></div>
+      <div style="font-size:.65rem;font-weight:600;color:#1a1a1a;line-height:1.2">${a.modelo||"Artículo"}</div>
+      <div style="font-size:.58rem;color:#888;margin-top:2px">${(a.categoria||"")} · T.${a.talla||"—"} · ${a.colorNombre||"—"}</div>
+      <div style="font-size:.62rem;font-weight:600;color:#7A4F2A;margin-top:2px">$${Number(a.precio||0).toLocaleString()}</div>
+      <div style="font-size:.5rem;color:#BBB;margin-top:2px">${artId}</div>
+      <button class="no-print" onclick="quitarDeLote('${artId}')" style="position:absolute;top:2px;right:2px;background:none;border:none;cursor:pointer;font-size:.65rem;color:#C0392B;padding:0;line-height:1" title="Quitar">✕</button>
+    `;
+    grid.appendChild(celda);
+    // Generar QR
+    setTimeout(()=>{
+      const el = document.getElementById("lote-qr-"+artId);
+      if(el && window.QRCode){
+        el.innerHTML="";
+        new QRCode(el,{text:artId,width:80,height:80,colorDark:"#3a2a1a",colorLight:"#ffffff"});
+      }
+    }, 80 * (i+1));
+  });
+  const modal = document.getElementById("modal-lote-print");
+  modal.style.display = "flex";
+}
+
+function quitarDeLote(artId){
+  window._lotePrint = window._lotePrint.filter(x=>x!==artId);
+  const btnEl = document.getElementById("btn-lote-"+artId);
+  if(btnEl){ btnEl.textContent="＋ Lote"; btnEl.style.background=""; btnEl.style.color=""; }
+  actualizarUILote();
+  if(!window._lotePrint.length){ cerrarModalLote(); return; }
+  abrirModalLote(); // re-render
+}
+
+function limpiarLote(){
+  window._lotePrint.forEach(artId=>{
+    const btnEl = document.getElementById("btn-lote-"+artId);
+    if(btnEl){ btnEl.textContent="＋ Lote"; btnEl.style.background=""; btnEl.style.color=""; }
+  });
+  window._lotePrint = [];
+  actualizarUILote();
+  cerrarModalLote();
+}
+
+function cerrarModalLote(){
+  const modal = document.getElementById("modal-lote-print");
+  if(modal) modal.style.display = "none";
+}
+
+function ejecutarImpresionLote(){
+  const modal = document.getElementById("modal-lote-print");
+  modal.classList.add("printing");
+  setTimeout(()=>{
+    window.print();
+    modal.classList.remove("printing");
+  }, 300);
+}
+// ─────────────────────────────────────────────────────────────────────
 
 function imprimirQR(artId){
   const a = (window._invData||[]).find(x=>x.id===artId);
@@ -3382,5 +3644,110 @@ function generarContrato(c){
     </div>
   </div>
 </div>
+<div id="modal-lote-print" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;overflow:auto">
+  <div style="background:#FFF;border-radius:8px;padding:1.2rem;max-width:96vw;width:640px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <div style="font-weight:600;font-size:.95rem;color:#3a2a1a">🖨️ Lote de impresión</div>
+      <div style="font-size:.75rem;color:#AAA" id="lote-info-texto"></div>
+    </div>
+    <div id="lote-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem"></div>
+    <div class="no-print" style="display:flex;gap:.6rem;justify-content:flex-end;border-top:1px solid #F0E8D8;padding-top:.8rem">
+      <button class="btn-sec" onclick="limpiarLote()">🗑️ Vaciar lote</button>
+      <button class="btn-sec" onclick="cerrarModalLote()">Cerrar</button>
+      <button class="paso-btn" onclick="ejecutarImpresionLote()">🖨️ Imprimir</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
+
+<!-- MODAL EDITAR CLIENTE -->
+<div class="overlay" id="modal-editar-cliente" style="align-items:flex-start;padding:1rem 0;overflow-y:auto">
+  <div class="modal" style="max-width:520px;width:100%;margin:auto">
+    <button class="btn-close" onclick="cerrarEditarCliente()">✕</button>
+    <div class="badge" style="background:var(--dorado-d)">Editar cliente</div>
+    <div class="modal-title" id="edit-cliente-titulo">Cliente</div>
+    <div style="background:#FDF8F0;border:1px solid var(--dorado);border-radius:3px;padding:.7rem .9rem;margin-bottom:1rem">
+      <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--dorado-d);margin-bottom:.4rem">⚠️ Folio</div>
+      <input type="text" id="edit-folio" placeholder="Ej: 0012" style="width:100%;border:none;border-bottom:1.5px solid var(--dorado);padding:.35rem 0;font-size:1rem;font-weight:600;letter-spacing:.1em;outline:none;background:transparent;color:var(--cafe)">
+      <div style="font-size:.68rem;color:#AAA;margin-top:.3rem">Máximo 4 dígitos. Se validará que no exista duplicado.</div>
+    </div>
+    <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dorado-d);margin-bottom:.5rem">Datos personales</div>
+    <div class="field"><label>Fecha de contrato</label><input type="date" id="edit-fecha"></div>
+    <div class="field"><label>Nombre completo</label><input type="text" id="edit-nombre" placeholder="Nombre de la cliente"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+      <div class="field"><label>Celular</label><input type="tel" id="edit-cel" placeholder="921 000 0000"></div>
+      <div class="field"><label>Teléfono</label><input type="tel" id="edit-tel" placeholder="921 000 0000"></div>
+    </div>
+    <div class="field"><label>Correo electrónico</label><input type="email" id="edit-correo" placeholder="correo@ejemplo.com"></div>
+    <div class="field"><label>Domicilio</label><input type="text" id="edit-domicilio" placeholder="Calle, colonia, ciudad"></div>
+    <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dorado-d);margin:.8rem 0 .5rem">Datos del vestido</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+      <div class="field"><label>Tipo</label>
+        <select id="edit-tipo">
+          <option value="">Seleccionar...</option>
+          <option value="xv">Quinceañera</option>
+          <option value="novia">Novia</option>
+        </select>
+      </div>
+      <div class="field"><label>Elaboración</label>
+        <select id="edit-elab">
+          <option value="Sobre pedido">Sobre pedido</option>
+          <option value="Sobre diseño">Sobre diseño</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+      <div class="field"><label>Marca</label><input type="text" id="edit-marca" placeholder="Ej: Morilee"></div>
+      <div class="field"><label>Modelo</label><input type="text" id="edit-modelo" placeholder="Ej: WF2813"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+      <div class="field"><label>Talla</label><input type="text" id="edit-talla" placeholder="Ej: Ch, M, 30"></div>
+      <div class="field"><label>Color (nombre)</label><input type="text" id="edit-color-nombre" placeholder="Ej: Azul cielo"></div>
+    </div>
+    <div class="field"><label>Color</label>
+      <div style="display:flex;align-items:center;gap:.8rem">
+        <div id="edit-color-preview" style="width:36px;height:36px;border-radius:3px;border:1px solid #DDD;cursor:pointer;flex-shrink:0" onclick="document.getElementById('edit-color-picker').click()"></div>
+        <input type="color" id="edit-color-picker" style="opacity:0;width:0;height:0;position:absolute" onchange="editColorChange(this.value)">
+        <span style="font-size:.74rem;color:#AAA">Toca el recuadro para cambiar</span>
+      </div>
+    </div>
+    <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dorado-d);margin:.8rem 0 .5rem">Medidas</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem">
+      <div class="field"><label>Busto</label><input type="text" id="edit-busto" placeholder="—"></div>
+      <div class="field"><label>Cintura</label><input type="text" id="edit-cintura" placeholder="—"></div>
+      <div class="field"><label>Cadera</label><input type="text" id="edit-cadera" placeholder="—"></div>
+      <div class="field"><label>Copa</label><input type="text" id="edit-copa" placeholder="—"></div>
+      <div class="field"><label>Largo</label><input type="text" id="edit-largo" placeholder="—"></div>
+    </div>
+    <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dorado-d);margin:.8rem 0 .5rem">Financiero</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+      <div class="field"><label>Precio vestido ($)</label><input type="number" id="edit-precio" placeholder="0"></div>
+      <div class="field"><label>Precio paquete ($)</label><input type="number" id="edit-precio-paquete" placeholder="0"></div>
+      <div class="field"><label>Anticipo ($)</label><input type="number" id="edit-anticipo" placeholder="0"></div>
+      <div class="field"><label>Forma de pago</label><input type="text" id="edit-fpago" placeholder="Efectivo, transferencia..."></div>
+    </div>
+    <div class="field"><label>Sistema de pago</label>
+      <select id="edit-sispago" onchange="editToggleParcialidades()">
+        <option value="En parcialidades">En parcialidades</option>
+        <option value="Liquidado">Liquidado</option>
+      </select>
+    </div>
+    <div class="field" id="edit-fi-parcialidades"><label>Parcialidades (días)</label><input type="number" id="edit-parcialidades" placeholder="30"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+      <div class="field"><label>Fecha límite pago</label><input type="date" id="edit-fecha-limite"></div>
+      <div class="field"><label>Fecha de entrega</label><input type="date" id="edit-entrega"></div>
+    </div>
+    <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dorado-d);margin:.8rem 0 .5rem">Otros</div>
+    <div class="field"><label>Estatus</label>
+      <select id="edit-estatus">
+        <option value="En proceso">En proceso</option>
+        <option value="Recibido">Recibido</option>
+        <option value="Entregado">Entregado</option>
+      </select>
+    </div>
+    <div class="field"><label>Observaciones</label><textarea id="edit-obs" rows="3" style="width:100%;border:1px solid #E8DDD0;border-radius:3px;padding:.5rem;font-family:'Lato',sans-serif;font-size:.82rem;resize:vertical;outline:none" placeholder="Notas adicionales..."></textarea></div>
+    <div class="msg-err" id="edit-cliente-msg"></div>
+    <button class="btn-primary" onclick="guardarEdicionCliente()" id="btn-guardar-edicion" style="width:100%;margin-top:.5rem">💾 Guardar cambios</button>
+  </div>
+</div>
