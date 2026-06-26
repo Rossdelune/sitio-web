@@ -530,7 +530,6 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
         <button class="sub-item" onclick="goSec('colaboradores')" id="admin-sub-colab">👥 Colaboradores</button>
         <button class="sub-item" onclick="goSec('permisos')" id="admin-sub-permisos">🔐 Permisos</button>
         <button class="sub-item" onclick="goSec('historial-accesos')" id="admin-sub-hist">🕐 Historial accesos</button>
-        <button class="sub-item" onclick="goSec('whatsapp-config')" id="admin-sub-wa">💬 WhatsApp</button>
       </div>
     </div>
 
@@ -1050,25 +1049,6 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 
     <!-- ── HISTORIAL ── -->
     <!-- ── PERMISOS ── -->
-    <!-- ── WHATSAPP CONFIG ── -->
-    <div class="section" id="sec-whatsapp-config">
-      <div class="sec-title">WhatsApp — Recordatorios</div>
-      <div class="card">
-        <div class="card-title">WhatsApp Business API</div>
-        <p style="font-size:.76rem;color:#AAA;margin-bottom:.8rem">La integración se realiza directamente con la API de WhatsApp Business (Meta Graph API). Configura las credenciales en el código cuando tengas el número activado.</p>
-        <div id="wa-config-msg" style="font-size:.74rem;margin-top:.4rem;min-height:.9rem"></div>
-      </div>
-      <div class="card" style="margin-top:.6rem">
-        <div class="card-title">Recordatorios automáticos</div>
-        <p style="font-size:.76rem;color:#888;margin-bottom:.5rem">
-          Se envían avisos automáticamente <strong>15, 7, 3 y 1 día</strong> antes de la fecha límite de pago.<br>
-          <span style="font-size:.72rem;color:#AAA">Para cambiar los días: busca <code>WA_DIAS_AVISO</code> en el código.</span>
-        </p>
-        <p style="font-size:.76rem;color:#888;margin-bottom:.8rem">El mensaje incluye: nombre del cliente, monto pendiente y fecha límite.</p>
-        <button class="btn-save" id="btn-wa-enviar" onclick="waEnviarRecordatoriosManual()">📤 Enviar recordatorios ahora</button>
-        <div id="wa-resultado" style="font-size:.74rem;color:var(--dorado-d);margin-top:.4rem;min-height:.9rem"></div>
-      </div>
-    </div>
 
     <div class="section" id="sec-permisos">
       <div class="sec-title">Permisos de Colaboradores</div>
@@ -1276,7 +1256,7 @@ async function doLogin(){
   err.textContent="";btn.innerHTML='<span class="spinner"></span>Verificando...';btn.disabled=true;
   try{
     const data=await loadData();
-    allUsers=data.users||[];allClientes=data.clientes||[];window._invData=data.inventario||[];waCargarConfig(data);
+    allUsers=data.users||[];allClientes=data.clientes||[];window._invData=data.inventario||[];
     const match=allUsers.find(x=>x.user===u&&x.pass===p&&x.role===loginRole);
     if(!match){err.textContent="Usuario o contraseña incorrectos.";btn.innerHTML="Entrar";btn.disabled=false;return;}
     if(match.blocked){err.textContent="Cuenta bloqueada. Contacta al administrador.";btn.innerHTML="Entrar";btn.disabled=false;return;}
@@ -1299,7 +1279,6 @@ function enterPanel(){
     document.getElementById("admin-sub-permisos").style.display="none";
     document.getElementById("admin-sub-hist").style.display="none";
     document.getElementById("admin-sub-micuenta").style.display="none";
-    document.getElementById("admin-sub-wa").style.display="none";
     // Mostrar botones del nav — bloqueados con 🔒, permitidos normal
     const permisos = currentUser.permisos||{};
     SECCIONES_CTRL.forEach(s=>{
@@ -1389,9 +1368,6 @@ function goSec(id){
   if(id==="colaboradores")loadWorkers();
   if(id==="historial-accesos")loadHistorial();
   if(id==="permisos"){_permisosWorkerActual=null;renderPermisos();}
-  if(id==="whatsapp-config"){
-    // WhatsApp Business API — sin credenciales en UI (configurar en código)
-  }
   if(id==="todos-pedidos"){renderPedidos();initFiltroEntregasAnio();}
   if(id==="entregas-fecha"){initFiltroEntregasAnio();}
   if(id==="pagos-pendientes"){renderPagosPendientes();}
@@ -3113,107 +3089,6 @@ function buscarPorQR(){
   input.value="";
 }
 
-// ══ WHATSAPP RECORDATORIOS ══
-// ─────────────────────────────────────────────────────────────────
-// CONFIGURACIÓN — Meta Graph API (WhatsApp Business directo)
-// Llenar cuando se tenga el número aprobado en Meta Business Suite
-// ─────────────────────────────────────────────────────────────────
-const WA_CONFIG = {
-  PHONE_NUMBER_ID: "REEMPLAZAR_PHONE_NUMBER_ID", // ID del número en Meta
-  ACCESS_TOKEN:    "REEMPLAZAR_WA_ACCESS_TOKEN", // Token permanente de la app
-};
-
-// ─────────────────────────────────────────────────────────────────
-// DÍAS DE ANTELACIÓN para enviar recordatorio
-// Modificar este arreglo para cambiar cuándo se envían los avisos
-// ─────────────────────────────────────────────────────────────────
-const WA_DIAS_AVISO = [15, 7, 3, 1]; // días antes de la fecha límite
-
-// Plantilla del mensaje — usa {nombre}, {monto}, {fecha}
-function waPlantilla(nombre, monto, fecha){
-  return `Hola ${nombre} 👋, te recordamos que tienes un pago pendiente de *$${monto}* con fecha límite el *${fecha}*. Por favor realiza tu pago a tiempo para evitar cargos adicionales. — Ross de Lune 🌙`;
-}
-
-// Envía un mensaje WhatsApp vía Meta Graph API
-async function waSendMessage(to, body){
-  if(!WA_CONFIG.PHONE_NUMBER_ID || WA_CONFIG.PHONE_NUMBER_ID.startsWith("REEMPLAZAR")){
-    console.warn("WhatsApp no configurado — reemplaza PHONE_NUMBER_ID y ACCESS_TOKEN en WA_CONFIG.");
-    return false;
-  }
-  const url = `https://graph.facebook.com/v19.0/${WA_CONFIG.PHONE_NUMBER_ID}/messages`;
-  try{
-    const r = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + WA_CONFIG.ACCESS_TOKEN,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: to,
-        type: "text",
-        text: { body: body }
-      })
-    });
-    const j = await r.json();
-    return j.messages ? true : false;
-  }catch(e){
-    console.error("Error enviando WhatsApp:", e);
-    return false;
-  }
-}
-
-// Revisa todos los clientes y envía recordatorios si corresponde
-async function waRevisarRecordatorios(){
-  const hoy = new Date(); hoy.setHours(0,0,0,0);
-  let enviados = 0, errores = 0;
-
-  for(const c of allClientes){
-    if(c.estatus==="Entregado") continue;
-    if(!c.fechaLimite) continue;
-
-    const tel = (c.cel||c.tel||"").replace(/\D/g,"");
-    if(!tel) continue;
-
-    const vence = new Date(c.fechaLimite+"T12:00:00");
-    const diasRestantes = Math.ceil((vence-hoy)/(1000*60*60*24));
-
-    if(!WA_DIAS_AVISO.includes(diasRestantes)) continue;
-
-    // Calcular saldo pendiente
-    const precio = Number(c.precio||0);
-    const paquete = Number(c.precioPaquete||0);
-    const extras = (c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
-    const total = precio+paquete+extras;
-    const pagado = Number(c.anticipo||0)+(c.pagos||[]).reduce((s,p)=>s+Number(p.monto||0),0);
-    const saldo = total - pagado;
-    if(saldo<=0) continue;
-
-    const fechaStr = vence.toLocaleDateString("es-MX",{day:"2-digit",month:"long",year:"numeric"});
-    const msg = waPlantilla(c.nombre, saldo.toLocaleString(), fechaStr);
-    const ok = await waSendMessage(tel, msg);
-    ok ? enviados++ : errores++;
-  }
-  return {enviados, errores};
-}
-
-// Ejecuta la revisión manualmente desde Config
-async function waEnviarRecordatoriosManual(){
-  const btn = document.getElementById("btn-wa-enviar");
-  const res = document.getElementById("wa-resultado");
-  if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Enviando...';}
-  if(res) res.textContent="";
-  const {enviados,errores} = await waRevisarRecordatorios();
-  if(btn){btn.disabled=false;btn.innerHTML='📤 Enviar recordatorios ahora';}
-  if(res) res.textContent = `✓ ${enviados} enviado${enviados!==1?"s":""} · ${errores} error${errores!==1?"es":""}`;
-  toast(`WhatsApp: ${enviados} enviados`);
-}
-
-// waCargarConfig — se conserva por compatibilidad con datos existentes en JSONBin
-// Las credenciales ahora van directamente en WA_CONFIG arriba (no se guardan en el bin)
-function waCargarConfig(data){
-  // Sin acción — credenciales en WA_CONFIG
-}
 
 // ══ CONTRATO ══
 function verContrato(id){
