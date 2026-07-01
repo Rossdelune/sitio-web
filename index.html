@@ -462,7 +462,23 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
     <div class="badge" id="login-badge">Administrador</div>
     <div class="modal-title" id="login-title">Bienvenida de nuevo</div>
     <div class="field"><label>Usuario</label><input type="text" id="inp-u" placeholder="tu usuario" onkeydown="if(event.key==='Enter')doLogin()"></div>
-    <div class="field"><label>Contraseña</label><input type="password" id="inp-p" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="field" style="position:relative">
+      <label>Contraseña</label>
+      <input type="password" id="inp-p" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:2.4rem">
+      <button type="button"
+        onmousedown="document.getElementById('inp-p').type='text'"
+        onmouseup="document.getElementById('inp-p').type='password'"
+        onmouseleave="document.getElementById('inp-p').type='password'"
+        ontouchstart="document.getElementById('inp-p').type='text'"
+        ontouchend="document.getElementById('inp-p').type='password'"
+        style="position:absolute;right:.3rem;bottom:.35rem;background:none;border:none;cursor:pointer;padding:.2rem;color:#999;display:flex;align-items:center"
+        title="Mantén presionado para ver">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+    </div>
     <div class="msg-err" id="login-err"></div>
     <button type="button" class="btn-primary" id="btn-login" onclick="doLogin()">Entrar</button>
   </div>
