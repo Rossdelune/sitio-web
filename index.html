@@ -1506,13 +1506,14 @@ const PKG_NOVIA=[
   {id:"ramo",      name:"Ramo",           opts:["Chico","Grande","Jumbo"],   default:"Chico"},
   {id:"corsage",   name:"Corsage",        opts:["Estándar","Grande","Jumbo"],default:"Estándar"},
   {id:"crinolina", name:"Crinolina",      opts:["Estándar","1 Olán","Maxi"], default:"Estándar"},
+  {id:"aro",       name:"Aro",            opts:["Básico","Maxi","Sin aro"],  default:"Básico"},
   {id:"velo",      name:"Velo bordado",   opts:["Corto","Largo","Mantilla"], default:"Corto"},
   {id:"ajustes",   name:"Ajustes",        opts:["Incluidos"],                default:"Incluidos"},
 ];
 const PKG_CUSTOM=[
   {id:"ramo",      name:"Ramo",          opts:["Chico","Grande","Jumbo"],   default:""},
   {id:"corsage",   name:"Corsage",       opts:["Estándar","Grande","Jumbo"],default:""},
-  {id:"aro",       name:"Aro",           opts:["Básico","Maxi"],            default:""},
+  {id:"aro",       name:"Aro",           opts:["Básico","Maxi","Sin aro"],  default:""},
   {id:"tiara",     name:"Tiara",         opts:["Estándar","Grande"],        default:""},
   {id:"crinolina", name:"Crinolina",     opts:["Estándar","1 Olán","Maxi"],default:""},
   {id:"velo",      name:"Velo bordado",  opts:["Corto","Largo","Mantilla"],default:""},
@@ -3785,9 +3786,6 @@ function generarContrato(c){
     </div>
   </div>
 </div>
-</body>
-</html>
-
 <!-- MODAL EDITAR CLIENTE -->
 <div class="overlay" id="modal-editar-cliente" style="align-items:flex-start;padding:1rem 0;overflow-y:auto">
   <div class="modal" style="max-width:520px;width:100%;margin:auto">
@@ -3878,3 +3876,5 @@ function generarContrato(c){
     <button class="btn-primary" onclick="guardarEdicionCliente()" id="btn-guardar-edicion" style="width:100%;margin-top:.5rem">💾 Guardar cambios</button>
   </div>
 </div>
+</body>
+</html>
