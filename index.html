@@ -3919,7 +3919,7 @@ function estatusClass(e){
 function renderPedidos(){
   const tbody=document.getElementById("pedidos-tbody");
   if(!tbody)return;
-  const pendientes=allClientes.filter(c=>!c.estatus||c.estatus==="Pedido Realizado"||c.estatus==="Pedido realizado");
+  const pendientes=allClientes.filter(c=>!c.estatus||c.estatus==="Pedido Realizado"||c.estatus==="Pedido realizado"||c.estatus==="En Compra");
   if(!pendientes.length){
     tbody.innerHTML='<tr><td colspan="11" style="color:#AAA;padding:1.5rem;text-align:center;">Sin pedidos pendientes 🎀</td></tr>';return;
   }
