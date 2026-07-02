@@ -244,6 +244,10 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 .color-dot{width:14px;height:14px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.1);vertical-align:middle;margin-right:.4rem;}
 .status-badge{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .55rem;border-radius:12px;}
 .s-pedido{background:#FEF3CD;color:#856404;}
+.s-compra{background:#E8D5F5;color:#5B2C6F;}
+.s-tienda{background:#D5F5E3;color:#1E8449;}
+.s-recibido{background:#D1ECF1;color:#0C5460;}
+select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearance:none;font-family:inherit;font-weight:600;outline:none;padding:.2rem .55rem;}
 .s-recibido{background:#D1ECF1;color:#0C5460;}
 .s-entregado{background:#D4EDDA;color:#155724;}
 
@@ -1743,6 +1747,17 @@ async function saveCliente(){
 // ══ EDITAR CLIENTE ══
 let _editClienteId = null;
 
+async function eliminarCliente(id, nombre){
+  if(!confirm(`¿Eliminar el cliente "${nombre}"? Esta acción no se puede deshacer.`)) return;
+  try{
+    const data = await loadData();
+    allClientes = (data.clientes||[]).filter(c=>c.id!==id);
+    await saveData({...data, clientes:allClientes});
+    renderClientes();
+    toast("Cliente eliminado ✓");
+  }catch(e){toast("Error al eliminar","err");}
+}
+
 function abrirEditarCliente(id){
   const c = allClientes.find(x=>x.id===id);
   if(!c){toast("Cliente no encontrado","err");return;}
@@ -1780,7 +1795,7 @@ function abrirEditarCliente(id){
   document.getElementById("edit-parcialidades").value= c.parcialidades||"30";
   document.getElementById("edit-fecha-limite").value = c.fechaLimite||"";
   document.getElementById("edit-entrega").value      = c.entrega||"";
-  document.getElementById("edit-estatus").value      = c.estatus||"En proceso";
+  document.getElementById("edit-estatus").value      = c.estatus||"Pedido Realizado";
   document.getElementById("edit-obs").value          = c.observaciones||"";
 
   editToggleParcialidades();
@@ -1856,7 +1871,7 @@ async function guardarEdicionCliente(){
       precio:        document.getElementById("edit-precio").value,
       precioPaquete: document.getElementById("edit-precio-paquete").value,
       anticipo:      document.getElementById("edit-anticipo").value,
-      fechaAnticipo: c.fechaAnticipo || c.fecha,
+      fechaAnticipo: original.fechaAnticipo || original.fecha,
       fpago:         document.getElementById("edit-fpago").value.trim(),
       sispago:       document.getElementById("edit-sispago").value,
       parcialidades: document.getElementById("edit-parcialidades").value||30,
@@ -1937,7 +1952,7 @@ function renderClientes(){
         <button class="ic-btn" onclick="verContrato('${c.id}')" title="Contrato">📄</button>
         <button class="ic-btn" onclick="verNotaVenta('${c.id}')" title="Nota de venta">🧾</button>
         <button class="ic-btn" onclick="verFormatoEntrega('${c.id}')" title="Formato de entrega">📦</button>
-        ${currentUser.role==="admin"?`<button class="ic-btn" onclick="abrirEditarCliente('${c.id}')" title="Editar cliente">✏️</button>`:""}
+        ${currentUser.role==="admin"?`<button class="ic-btn" onclick="abrirEditarCliente('${c.id}')" title="Editar cliente">✏️</button><button class="ic-btn" onclick="eliminarCliente('${c.id}','${c.nombre}')" title="Eliminar cliente" style="color:var(--rojo)">🗑️</button>`:""}
       </td>
     </tr>`;
   }).join("");
@@ -3897,19 +3912,25 @@ function renderEntregasFecha(){
   if(resumenEl)resumenEl.innerHTML=`${filtrados.length} entrega${filtrados.length!==1?"s":""} &nbsp;·&nbsp; Total <strong>$${totalGeneral.toLocaleString()}</strong> &nbsp;·&nbsp; Saldo pendiente <strong style="color:var(--rojo)">$${saldoGeneral.toLocaleString()}</strong>`;
 }
 
+function estatusClass(e){
+  return e==="Entregado"?"s-entregado":e==="En Tienda"?"s-tienda":e==="En Compra"?"s-compra":e==="Recibido"?"s-recibido":"s-pedido";
+}
+
 function renderPedidos(){
   const tbody=document.getElementById("pedidos-tbody");
   if(!tbody)return;
-  if(!allClientes.length){
-    tbody.innerHTML='<tr><td colspan="11" style="color:#AAA;padding:1.5rem;text-align:center;">Sin pedidos registrados aún.</td></tr>';return;
+  const pendientes=allClientes.filter(c=>!c.estatus||c.estatus==="Pedido Realizado"||c.estatus==="Pedido realizado");
+  if(!pendientes.length){
+    tbody.innerHTML='<tr><td colspan="11" style="color:#AAA;padding:1.5rem;text-align:center;">Sin pedidos pendientes 🎀</td></tr>';return;
   }
   const tipos={"xv":"Quinceañera","novia":"Novia","solo":"Solo vestido","custom":"Personalizado","":" — "};
-  tbody.innerHTML=allClientes.map(c=>{
+  tbody.innerHTML=pendientes.map(c=>{
     const precio=Number(c.precio||0);
     const anticipo=Number(c.anticipo||0);
     const extras=(c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
     const total=precio+extras;
     const saldo=total-anticipo;
+    const cls=estatusClass(c.estatus);
     return `<tr>
       <td style="font-size:.72rem;color:#AAA">${c.folio||"—"}</td>
       <td><strong style="font-weight:400;font-size:.8rem">${c.nombre}</strong></td>
@@ -3921,9 +3942,34 @@ function renderPedidos(){
       <td style="font-size:.76rem">$${total.toLocaleString()}</td>
       <td style="font-size:.76rem;color:var(--verde)">$${anticipo.toLocaleString()}</td>
       <td style="font-size:.76rem;color:var(--rojo)">$${saldo.toLocaleString()}</td>
-      <td><span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}">${c.estatus||"—"}</span></td>
+      <td>
+        <select class="status-badge ${cls}" onchange="cambiarEstatusPedido('${c.id}',this.value)">
+          <option value="Pedido Realizado" ${!c.estatus||c.estatus==="Pedido Realizado"||c.estatus==="Pedido realizado"?"selected":""}>Pedido Realizado</option>
+          <option value="En Compra" ${c.estatus==="En Compra"?"selected":""}>En Compra</option>
+          <option value="En Tienda" ${c.estatus==="En Tienda"?"selected":""}>En Tienda</option>
+          <option value="Recibido" ${c.estatus==="Recibido"?"selected":""}>Recibido</option>
+          <option value="Entregado" ${c.estatus==="Entregado"?"selected":""}>Entregado</option>
+        </select>
+      </td>
     </tr>`;
   }).join("");
+}
+
+async function cambiarEstatusPedido(clienteId, nuevoEstatus){
+  try{
+    const data = await loadData();
+    allClientes = data.clientes||[];
+    const idx = allClientes.findIndex(x=>x.id===clienteId);
+    if(idx===-1) return;
+    allClientes[idx].estatus = nuevoEstatus;
+    allClientes[idx].editadoPor = currentUser.user;
+    allClientes[idx].editadoEn = new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"});
+    await saveData({...data, clientes:allClientes});
+    toast("Estatus actualizado ✓");
+    renderPedidos();
+  }catch(e){
+    toast("Error al actualizar estatus","err");
+  }
 }
 
 function generarContrato(c){
@@ -4104,7 +4150,9 @@ function generarContrato(c){
     <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dorado-d);margin:.8rem 0 .5rem">Otros</div>
     <div class="field"><label>Estatus</label>
       <select id="edit-estatus">
-        <option value="En proceso">En proceso</option>
+        <option value="Pedido Realizado">Pedido Realizado</option>
+        <option value="En Compra">En Compra</option>
+        <option value="En Tienda">En Tienda</option>
         <option value="Recibido">Recibido</option>
         <option value="Entregado">Entregado</option>
       </select>
@@ -4114,5 +4162,6 @@ function generarContrato(c){
     <button class="btn-primary" onclick="guardarEdicionCliente()" id="btn-guardar-edicion" style="width:100%;margin-top:.5rem">💾 Guardar cambios</button>
   </div>
 </div>
+<div id="toast" class="toast"></div>
 </body>
 </html>
