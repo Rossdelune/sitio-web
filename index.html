@@ -614,7 +614,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
             <input type="text" id="inv-scan-input" placeholder="Apunta el escáner aquí y escanea el QR..." style="flex:1" onkeydown="if(event.key==='Enter'){buscarPorQR();event.preventDefault();}">
             <button class="paso-btn" onclick="buscarPorQR()" style="white-space:nowrap">Buscar</button>
           </div>
-          <div id="inv-scan-msg" style="font-size:.72rem;margin-top:.25rem;min-height:.9rem"></div>
+          <div id="inv-scan-msg" style="font-size:.72rem;margin-top:.25rem;min-height:.9rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap"></div>
         </div>
         <!-- Color picker -->
         <div class="fi">
@@ -1335,6 +1335,11 @@ let selectedColor = "#C8A8D0";
 // ══ JSONBin ══
 async function loadData(){
   const r = await fetch(BIN_URL+"/latest?t="+Date.now(),{cache:"no-store",headers:{"X-Master-Key":MASTER_KEY,"X-Access-Key":ACCESS_KEY}});
+  if(!r.ok){
+    let detalle="";
+    try{ detalle=(await r.json()).message||""; }catch(_){}
+    throw new Error(`JSONBin ${r.status}${detalle?": "+detalle:""}`);
+  }
   const j = await r.json(); return j.record;
 }
 async function saveData(d){
@@ -1398,7 +1403,7 @@ async function doLogin(){
     const idx=allUsers.findIndex(x=>x.user===u);allUsers[idx]=match;
     await saveData({...data,users:allUsers,clientes:allClientes});
     currentUser=match;closeLogin();enterPanel();
-  }catch(e){err.textContent="Error de conexión. Intenta de nuevo.";btn.innerHTML="Entrar";btn.disabled=false;}
+  }catch(e){console.error("doLogin error:",e);err.textContent="Error de conexión: "+e.message;btn.innerHTML="Entrar";btn.disabled=false;}
 }
 
 // ══ PANEL ══
@@ -1560,6 +1565,12 @@ function limpiarFormularioCliente(){
   if(fiParc) fiParc.style.display="none";
   // Resumen de costos a cero
   calcTotal();
+  // Escaneo QR: limpiar mensaje del artículo del cliente anterior
+  const scanMsg=document.getElementById("inv-scan-msg");
+  if(scanMsg){ scanMsg.style.color=""; scanMsg.innerHTML=""; }
+  const scanInput=document.getElementById("inv-scan-input");
+  if(scanInput) scanInput.value="";
+  window._qrArticuloActual=null;
   // Mensaje de error limpio
   const msg=document.getElementById("cliente-msg");
   if(msg) msg.textContent="";
@@ -3656,9 +3667,25 @@ function buscarPorQR(){
   // Actualizar el color visualmente si existe la función
   if(typeof onColorChange==="function") onColorChange(art.colorHex||"#C8A8D0");
   if(typeof onColorNameInput==="function") onColorNameInput(art.colorNombre||"");
+  window._qrArticuloActual = art.id;
   msg.style.color="var(--dorado-d)";
-  msg.textContent="✓ "+art.categoria+" · "+art.modelo+" · Talla "+art.talla+" · "+art.colorNombre;
+  msg.innerHTML = "✓ "+art.categoria+" · "+art.modelo+" · Talla "+art.talla+" · "+art.colorNombre+
+    ' <button type="button" onclick="quitarArticuloEscaneado()" style="background:none;border:none;color:var(--rojo);cursor:pointer;font-size:.68rem;text-decoration:underline;padding:0">✕ Quitar</button>';
   input.value="";
+}
+
+function quitarArticuloEscaneado(){
+  document.getElementById("c-modelo").value="";
+  document.getElementById("c-talla").value="";
+  document.getElementById("c-color-name").value="";
+  selectedColor="#C8A8D0";
+  const colorBox=document.getElementById("color-preview-box");
+  if(colorBox) colorBox.style.background=selectedColor;
+  const colorPicker=document.getElementById("color-picker");
+  if(colorPicker) colorPicker.value=selectedColor;
+  window._qrArticuloActual=null;
+  const msg=document.getElementById("inv-scan-msg");
+  if(msg){ msg.style.color=""; msg.innerHTML=""; }
 }
 
 
