@@ -328,6 +328,20 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 .proceso-pct{font-size:.72rem;color:var(--dorado-d);font-weight:500;white-space:nowrap;}
 .proceso-arrow{font-size:.7rem;color:#AAA;transition:transform .2s;margin-left:.5rem;}
 .proceso-card-header.open .proceso-arrow{transform:rotate(180deg);}
+.agenda-nav{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;}
+.agenda-rango{font-size:.8rem;color:var(--dorado-d);font-weight:700;letter-spacing:.03em;text-transform:capitalize;}
+.agenda-grid{display:grid;grid-template-columns:repeat(7,minmax(130px,1fr));gap:.5rem;overflow-x:auto;padding-bottom:.3rem;}
+.agenda-day{border:1px solid var(--borde);border-radius:4px;background:#FFF;min-height:100px;display:flex;flex-direction:column;}
+.agenda-day.hoy{border-color:var(--dorado);box-shadow:0 0 0 1px var(--dorado) inset;}
+.agenda-day-head{background:var(--crema);padding:.35rem .5rem;border-bottom:1px solid var(--borde);text-align:center;border-radius:4px 4px 0 0;}
+.agenda-day-nombre{font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--dorado-d);font-weight:700;}
+.agenda-day-fecha{font-size:.72rem;color:var(--texto);}
+.agenda-day-body{padding:.4rem;display:flex;flex-direction:column;gap:.3rem;flex:1;}
+.agenda-entry{border-left:3px solid var(--dorado);background:var(--bg);border-radius:3px;padding:.3rem .4rem;font-size:.68rem;cursor:pointer;transition:background .15s;}
+.agenda-entry:hover{background:#F1E7D8;}
+.agenda-entry-paso{font-size:.58rem;color:var(--dorado-d);text-transform:uppercase;letter-spacing:.05em;font-weight:700;}
+.agenda-entry-nombre{font-size:.7rem;color:var(--texto);font-weight:600;}
+.agenda-empty{color:#CCC;font-size:.65rem;text-align:center;padding:.7rem 0;}
 
 .proceso-body{display:none;padding:1rem;}
 .proceso-body.open{display:block;}
@@ -533,6 +547,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
       <button class="nav-btn" id="nb-progreso" onclick="toggleNav('progreso')">📦 Progreso <span class="arrow">▾</span></button>
       <div class="subnav" id="sub-progreso">
         <button class="sub-item" onclick="goSec('progreso-pedido')">🔄 Proceso pedido</button>
+        <button class="sub-item" onclick="goSec('progreso-agenda')">📅 Agenda de ajustes</button>
         <button class="sub-item" onclick="goSec('progreso-diseno')">✂️ Proceso diseño</button>
         <button class="sub-item" onclick="goSec('progreso-formato')">🖨️ Formato de ajustes</button>
       </div>
@@ -978,6 +993,24 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
         </div>
         <div id="proceso-lista">
           <p style="color:#AAA;font-size:.82rem;padding:.5rem">Cargando pedidos...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── AGENDA SEMANAL DE AJUSTES ── -->
+    <div class="section" id="sec-progreso-agenda">
+      <div class="sec-title">Agenda de Ajustes</div>
+      <div class="card" style="padding:.8rem 1rem">
+        <div class="agenda-nav">
+          <button class="btn-sec" onclick="moverSemanaAgenda(-1)">← Semana anterior</button>
+          <div class="agenda-rango" id="agenda-rango-label">—</div>
+          <button class="btn-sec" onclick="moverSemanaAgenda(1)">Semana siguiente →</button>
+        </div>
+        <div style="text-align:center;margin:.5rem 0 .8rem">
+          <button class="btn-sec" onclick="irHoyAgenda()" style="font-size:.68rem">Hoy</button>
+        </div>
+        <div class="agenda-grid" id="agenda-grid">
+          <p style="color:#AAA;font-size:.82rem;padding:.5rem">Cargando agenda...</p>
         </div>
       </div>
     </div>
@@ -1478,6 +1511,7 @@ function goSec(id){
     renderCorteCaja();
   }
   if(id==="progreso-pedido"){renderProceso();}
+  if(id==="progreso-agenda"){renderAgendaAjustes();}
   if(id==="progreso-diseno"){renderDiseno();}
   if(id==="progreso-formato"){renderFormatoAjustesLista();}
   if(id==="inv-qr"){renderInventario();}
@@ -2626,6 +2660,7 @@ function buildProcesoCard(c){
     const done = !!prog[p.id];
     const nota = prog[p.id+"_nota"]||"";
     const fPrueba = prog[p.id+"_fechaPrueba"]||"";
+    const hPrueba = prog[p.id+"_horaPrueba"]||"";
     const fTerm   = prog[p.id+"_fechaTerminado"]||"";
     return `<div class="paso-row">
       <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem;flex-wrap:wrap">
@@ -2639,6 +2674,12 @@ function buildProcesoCard(c){
         <label style="font-size:.6rem;color:#AAA;display:flex;align-items:center;gap:.25rem">Terminado
           <input type="date" value="${fTerm}" style="font-size:.66rem;border:1px solid #E8DDD0;border-radius:2px;padding:.15rem .3rem"
             onchange="guardarNotaPedido('${c.id}','${p.id}_fechaTerminado',this.value)">
+        </label>
+      </div>
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem;flex-wrap:wrap">
+        <label style="font-size:.6rem;color:#AAA;display:flex;align-items:center;gap:.25rem">Hora
+          <input type="time" value="${hPrueba}" style="font-size:.66rem;border:1px solid #E8DDD0;border-radius:2px;padding:.15rem .3rem"
+            onchange="guardarNotaPedido('${c.id}','${p.id}_horaPrueba',this.value)">
         </label>
       </div>
       <textarea class="paso-nota-input" placeholder="Observaciones del ${p.label}..." rows="2"
@@ -2687,6 +2728,111 @@ async function guardarNotaPedido(clienteId, campo, valor){
   if(!allClientes[idx].progreso.pedido) allClientes[idx].progreso.pedido={};
   allClientes[idx].progreso.pedido[campo] = valor;
   await saveData({...data, users:allUsers, clientes:allClientes});
+}
+
+// ══ AGENDA SEMANAL DE AJUSTES ══
+let _agendaOffset = 0; // 0 = semana actual, +1 siguiente, -1 anterior
+
+function lunesDeSemana(fecha){
+  const d = new Date(fecha);
+  const dia = d.getDay(); // 0=Dom,1=Lun,...6=Sáb
+  const diff = dia===0 ? -6 : 1-dia;
+  d.setDate(d.getDate()+diff);
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function formatHora12(hhmm){
+  if(!hhmm) return "";
+  const [h,m] = hhmm.split(":").map(Number);
+  const ampm = h>=12 ? "PM" : "AM";
+  let h12 = h%12; if(h12===0) h12=12;
+  return `${h12}:${String(m).padStart(2,"0")} ${ampm}`;
+}
+
+function fechaISO(d){
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+function moverSemanaAgenda(delta){
+  _agendaOffset += delta;
+  renderAgendaAjustes();
+}
+
+function irHoyAgenda(){
+  _agendaOffset = 0;
+  renderAgendaAjustes();
+}
+
+function renderAgendaAjustes(){
+  const grid = document.getElementById("agenda-grid");
+  const label = document.getElementById("agenda-rango-label");
+  if(!grid) return;
+
+  const hoy = new Date();
+  const base = lunesDeSemana(hoy);
+  base.setDate(base.getDate() + (_agendaOffset*7));
+
+  const diasNombre = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+  const dias = [];
+  for(let i=0;i<7;i++){
+    const d = new Date(base);
+    d.setDate(base.getDate()+i);
+    dias.push(d);
+  }
+
+  if(label){
+    const ini = dias[0].toLocaleDateString("es-MX",{day:"numeric",month:"short"});
+    const fin = dias[6].toLocaleDateString("es-MX",{day:"numeric",month:"short",year:"numeric"});
+    label.textContent = `${ini} – ${fin}`;
+  }
+
+  const hoyISO = fechaISO(hoy);
+
+  grid.innerHTML = dias.map((d,i)=>{
+    const iso = fechaISO(d);
+    const citas = [];
+    allClientes.forEach(c=>{
+      const prog = c.progreso?.pedido || {};
+      PASOS_PEDIDO.forEach(p=>{
+        const fPrueba = prog[p.id+"_fechaPrueba"] || "";
+        const hPrueba = prog[p.id+"_horaPrueba"] || "";
+        if(fPrueba === iso) citas.push({cliente:c, paso:p, hora:hPrueba});
+      });
+    });
+    citas.sort((a,b)=>{
+      if(a.hora && b.hora) return a.hora.localeCompare(b.hora);
+      if(a.hora) return -1;
+      if(b.hora) return 1;
+      return 0;
+    });
+    const cuerpo = citas.length
+      ? citas.map(ct=>`<div class="agenda-entry" onclick="irAClienteProceso('${ct.cliente.id}')">
+          <div class="agenda-entry-paso">${ct.paso.label}</div>
+          <div class="agenda-entry-nombre">${ct.hora?formatHora12(ct.hora)+" · ":""}${ct.cliente.nombre}</div>
+        </div>`).join("")
+      : '<div class="agenda-empty">Sin citas</div>';
+    return `<div class="agenda-day ${iso===hoyISO?"hoy":""}">
+      <div class="agenda-day-head">
+        <div class="agenda-day-nombre">${diasNombre[i]}</div>
+        <div class="agenda-day-fecha">${d.getDate()}/${d.getMonth()+1}</div>
+      </div>
+      <div class="agenda-day-body">${cuerpo}</div>
+    </div>`;
+  }).join("");
+}
+
+function irAClienteProceso(clienteId){
+  goSec("progreso-pedido");
+  setTimeout(()=>{
+    const el = document.getElementById("pcard-"+clienteId);
+    if(el){
+      el.scrollIntoView({behavior:"smooth", block:"center"});
+      el.style.transition = "box-shadow .3s";
+      el.style.boxShadow = "0 0 0 2px var(--dorado)";
+      setTimeout(()=>{el.style.boxShadow="";},1800);
+    }
+  },150);
 }
 
 // ══ LISTA "FORMATO DE AJUSTES" (submenú Progreso) ══
@@ -3079,7 +3225,7 @@ const SECCIONES_CTRL = [
   {id:"clientes",       label:"👗 Clientes",          subs:["nuevo-cliente","lista-clientes"]},
   {id:"pagos",          label:"💳 Pagos",              subs:["pagos-pendientes","historial-pagos","nota-sencilla","corte-caja"]},
   {id:"pedidos",        label:"📋 Pedidos",            subs:["todos-pedidos","entregas-fecha"]},
-  {id:"progreso",       label:"📦 Progreso",           subs:["progreso-pedido","progreso-diseno","progreso-formato"]},
+  {id:"progreso",       label:"📦 Progreso",           subs:["progreso-pedido","progreso-agenda","progreso-diseno","progreso-formato"]},
   {id:"inventario",     label:"🏷️ Inventario",         subs:["inv-qr","inv-paquetes"]},
 ];
 
