@@ -493,14 +493,11 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
       <label>Contraseña</label>
       <input type="password" id="inp-p" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:2.4rem">
       <button type="button"
-        onmousedown="document.getElementById('inp-p').type='text'"
-        onmouseup="document.getElementById('inp-p').type='password'"
-        onmouseleave="document.getElementById('inp-p').type='password'"
-        ontouchstart="document.getElementById('inp-p').type='text'"
-        ontouchend="document.getElementById('inp-p').type='password'"
+        onmousedown="showPass()" onmouseup="hidePass()" onmouseleave="hidePass()"
+        ontouchstart="showPass()" ontouchend="hidePass()"
         style="position:absolute;right:.3rem;bottom:.35rem;background:none;border:none;cursor:pointer;padding:.2rem;color:#999;display:flex;align-items:center"
         title="Mantén presionado para ver">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <svg id="pass-eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
           <circle cx="12" cy="12" r="3"/>
         </svg>
@@ -1421,7 +1418,19 @@ function openLogin(role){
   document.getElementById("ov-login").classList.add("open");
   setTimeout(()=>document.getElementById("inp-u").focus(),80);
 }
-function closeLogin(){document.getElementById("ov-login").classList.remove("open");}
+function showPass(){
+  const input = document.getElementById("inp-p");
+  if(input) input.type="text";
+}
+function hidePass(){
+  const input = document.getElementById("inp-p");
+  if(input) input.type="password";
+}
+
+function closeLogin(){
+  document.getElementById("ov-login").classList.remove("open");
+  hidePass();
+}
 
 async function doLogin(){
   const u=document.getElementById("inp-u").value.trim().toLowerCase();
@@ -1471,6 +1480,19 @@ function enterPanel(){
         nb.dataset.bloqueado="";
         nb.style.opacity="";
       }
+    });
+  } else {
+    // Admin: restaurar todo por si la sesión anterior en esta misma pestaña fue de un worker
+    document.getElementById("admin-sub-colab").style.display="";
+    document.getElementById("admin-sub-permisos").style.display="";
+    document.getElementById("admin-sub-hist").style.display="";
+    document.getElementById("admin-sub-micuenta").style.display="";
+    SECCIONES_CTRL.forEach(s=>{
+      const nb = document.getElementById("nb-"+s.id);
+      if(!nb) return;
+      nb.dataset.bloqueado="";
+      nb.style.opacity="";
+      nb.innerHTML = nb.innerHTML.replace(/🔒\s*/g,"");
     });
   }
   document.getElementById("my-display").value=currentUser.display||"";
@@ -2707,7 +2729,7 @@ function verNotaSencillaGuardada(id){
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:.5rem">
       <div style="font-size:1.1rem;font-weight:700">NOTA DE VENTA</div>
-      <div style="font-size:.85rem">Fecha: ${hoy}</div>
+      <div style="font-size:.85rem">Folio: <strong>Sin folio</strong> &nbsp;·&nbsp; Fecha: ${hoy}</div>
     </div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:.4rem;font-size:.82rem">
       <tr>
@@ -3679,8 +3701,9 @@ async function verificarAuthSuper(){
     const data = await loadData();
     const admin = (data.users||[]).find(x=>x.user===u&&x.pass===p&&x.role==="admin"&&!x.blocked);
     if(!admin){err.textContent="Credenciales incorrectas.";return;}
+    const cb = _authSuperCallback; // guardamos el callback ANTES de cerrar el modal, que lo pone en null
     cerrarAuthSuper();
-    if(_authSuperCallback) _authSuperCallback();
+    if(cb) cb();
   }catch(e){err.textContent="Error de conexión.";}
 }
 
@@ -4485,6 +4508,7 @@ function estatusClass(e){
 function renderPedidos(){
   const tbody=document.getElementById("pedidos-tbody");
   if(!tbody)return;
+  // Filtra solo los pendientes — "Pedido Realizado" o sin estatus
   const pendientes=allClientes.filter(c=>!c.esNotaSencilla && (!c.estatus||c.estatus==="Pedido Realizado"||c.estatus==="Pedido realizado"||c.estatus==="En Compra"));
   if(!pendientes.length){
     tbody.innerHTML='<tr><td colspan="11" style="color:#AAA;padding:1.5rem;text-align:center;">Sin pedidos pendientes 🎀</td></tr>';return;
@@ -4522,6 +4546,8 @@ function renderPedidos(){
 }
 
 async function cambiarEstatusPedido(clienteId, nuevoEstatus){
+  // Cambia el estatus desde la tabla de pedidos y refresca la lista
+  // Si el nuevo estatus no es "Pedido Realizado", el cliente desaparece de la tabla
   try{
     const data = await loadData();
     allClientes = data.clientes||[];
