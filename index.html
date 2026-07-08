@@ -569,6 +569,8 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
         <button class="sub-item" onclick="goSec('pagos-pendientes')">⏳ Pendientes</button>
         <button class="sub-item" onclick="goSec('pagos-historial')">📊 Historial</button>
         <button class="sub-item" onclick="goSec('corte-caja')">💰 Corte de caja</button>
+        <button class="sub-item" onclick="goSec('pagos-cuentas')">🏦 Cuentas</button>
+        <button class="sub-item" onclick="goSec('pagos-ingresos')">📈 Ingresos</button>
         <button class="sub-item" onclick="abrirNotaSencilla()">🧾 Nota sencilla</button>
       </div>
     </div>
@@ -606,6 +608,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
         <button class="sub-item" onclick="goSec('mi-cuenta')" id="admin-sub-micuenta">👤 Mi cuenta</button>
         <button class="sub-item" onclick="goSec('colaboradores')" id="admin-sub-colab">👥 Colaboradores</button>
         <button class="sub-item" onclick="goSec('permisos')" id="admin-sub-permisos">🔐 Permisos</button>
+        <button class="sub-item" onclick="goSec('cuentas-config')" id="admin-sub-cuentas">🏦 Cuentas</button>
         <button class="sub-item" onclick="goSec('historial-accesos')" id="admin-sub-hist">🕐 Historial accesos</button>
       </div>
     </div>
@@ -747,7 +750,11 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
         </div>
         <div class="fi" id="fi-cuenta-anticipo" style="display:none">
           <label>Cuenta destino (anticipo)</label>
-          <input type="text" id="c-cuenta-anticipo" placeholder="Ej. BBVA, Banamex, HSBC...">
+          <select id="c-cuenta-anticipo"></select>
+        </div>
+        <div class="fi" id="fi-ref-anticipo" style="display:none">
+          <label>Número de referencia (opcional)</label>
+          <input type="text" id="c-ref-anticipo" placeholder="Número de transferencia...">
         </div>
         <div class="fi"><label>Observaciones / Requisiciones especiales</label><textarea id="c-obs" placeholder="Detalles especiales del pedido..."></textarea></div>
         <div class="fi">
@@ -1010,7 +1017,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
         <div class="card" style="padding:.5rem">
           <div style="overflow-x:auto">
             <table class="tbl">
-              <thead><tr><th>#</th><th>Cliente</th><th>Método</th><th>Cuenta</th><th>Monto</th><th>Registró</th></tr></thead>
+              <thead><tr><th>#</th><th>Cliente</th><th>Método</th><th>Cuenta</th><th>Ref.</th><th>Monto</th><th>Registró</th></tr></thead>
               <tbody id="corte-tbody-anticipos"></tbody>
             </table>
           </div>
@@ -1029,6 +1036,58 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
         </div>
       </div>
       <div id="corte-empty" style="display:none;color:#AAA;text-align:center;padding:1.5rem;font-size:.85rem">Sin movimientos para esta fecha.</div>
+    </div>
+
+    <!-- ── CUENTAS (gestor financiero) ── -->
+    <div class="section" id="sec-pagos-cuentas">
+      <div class="sec-title">Cuentas</div>
+      <p style="color:#AAA;font-size:.78rem;margin:-.4rem 0 .8rem">Saldo por cuenta, según abonos y anticipos recibidos, menos los gastos registrados. Esto es independiente del corte de caja diario.</p>
+      <!-- Saldos por cuenta -->
+      <div id="cuentas-saldo-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.5rem;margin-bottom:.8rem"></div>
+      <div id="cuentas-sin-asignar-aviso" style="display:none;margin-bottom:.8rem"></div>
+      <!-- Entradas -->
+      <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--dorado-d);margin-bottom:.3rem">Entradas</div>
+      <div class="card" style="padding:.5rem;margin-bottom:.8rem">
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Método</th><th>Cuenta</th><th>Monto</th></tr></thead>
+            <tbody id="cuentas-tbody-entradas"><tr><td colspan="6" style="color:#AAA;padding:1rem;"><span class="spinner"></span>Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Salidas -->
+      <div class="hdr-row" style="margin-bottom:.3rem">
+        <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--dorado-d)">Salidas (gastos)</div>
+        <button class="btn-new" onclick="openGastoModal()">+ Registrar gasto</button>
+      </div>
+      <div class="card" style="padding:.5rem">
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>Fecha</th><th>Cuenta</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Registró</th><th></th></tr></thead>
+            <tbody id="cuentas-tbody-salidas"><tr><td colspan="7" style="color:#AAA;padding:1rem;"><span class="spinner"></span>Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── INGRESOS MENSUALES (gráfica) ── -->
+    <div class="section" id="sec-pagos-ingresos">
+      <div class="sec-title">Ingresos Mensuales</div>
+      <div class="card" style="padding:.8rem 1rem;margin-bottom:.6rem">
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+          <label style="font-size:.75rem;color:var(--dorado-d);white-space:nowrap">Año:</label>
+          <select id="ingresos-anio" onchange="renderIngresosMensuales()" style="font-size:.8rem;padding:.3rem .5rem;border:1px solid var(--borde);border-radius:4px;background:var(--bg);color:var(--texto)"></select>
+          <div style="font-size:.72rem;color:#AAA">Suma de anticipos + abonos recibidos cada mes.</div>
+        </div>
+      </div>
+      <div id="ingresos-total-card" style="margin-bottom:.6rem"></div>
+      <div class="card" style="padding:.8rem">
+        <div id="ingresos-chart-box" style="position:relative;width:100%">
+          <canvas id="ingresos-chart" style="width:100%;height:280px;display:block"></canvas>
+        </div>
+        <div id="ingresos-legend" style="display:flex;flex-wrap:wrap;gap:.7rem;margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--borde)"></div>
+        <div id="ingresos-totales-mes" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--borde)"></div>
+      </div>
     </div>
 
     <!-- ── PROCESO DE ELABORACIÓN ── -->
@@ -1250,6 +1309,24 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
       </div>
     </div>
 
+    <div class="section" id="sec-cuentas-config">
+      <div class="sec-title">Cuentas</div>
+      <div class="card">
+        <p style="color:#AAA;font-size:.78rem;margin-bottom:.8rem">Estas son las cuentas donde se puede recibir dinero (Efectivo, Tarjeta, Transferencias). Se usan al registrar abonos y anticipos, y en el módulo de Cuentas dentro de Pagos.</p>
+        <div class="hdr-row">
+          <div class="card-title" style="margin:0">Catálogo de cuentas</div>
+          <button class="btn-new" onclick="openCuentaModal(null)">+ Nueva cuenta</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="w-tbl">
+            <thead><tr><th>Nombre</th><th>Tipo</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="cuentas-config-tbody"><tr><td colspan="4" style="color:#AAA;padding:1rem;"><span class="spinner"></span>Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+
     <div class="section" id="sec-historial-accesos">
       <div class="sec-title">Historial de Accesos</div>
       <div class="card">
@@ -1271,6 +1348,65 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <div class="field"><label>Contraseña</label><input type="password" id="w-pass" placeholder="••••••••"></div>
     <div class="msg-err" id="wm-msg"></div>
     <button class="btn-primary" onclick="saveWorker()">Guardar</button>
+  </div>
+</div>
+
+<!-- ── MODAL CUENTA ── -->
+<div class="overlay" id="modal-cuenta">
+  <div class="modal">
+    <button class="btn-close" onclick="closeCuentaModal()">✕</button>
+    <div class="badge" style="background:var(--morado)" id="cm-badge">Nueva cuenta</div>
+    <div class="modal-title" id="cm-title">Cuenta</div>
+    <div class="field">
+      <label>Tipo</label>
+      <select id="cu-tipo" onchange="toggleCuentaCampos()">
+        <option value="efectivo">Efectivo</option>
+        <option value="tarjeta">Tarjeta</option>
+        <option value="transferencia" selected>Transferencia</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
+    <div class="field" id="fi-cu-nombre"><label>Nombre</label><input type="text" id="cu-nombre" placeholder="Ej: Tarjeta"></div>
+    <div class="field" id="fi-cu-banco" style="display:none">
+      <label>Banco</label>
+      <input type="text" id="cu-banco" placeholder="Ej: BBVA, Banamex, HSBC...">
+    </div>
+    <div class="field" id="fi-cu-digitos" style="display:none">
+      <label>Últimos 4 dígitos</label>
+      <input type="text" id="cu-digitos" placeholder="0000" maxlength="4" inputmode="numeric">
+    </div>
+    <div class="msg-err" id="cm-msg"></div>
+    <button class="btn-primary" onclick="saveCuenta()">Guardar</button>
+  </div>
+</div>
+
+<!-- ── MODAL GASTO ── -->
+<div class="overlay" id="modal-gasto">
+  <div class="modal">
+    <button class="btn-close" onclick="closeGastoModal()">✕</button>
+    <div class="badge" style="background:var(--rojo)">Registrar gasto</div>
+    <div class="modal-title">Salida de dinero</div>
+    <div class="field"><label>Fecha</label><input type="date" id="ga-fecha"></div>
+    <div class="field"><label>Monto ($)</label><input type="number" id="ga-monto" placeholder="0" min="1"></div>
+    <div class="field">
+      <label>Cuenta de la que sale</label>
+      <select id="ga-cuenta"></select>
+    </div>
+    <div class="field">
+      <label>Categoría</label>
+      <select id="ga-categoria">
+        <option>Renta</option>
+        <option>Insumos / materiales</option>
+        <option>Sueldos</option>
+        <option>Servicios (luz, agua, internet...)</option>
+        <option>Envíos</option>
+        <option>Mantenimiento</option>
+        <option>Otro</option>
+      </select>
+    </div>
+    <div class="field"><label>Descripción (opcional)</label><input type="text" id="ga-desc" placeholder="Detalle del gasto..."></div>
+    <div class="msg-err" id="gm-msg"></div>
+    <button class="btn-primary" onclick="saveGasto()">Guardar gasto</button>
   </div>
 </div>
 
@@ -1327,7 +1463,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     </div>
     <div class="field" id="fi-abono-cuenta" style="display:none">
       <label>Cuenta destino</label>
-      <input type="text" id="abono-cuenta" placeholder="Ej. BBVA, Banamex, HSBC...">
+      <select id="abono-cuenta"></select>
     </div>
     <div class="field">
       <label>Referencia (opcional)</label>
@@ -1403,6 +1539,8 @@ const BIN_ID     = "6a2f95d2da38895dfec1c3bb";
 const BIN_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 let currentUser = null, allUsers = [], allClientes = [];
+let allCuentas = [];
+let allGastos = [];
 let editingWorker = null;
 let selectedColor = "#C8A8D0";
 
@@ -1456,6 +1594,47 @@ function toast(msg,type="ok"){
   setTimeout(()=>t.classList.remove("show"),3000);
 }
 
+// ══ CUENTAS (catálogo) ══
+// Si el bin todavía no tiene data.cuentas, se crean las 4 cuentas base la primera vez.
+function cuentasDefault(){
+  return [
+    {id:"cta_efectivo", nombre:"Efectivo", tipo:"efectivo", activa:true},
+    {id:"cta_tarjeta",  nombre:"Tarjeta",  tipo:"tarjeta",  activa:true},
+    {id:"cta_transf1",  nombre:"Transferencia cuenta 1", tipo:"transferencia", activa:true},
+    {id:"cta_transf2",  nombre:"Transferencia cuenta 2", tipo:"transferencia", activa:true}
+  ];
+}
+async function asegurarCuentas(data){
+  if(data.cuentas && data.cuentas.length) return data.cuentas;
+  const cuentas = cuentasDefault();
+  data.cuentas = cuentas; // mutamos el objeto para que el saveData de doLogin no lo pise
+  await saveData({...data, clientes:data.clientes||[]});
+  return cuentas;
+}
+// Llena un <select> con las cuentas activas tipo "transferencia" (Transferencia cuenta 1, cuenta 2, etc.)
+function poblarSelectCuentaTransferencia(selectId, valorActual){
+  const sel = document.getElementById(selectId);
+  if(!sel) return;
+  const opciones = (allCuentas||[]).filter(c=>c.tipo==="transferencia" && c.activa);
+  sel.innerHTML = '<option value="">Seleccionar cuenta...</option>' + opciones.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join("");
+  if(valorActual) sel.value = valorActual;
+}
+// Busca el id de la cuenta base (Efectivo o Tarjeta) según el método de pago
+function cuentaIdPorMetodo(metodo, cuentaSeleccionadaId){
+  if(!metodo) return null;
+  if(metodo==="Transferencia") return cuentaSeleccionadaId || null;
+  const tipo = metodo==="Efectivo" ? "efectivo" : metodo==="Tarjeta" ? "tarjeta" : null;
+  if(!tipo) return null;
+  const cuenta = (allCuentas||[]).find(c=>c.tipo===tipo && c.activa);
+  return cuenta ? cuenta.id : null;
+}
+// Resuelve un cuentaId a su nombre para mostrar en tablas/reportes
+function nombreCuenta(cuentaId){
+  if(!cuentaId) return "Sin cuenta asignada";
+  const c = (allCuentas||[]).find(x=>x.id===cuentaId);
+  return c ? c.nombre : "Sin cuenta asignada";
+}
+
 // ══ LOGIN ══
 let loginRole="admin";
 let _desbloqueosTemp = new Set(); // secciones desbloqueadas por supervisor en esta sesión
@@ -1492,6 +1671,7 @@ async function doLogin(){
   try{
     const data=await loadData();
     allUsers=data.users||[];allClientes=data.clientes||[];window._invData=data.inventario||[];
+    allCuentas=await asegurarCuentas(data);
     const match=allUsers.find(x=>x.user===u&&x.pass===p&&x.role===loginRole);
     if(!match){err.textContent="Usuario o contraseña incorrectos.";btn.innerHTML="Entrar";btn.disabled=false;return;}
     if(match.blocked){err.textContent="Cuenta bloqueada. Contacta al administrador.";btn.innerHTML="Entrar";btn.disabled=false;return;}
@@ -1512,6 +1692,7 @@ function enterPanel(){
   if(currentUser.role!=="admin"){
     document.getElementById("admin-sub-colab").style.display="none";
     document.getElementById("admin-sub-permisos").style.display="none";
+    document.getElementById("admin-sub-cuentas").style.display="none";
     document.getElementById("admin-sub-hist").style.display="none";
     document.getElementById("admin-sub-micuenta").style.display="none";
     // Mostrar botones del nav — bloqueados con 🔒, permitidos normal
@@ -1536,6 +1717,7 @@ function enterPanel(){
     // Admin: restaurar todo por si la sesión anterior en esta misma pestaña fue de un worker
     document.getElementById("admin-sub-colab").style.display="";
     document.getElementById("admin-sub-permisos").style.display="";
+    document.getElementById("admin-sub-cuentas").style.display="";
     document.getElementById("admin-sub-hist").style.display="";
     document.getElementById("admin-sub-micuenta").style.display="";
     SECCIONES_CTRL.forEach(s=>{
@@ -1616,10 +1798,13 @@ function goSec(id){
   if(id==="colaboradores")loadWorkers();
   if(id==="historial-accesos")loadHistorial();
   if(id==="permisos"){_permisosWorkerActual=null;renderPermisos();}
+  if(id==="cuentas-config"){renderCuentasConfig();}
   if(id==="todos-pedidos"){renderPedidos();initFiltroEntregasAnio();}
   if(id==="entregas-fecha"){initFiltroEntregasAnio();}
   if(id==="pagos-pendientes"){renderPagosPendientes();}
   if(id==="pagos-historial"){renderHistorialPagos();}
+  if(id==="pagos-cuentas"){renderCuentasPagos();}
+  if(id==="pagos-ingresos"){initIngresosMensuales();}
   if(id==="corte-caja"){
     const hoy=fechaLocalISO();
     const inp=document.getElementById("corte-fecha");
@@ -1664,6 +1849,10 @@ function limpiarFormularioCliente(){
   if(cuentaAnticEl) cuentaAnticEl.value="";
   const fiCuentaAntic=document.getElementById("fi-cuenta-anticipo");
   if(fiCuentaAntic) fiCuentaAntic.style.display="none";
+  const refAnticEl=document.getElementById("c-ref-anticipo");
+  if(refAnticEl) refAnticEl.value="";
+  const fiRefAntic=document.getElementById("fi-ref-anticipo");
+  if(fiRefAntic) fiRefAntic.style.display="none";
   // Folio display
   const folioDisp=document.getElementById("c-folio-display");
   if(folioDisp) folioDisp.textContent="Se asignará al guardar";
@@ -1885,7 +2074,8 @@ async function saveCliente(){
     prorogaDias:0,
     interes:"no",
     fpago:document.getElementById("c-fpago").value,
-    cuentaAnticipo:document.getElementById("c-cuenta-anticipo").value.trim(),
+    cuentaAnticipoId:cuentaIdPorMetodo(document.getElementById("c-fpago").value, document.getElementById("c-cuenta-anticipo").value),
+    refAnticipo:document.getElementById("c-ref-anticipo").value.trim(),
     entrega:document.getElementById("c-entrega").value,
     observaciones:document.getElementById("c-obs").value.trim(),
     estatus:document.getElementById("c-estatus").value,
@@ -1988,7 +2178,9 @@ function abrirEditarCliente(id){
   // Mostrar campo cuenta si fpago es transferencia
   const esTransf = (c.fpago||"").toLowerCase()==="transferencia";
   document.getElementById("fi-edit-cuenta-anticipo").style.display = esTransf ? "block" : "none";
-  document.getElementById("edit-cuenta-anticipo").value = esTransf ? (c.cuentaAnticipo||"") : "";
+  document.getElementById("fi-edit-ref-anticipo").style.display = esTransf ? "block" : "none";
+  if(esTransf) poblarSelectCuentaTransferencia("edit-cuenta-anticipo", c.cuentaAnticipoId||"");
+  document.getElementById("edit-ref-anticipo").value = esTransf ? (c.refAnticipo||"") : "";
   document.getElementById("edit-sispago").value      = c.sispago||"En parcialidades";
   document.getElementById("edit-parcialidades").value= c.parcialidades||"30";
   document.getElementById("edit-fecha-limite").value = c.fechaLimite||"";
@@ -2188,7 +2380,8 @@ async function guardarEdicionCliente(){
       anticipo:      document.getElementById("edit-anticipo").value,
       fechaAnticipo: original.fechaAnticipo || original.fecha,
       fpago:         document.getElementById("edit-fpago").value.trim(),
-      cuentaAnticipo: document.getElementById("edit-cuenta-anticipo").value.trim() || original.cuentaAnticipo || "",
+      cuentaAnticipoId: cuentaIdPorMetodo(document.getElementById("edit-fpago").value.trim(), document.getElementById("edit-cuenta-anticipo").value) || original.cuentaAnticipoId || null,
+      refAnticipo:   document.getElementById("edit-ref-anticipo").value.trim() || original.refAnticipo || "",
       sispago:       document.getElementById("edit-sispago").value,
       parcialidades: document.getElementById("edit-parcialidades").value||30,
       fechaLimite:   document.getElementById("edit-fecha-limite").value,
@@ -2494,6 +2687,7 @@ function renderPagosPendientes(){
     sumaTotal += total;
     sumaPagado += pagado;
     sumaSaldo += saldoFinal>0 ? saldoFinal : 0;
+    if(saldoFinal<=0) return null; // ya liquidado — no debe aparecer en pendientes
 
     // Estado de vencimiento
     let estadoHTML = '';
@@ -2523,7 +2717,7 @@ function renderPagosPendientes(){
       <td>${estadoHTML}</td>
       <td><button class="ic-btn" onclick="abrirAbonoModal('${c.id}')" title="Registrar abono">➕</button></td>
     </tr>`;
-  });
+  }).filter(Boolean);
   tbody.innerHTML = rows.length ? rows.join("") : '<tr><td colspan="8" style="color:#AAA;padding:1.5rem;text-align:center">Todos los pedidos están liquidados 🎀</td></tr>';
 
   // Resumen arriba
@@ -2592,7 +2786,8 @@ function renderCorteCaja(){
         folio: c.folio||"—",
         nombre: c.nombre,
         metodo: c.fpago||"—",
-        cuenta: c.cuentaAnticipo||"—",
+        cuenta: nombreCuenta(c.cuentaAnticipoId),
+        ref: c.refAnticipo||"—",
         monto: Number(c.anticipo||0),
         registradoPor: c.creadoPor||"—"
       });
@@ -2608,7 +2803,7 @@ function renderCorteCaja(){
           folio: c.folio||"—",
           nombre: c.nombre,
           metodo: p.metodo||"—",
-          cuenta: p.cuenta||"—",
+          cuenta: nombreCuenta(p.cuentaId),
           ref: p.ref||"—",
           monto: Number(p.monto||0),
           registradoPor: p.registradoPor||"—"
@@ -2657,7 +2852,8 @@ function renderCorteCaja(){
       <td style="font-size:.72rem;color:#AAA">${x.folio}</td>
       <td style="font-size:.8rem">${x.nombre}</td>
       <td style="font-size:.76rem">${x.metodo}</td>
-      <td style="font-size:.72rem;color:#AAA">${(x.metodo||"").toLowerCase()==="transferencia" ? (x.cuenta||"—") : "—"}</td>
+      <td style="font-size:.72rem;color:#AAA">${x.cuenta}</td>
+      <td style="font-size:.72rem;color:#AAA">${x.ref}</td>
       <td style="font-size:.76rem;color:var(--verde);font-weight:600">$${x.monto.toLocaleString("es-MX")}</td>
       <td style="font-size:.72rem;color:#AAA">${x.registradoPor}</td>
     </tr>`).join("");
@@ -2672,7 +2868,7 @@ function renderCorteCaja(){
       <td style="font-size:.72rem;color:#AAA">${x.folio}</td>
       <td style="font-size:.8rem">${x.nombre}</td>
       <td style="font-size:.76rem">${x.metodo}</td>
-      <td style="font-size:.72rem;color:#AAA">${x.metodo==="Transferencia" ? (x.cuenta||"—") : "—"}</td>
+      <td style="font-size:.72rem;color:#AAA">${x.cuenta}</td>
       <td style="font-size:.72rem;color:#AAA">${x.ref}</td>
       <td style="font-size:.76rem;color:var(--verde);font-weight:600">$${x.monto.toLocaleString("es-MX")}</td>
       <td style="font-size:.72rem;color:#AAA">${x.registradoPor}</td>
@@ -2718,31 +2914,39 @@ function toggleAbonoProroga(){
 }
 function closeAbonoModal(){
   document.getElementById("modal-abono").classList.remove("open");
-  document.getElementById("abono-cuenta").value="";
+  document.getElementById("abono-cuenta").innerHTML="";
   document.getElementById("fi-abono-cuenta").style.display="none";
   document.getElementById("abono-metodo").value="Efectivo";
 }
 function toggleAbonoCuenta(){
   const metodo = document.getElementById("abono-metodo").value;
-  document.getElementById("fi-abono-cuenta").style.display = metodo==="Transferencia" ? "block" : "none";
-  if(metodo!=="Transferencia") document.getElementById("abono-cuenta").value="";
+  const mostrar = metodo==="Transferencia";
+  document.getElementById("fi-abono-cuenta").style.display = mostrar ? "block" : "none";
+  if(mostrar) poblarSelectCuentaTransferencia("abono-cuenta");
+  else document.getElementById("abono-cuenta").innerHTML="";
 }
 function toggleCuentaAnticipo(){
   const metodo = document.getElementById("c-fpago").value;
-  document.getElementById("fi-cuenta-anticipo").style.display = metodo==="Transferencia" ? "block" : "none";
-  if(metodo!=="Transferencia") document.getElementById("c-cuenta-anticipo").value="";
+  const mostrar = metodo==="Transferencia";
+  document.getElementById("fi-cuenta-anticipo").style.display = mostrar ? "block" : "none";
+  document.getElementById("fi-ref-anticipo").style.display = mostrar ? "block" : "none";
+  if(mostrar) poblarSelectCuentaTransferencia("c-cuenta-anticipo");
+  else { document.getElementById("c-cuenta-anticipo").innerHTML=""; document.getElementById("c-ref-anticipo").value=""; }
 }
 function toggleEditCuentaAnticipo(){
   const metodo = document.getElementById("edit-fpago").value.trim().toLowerCase();
-  document.getElementById("fi-edit-cuenta-anticipo").style.display = metodo==="transferencia" ? "block" : "none";
-  if(metodo!=="transferencia") document.getElementById("edit-cuenta-anticipo").value="";
+  const mostrar = metodo==="transferencia";
+  document.getElementById("fi-edit-cuenta-anticipo").style.display = mostrar ? "block" : "none";
+  document.getElementById("fi-edit-ref-anticipo").style.display = mostrar ? "block" : "none";
+  if(mostrar) poblarSelectCuentaTransferencia("edit-cuenta-anticipo");
+  else { document.getElementById("edit-cuenta-anticipo").innerHTML=""; document.getElementById("edit-ref-anticipo").value=""; }
 }
 
 async function guardarAbono(){
   const monto = parseFloat(document.getElementById("abono-monto").value);
   const fecha = document.getElementById("abono-fecha").value;
   const metodo = document.getElementById("abono-metodo").value;
-  const cuenta = document.getElementById("abono-cuenta").value.trim();
+  const cuentaSeleccionada = document.getElementById("abono-cuenta").value;
   const ref = document.getElementById("abono-ref").value.trim();
   const proroga = document.getElementById("abono-proroga").checked;
   const prorogaDias = parseInt(document.getElementById("abono-proroga-dias").value)||0;
@@ -2754,12 +2958,14 @@ async function guardarAbono(){
     const data = await loadData();
     allClientes = data.clientes||[];
     allUsers = data.users||[];
+    allCuentas = data.cuentas||allCuentas;
+    const cuentaId = cuentaIdPorMetodo(metodo, cuentaSeleccionada);
     const idx = allClientes.findIndex(x=>x.id===abonoClienteId);
     const c = allClientes[idx];
     if(!c.pagos) c.pagos=[];
     if(monto && monto>0){
       c.pagos.push({
-        monto, fecha, metodo, cuenta, ref,
+        monto, fecha, metodo, cuentaId, ref,
         registradoPor: currentUser.user,
         registradoEn: new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"})
       });
@@ -3704,7 +3910,7 @@ async function eliminarSuministro(clienteId, idx_sumi){
 // ══ PERMISOS ══
 const SECCIONES_CTRL = [
   {id:"clientes",       label:"👗 Clientes",          subs:["nuevo-cliente","lista-clientes"]},
-  {id:"pagos",          label:"💳 Pagos",              subs:["pagos-pendientes","historial-pagos","nota-sencilla","corte-caja"]},
+  {id:"pagos",          label:"💳 Pagos",              subs:["pagos-pendientes","pagos-historial","nota-sencilla","corte-caja","pagos-cuentas","pagos-ingresos"]},
   {id:"pedidos",        label:"📋 Pedidos",            subs:["todos-pedidos","entregas-fecha"]},
   {id:"progreso",       label:"📦 Progreso",           subs:["progreso-pedido","progreso-agenda","progreso-diseno","progreso-formato"]},
   {id:"inventario",     label:"🏷️ Inventario",         subs:["inv-qr","inv-buscar","inv-paquetes"]},
@@ -3769,6 +3975,441 @@ async function guardarPermisos(){
     toast("Permisos actualizados ✓");
   }catch(e){msg.style.color="var(--rojo)";msg.textContent="Error al guardar.";}
 }
+
+// ══ CUENTAS — Config (crear/renombrar/desactivar) ══
+function renderCuentasConfig(){
+  const tbody = document.getElementById("cuentas-config-tbody");
+  if(!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" style="color:#AAA;padding:1rem;"><span class="spinner"></span>Cargando...</td></tr>';
+  loadData().then(data=>{
+    allCuentas = data.cuentas||[];
+    if(!allCuentas.length){ tbody.innerHTML='<tr><td colspan="4" style="color:#AAA;padding:1rem;">Sin cuentas registradas.</td></tr>'; return; }
+    const tipoLabel = {efectivo:"Efectivo", tarjeta:"Tarjeta", transferencia:"Transferencia", otro:"Otro"};
+    tbody.innerHTML = allCuentas.map(c=>`<tr>
+      <td style="font-size:.8rem">${c.nombre}</td>
+      <td style="font-size:.76rem;color:#888">${tipoLabel[c.tipo]||c.tipo}</td>
+      <td><span class="status-badge ${c.activa?'s-entregado':'s-pedido'}">${c.activa?'Activa':'Inactiva'}</span></td>
+      <td style="white-space:nowrap">
+        <button class="ic-btn" onclick="openCuentaModal('${c.id}')" title="Editar">✏️</button>
+        <button class="ic-btn" onclick="toggleCuentaActiva('${c.id}')" title="${c.activa?'Desactivar':'Activar'}">${c.activa?'🚫':'✅'}</button>
+      </td>
+    </tr>`).join("");
+  }).catch(()=>{ tbody.innerHTML='<tr><td colspan="4" style="color:var(--rojo);padding:1rem;">Error al cargar.</td></tr>'; });
+}
+
+let editingCuenta = null;
+function toggleCuentaCampos(){
+  const tipo = document.getElementById("cu-tipo").value;
+  const esTransf = tipo==="transferencia";
+  document.getElementById("fi-cu-nombre").style.display = esTransf ? "none" : "block";
+  document.getElementById("fi-cu-banco").style.display   = esTransf ? "block" : "none";
+  document.getElementById("fi-cu-digitos").style.display = esTransf ? "block" : "none";
+}
+function openCuentaModal(id){
+  editingCuenta = id;
+  const badge = document.getElementById("cm-badge");
+  const title = document.getElementById("cm-title");
+  document.getElementById("cm-msg").textContent="";
+  if(id){
+    const c = allCuentas.find(x=>x.id===id);
+    badge.textContent="Editar cuenta"; title.textContent="Editar cuenta";
+    document.getElementById("cu-tipo").value = c?.tipo||"transferencia";
+    document.getElementById("cu-nombre").value = c?.nombre||"";
+    document.getElementById("cu-banco").value = c?.banco||"";
+    document.getElementById("cu-digitos").value = c?.digitos||"";
+  } else {
+    badge.textContent="Nueva cuenta"; title.textContent="Cuenta";
+    document.getElementById("cu-tipo").value="transferencia";
+    document.getElementById("cu-nombre").value="";
+    document.getElementById("cu-banco").value="";
+    document.getElementById("cu-digitos").value="";
+  }
+  toggleCuentaCampos();
+  document.getElementById("modal-cuenta").classList.add("open");
+}
+function closeCuentaModal(){
+  document.getElementById("modal-cuenta").classList.remove("open");
+  editingCuenta = null;
+}
+async function saveCuenta(){
+  const tipo = document.getElementById("cu-tipo").value;
+  const msg = document.getElementById("cm-msg");
+  msg.textContent="";
+  let nombre, banco="", digitos="";
+  if(tipo==="transferencia"){
+    banco = document.getElementById("cu-banco").value.trim();
+    digitos = document.getElementById("cu-digitos").value.trim();
+    if(!banco){ msg.textContent="Escribe el nombre del banco."; return; }
+    if(!/^\d{4}$/.test(digitos)){ msg.textContent="Los últimos dígitos deben ser exactamente 4 números."; return; }
+    nombre = `${banco} •••• ${digitos}`;
+  } else {
+    nombre = document.getElementById("cu-nombre").value.trim();
+    if(!nombre){ msg.textContent="Escribe un nombre para la cuenta."; return; }
+  }
+  try{
+    const data = await loadData();
+    allCuentas = data.cuentas||cuentasDefault();
+    const dup = allCuentas.find(x=>x.nombre.toLowerCase()===nombre.toLowerCase() && x.id!==editingCuenta);
+    if(dup){ msg.textContent="Ya existe una cuenta con ese nombre."; return; }
+    if(editingCuenta){
+      const idx = allCuentas.findIndex(x=>x.id===editingCuenta);
+      if(idx>-1){ allCuentas[idx].nombre=nombre; allCuentas[idx].tipo=tipo; allCuentas[idx].banco=banco; allCuentas[idx].digitos=digitos; }
+    } else {
+      const nuevoId = "cta_"+Date.now();
+      allCuentas.push({id:nuevoId, nombre, tipo, banco, digitos, activa:true});
+    }
+    await saveData({...data, cuentas:allCuentas, clientes:data.clientes||[]});
+    closeCuentaModal();
+    renderCuentasConfig();
+    toast("Cuenta guardada ✓");
+  }catch(e){ msg.textContent="Error al guardar."; }
+}
+async function toggleCuentaActiva(id){
+  try{
+    const data = await loadData();
+    allCuentas = data.cuentas||[];
+    const idx = allCuentas.findIndex(x=>x.id===id);
+    if(idx<0) return;
+    allCuentas[idx].activa = !allCuentas[idx].activa;
+    await saveData({...data, cuentas:allCuentas, clientes:data.clientes||[]});
+    renderCuentasConfig();
+    toast(allCuentas[idx].activa?"Cuenta activada ✓":"Cuenta desactivada ✓");
+  }catch(e){ toast("Error al actualizar","err"); }
+}
+
+// ══ CUENTAS — Pagos (saldos, entradas, salidas) ══
+function selectAsignarCuentaHTML(clienteId, tipo, pagoIndex){
+  const opciones = (allCuentas||[]).filter(c=>c.activa)
+    .map(c=>'<option value="'+c.id+'">'+c.nombre+'</option>').join("");
+  const idxAttr = (pagoIndex===null||pagoIndex===undefined) ? "null" : pagoIndex;
+  return '<select style="font-size:.72rem;padding:.2rem .3rem" onchange="asignarCuentaEntrada(\''+clienteId+'\',\''+tipo+'\','+idxAttr+',this.value)">'
+    + '<option value="">Sin asignar</option>' + opciones + '</select>';
+}
+
+async function renderCuentasPagos(){
+  const cardsEl = document.getElementById("cuentas-saldo-cards");
+  const avisoEl = document.getElementById("cuentas-sin-asignar-aviso");
+  const tbodyEntradas = document.getElementById("cuentas-tbody-entradas");
+  const tbodySalidas = document.getElementById("cuentas-tbody-salidas");
+  tbodyEntradas.innerHTML = '<tr><td colspan="6" style="color:#AAA;padding:1rem;"><span class="spinner"></span>Cargando...</td></tr>';
+  tbodySalidas.innerHTML = '<tr><td colspan="7" style="color:#AAA;padding:1rem;"><span class="spinner"></span>Cargando...</td></tr>';
+  let data;
+  try{ data = await loadData(); }catch(e){ tbodyEntradas.innerHTML='<tr><td colspan="6" style="color:var(--rojo)">Error al cargar.</td></tr>'; return; }
+  allClientes = data.clientes||[];
+  allCuentas = data.cuentas||[];
+  allGastos = data.gastos||[];
+
+  // Entradas: anticipos + abonos de todos los clientes
+  const entradas = [];
+  allClientes.forEach(c=>{
+    if(Number(c.anticipo||0) > 0){
+      entradas.push({
+        clienteId:c.id, tipo:"anticipo", pagoIndex:null,
+        fecha:c.fechaAnticipo||c.fecha||"—", nombre:c.nombre,
+        metodo:c.fpago||"—", cuentaId:c.cuentaAnticipoId||null,
+        monto:Number(c.anticipo||0)
+      });
+    }
+    (c.pagos||[]).forEach((p,i)=>{
+      if(Number(p.monto||0) > 0){
+        entradas.push({
+          clienteId:c.id, tipo:"abono", pagoIndex:i,
+          fecha:p.fecha||"—", nombre:c.nombre,
+          metodo:p.metodo||"—", cuentaId:p.cuentaId||null,
+          monto:Number(p.monto||0)
+        });
+      }
+    });
+  });
+  entradas.sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+
+  // Saldos por cuenta activa
+  const cuentasActivas = allCuentas.filter(c=>c.activa);
+  cardsEl.innerHTML = cuentasActivas.map(cu=>{
+    const totalEntradas = entradas.filter(e=>e.cuentaId===cu.id).reduce((s,e)=>s+e.monto,0);
+    const totalSalidas = allGastos.filter(g=>g.cuentaId===cu.id).reduce((s,g)=>s+Number(g.monto||0),0);
+    const saldo = totalEntradas - totalSalidas;
+    return '<div class="card" style="padding:.7rem .8rem;text-align:center">'
+      + '<div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:#AAA;margin-bottom:.3rem">'+cu.nombre+'</div>'
+      + '<div style="font-size:1.05rem;font-weight:700;color:var(--cafe)">$'+saldo.toLocaleString("es-MX")+'</div>'
+      + '<div style="font-size:.65rem;color:#AAA;margin-top:.2rem">Entradas $'+totalEntradas.toLocaleString("es-MX")+' · Salidas $'+totalSalidas.toLocaleString("es-MX")+'</div>'
+      + '</div>';
+  }).join("");
+
+  const sinAsignar = entradas.filter(e=>!e.cuentaId);
+  if(sinAsignar.length){
+    const totalSinAsignar = sinAsignar.reduce((s,e)=>s+e.monto,0);
+    avisoEl.style.display="block";
+    avisoEl.innerHTML = '<div class="card" style="padding:.6rem .9rem;border-left:3px solid var(--dorado-d)">'
+      + '<div style="font-size:.78rem;color:var(--cafe)">⚠️ Hay <strong>'+sinAsignar.length+'</strong> movimiento(s) por $'+totalSinAsignar.toLocaleString("es-MX")+' sin cuenta asignada. Asígnalos en la tabla de abajo para que su saldo cuente.</div></div>';
+  } else {
+    avisoEl.style.display="none";
+  }
+
+  tbodyEntradas.innerHTML = entradas.length ? entradas.map(e=>{
+    const cuentaCelda = e.cuentaId ? nombreCuenta(e.cuentaId) : selectAsignarCuentaHTML(e.clienteId, e.tipo, e.pagoIndex);
+    return '<tr>'
+      + '<td style="font-size:.72rem;color:#AAA">'+e.fecha+'</td>'
+      + '<td style="font-size:.8rem">'+e.nombre+'</td>'
+      + '<td style="font-size:.74rem;color:#AAA">'+(e.tipo==="anticipo"?"Anticipo":"Abono")+'</td>'
+      + '<td style="font-size:.76rem">'+e.metodo+'</td>'
+      + '<td style="font-size:.72rem">'+cuentaCelda+'</td>'
+      + '<td style="font-size:.76rem;color:var(--verde);font-weight:600">$'+e.monto.toLocaleString("es-MX")+'</td>'
+      + '</tr>';
+  }).join("") : '<tr><td colspan="6" style="color:#AAA;padding:1rem;text-align:center">Sin movimientos registrados.</td></tr>';
+
+  tbodySalidas.innerHTML = allGastos.length ? allGastos.slice().sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")).map(g=>
+    '<tr>'
+    + '<td style="font-size:.72rem;color:#AAA">'+(g.fecha||"—")+'</td>'
+    + '<td style="font-size:.74rem">'+nombreCuenta(g.cuentaId)+'</td>'
+    + '<td style="font-size:.74rem">'+(g.categoria||"—")+'</td>'
+    + '<td style="font-size:.74rem;color:#888">'+(g.descripcion||"—")+'</td>'
+    + '<td style="font-size:.76rem;color:var(--rojo);font-weight:600">$'+Number(g.monto||0).toLocaleString("es-MX")+'</td>'
+    + '<td style="font-size:.72rem;color:#AAA">'+(g.registradoPor||"—")+'</td>'
+    + '<td><button class="ic-btn" onclick="eliminarGasto(\''+g.id+'\')" title="Eliminar">🗑️</button></td>'
+    + '</tr>'
+  ).join("") : '<tr><td colspan="7" style="color:#AAA;padding:1rem;text-align:center">Sin gastos registrados.</td></tr>';
+}
+
+async function asignarCuentaEntrada(clienteId, tipo, pagoIndex, cuentaId){
+  try{
+    const data = await loadData();
+    allClientes = data.clientes||[];
+    const idx = allClientes.findIndex(x=>x.id===clienteId);
+    if(idx<0) return;
+    if(tipo==="anticipo"){
+      allClientes[idx].cuentaAnticipoId = cuentaId||null;
+    } else if(tipo==="abono" && pagoIndex!==null && allClientes[idx].pagos && allClientes[idx].pagos[pagoIndex]){
+      allClientes[idx].pagos[pagoIndex].cuentaId = cuentaId||null;
+    }
+    await saveData({...data, clientes:allClientes});
+    toast("Cuenta asignada ✓");
+    renderCuentasPagos();
+  }catch(e){ toast("Error al asignar cuenta","err"); }
+}
+
+// ══ GASTOS (salidas) ══
+function openGastoModal(){
+  document.getElementById("gm-msg").textContent="";
+  document.getElementById("ga-fecha").value = fechaLocalISO();
+  document.getElementById("ga-monto").value = "";
+  document.getElementById("ga-desc").value = "";
+  document.getElementById("ga-categoria").selectedIndex = 0;
+  const sel = document.getElementById("ga-cuenta");
+  const opciones = (allCuentas||[]).filter(c=>c.activa).map(c=>'<option value="'+c.id+'">'+c.nombre+'</option>').join("");
+  sel.innerHTML = '<option value="">Seleccionar cuenta...</option>' + opciones;
+  document.getElementById("modal-gasto").classList.add("open");
+}
+function closeGastoModal(){
+  document.getElementById("modal-gasto").classList.remove("open");
+}
+async function saveGasto(){
+  const fecha = document.getElementById("ga-fecha").value;
+  const monto = parseFloat(document.getElementById("ga-monto").value);
+  const cuentaId = document.getElementById("ga-cuenta").value;
+  const categoria = document.getElementById("ga-categoria").value;
+  const descripcion = document.getElementById("ga-desc").value.trim();
+  const msg = document.getElementById("gm-msg");
+  msg.textContent="";
+  if(!fecha){ msg.textContent="Selecciona la fecha del gasto."; return; }
+  if(!monto || monto<=0){ msg.textContent="Escribe un monto válido."; return; }
+  if(!cuentaId){ msg.textContent="Selecciona de qué cuenta sale el dinero."; return; }
+  try{
+    const data = await loadData();
+    allGastos = data.gastos||[];
+    allGastos.push({
+      id:"gasto_"+Date.now(), fecha, monto, cuentaId, categoria, descripcion,
+      registradoPor: currentUser.user,
+      registradoEn: new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"})
+    });
+    await saveData({...data, gastos:allGastos, clientes:data.clientes||[]});
+    closeGastoModal();
+    toast("Gasto registrado ✓");
+    renderCuentasPagos();
+  }catch(e){ msg.textContent="Error al guardar."; }
+}
+async function eliminarGasto(id){
+  if(!confirm("¿Eliminar este gasto? Esta acción no se puede deshacer.")) return;
+  try{
+    const data = await loadData();
+    allGastos = (data.gastos||[]).filter(g=>g.id!==id);
+    await saveData({...data, gastos:allGastos, clientes:data.clientes||[]});
+    toast("Gasto eliminado ✓");
+    renderCuentasPagos();
+  }catch(e){ toast("Error al eliminar","err"); }
+}
+
+// ══ INGRESOS MENSUALES (gráfica de líneas por concepto/cuenta) ══
+const MESES_CORTOS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const COLORES_LINEA = ["#7A4F2A","#27AE60","#2E86AB","#C0392B","#6B4F7A","#D68910","#16A085","#8E44AD"];
+
+async function initIngresosMensuales(){
+  const sel = document.getElementById("ingresos-anio");
+  let data;
+  try{ data = await loadData(); }catch(e){ return; }
+  allClientes = data.clientes||[];
+  allCuentas = data.cuentas||[];
+  const anioActual = new Date().getFullYear();
+  const anios = new Set([anioActual]);
+  allClientes.forEach(c=>{
+    const fa = (c.fechaAnticipo||c.fecha||"").slice(0,4);
+    if(fa) anios.add(parseInt(fa,10));
+    (c.pagos||[]).forEach(p=>{
+      const fp = (p.fecha||"").slice(0,4);
+      if(fp) anios.add(parseInt(fp,10));
+    });
+  });
+  const listaAnios = Array.from(anios).filter(a=>!isNaN(a)).sort((a,b)=>b-a);
+  sel.innerHTML = listaAnios.map(a=>`<option value="${a}">${a}</option>`).join("");
+  sel.value = anioActual;
+  renderIngresosMensuales();
+}
+
+// Construye, para el año dado, una serie de 12 meses por cada concepto:
+// una por cada cuenta activa + "Sin cuenta asignada" (para no esconder dinero sin clasificar)
+function calcularSeriesPorConcepto(anio){
+  // seriesMap agrupa por cuentaId real (incluye cuentas inactivas o ya eliminadas del catálogo);
+  // solo cae en "sin asignar" cuando el registro nunca tuvo cuentaId.
+  const seriesMap = {}; // key: cuentaId o "_sin_asignar" -> montos[12]
+  function sumar(cuentaId, mes, monto){
+    if(mes<0||mes>11) return;
+    const key = cuentaId || "_sin_asignar";
+    if(!seriesMap[key]) seriesMap[key] = new Array(12).fill(0);
+    seriesMap[key][mes] += monto;
+  }
+
+  allClientes.forEach(c=>{
+    const fa = c.fechaAnticipo||c.fecha||"";
+    if(fa.slice(0,4)===anio && Number(c.anticipo||0)>0){
+      sumar(c.cuentaAnticipoId||null, parseInt(fa.slice(5,7),10)-1, Number(c.anticipo||0));
+    }
+    (c.pagos||[]).forEach(p=>{
+      const fp = p.fecha||"";
+      if(fp.slice(0,4)===anio && Number(p.monto||0)>0){
+        sumar(p.cuentaId||null, parseInt(fp.slice(5,7),10)-1, Number(p.monto||0));
+      }
+    });
+  });
+
+  const todas = [];
+  // 1) Cuentas activas del catálogo, en su orden — aunque tengan $0 este año, para que la leyenda sea estable
+  allCuentas.filter(c=>c.activa).forEach(c=>{
+    todas.push({id:c.id, nombre:c.nombre, montos: seriesMap[c.id] || new Array(12).fill(0)});
+    delete seriesMap[c.id];
+  });
+  // 2) Cuentas inactivas que sí tuvieron movimientos este año — conservan su nombre real, no se pierden
+  allCuentas.filter(c=>!c.activa).forEach(c=>{
+    if(seriesMap[c.id]){
+      todas.push({id:c.id, nombre:c.nombre+" (inactiva)", montos: seriesMap[c.id]});
+      delete seriesMap[c.id];
+    }
+  });
+  // 3) Cualquier cuentaId restante que ya no exista en el catálogo (cuenta eliminada)
+  Object.keys(seriesMap).forEach(key=>{
+    if(key==="_sin_asignar") return;
+    todas.push({id:key, nombre:"Cuenta eliminada", montos: seriesMap[key]});
+  });
+  // 4) Sin cuenta asignada — solo si realmente hay algo sin clasificar
+  if(seriesMap["_sin_asignar"] && seriesMap["_sin_asignar"].reduce((s,m)=>s+m,0)>0){
+    todas.push({id:null, nombre:"Sin cuenta asignada", montos: seriesMap["_sin_asignar"]});
+  }
+  return todas;
+}
+
+function renderIngresosMensuales(){
+  const anio = document.getElementById("ingresos-anio").value;
+  const series = calcularSeriesPorConcepto(anio);
+  const totalAnio = series.reduce((s,serie)=>s+serie.montos.reduce((a,m)=>a+m,0),0);
+
+  document.getElementById("ingresos-total-card").innerHTML = `
+    <div class="card" style="padding:.7rem .9rem;text-align:center">
+      <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:#AAA;margin-bottom:.3rem">Total recibido en ${anio}</div>
+      <div style="font-size:1.3rem;font-weight:700;color:var(--dorado-d)">$${totalAnio.toLocaleString("es-MX")}</div>
+    </div>`;
+
+  dibujarGraficaIngresos(series);
+}
+
+function dibujarGraficaIngresos(series){
+  const canvas = document.getElementById("ingresos-chart");
+  const legendEl = document.getElementById("ingresos-legend");
+  if(!canvas) return;
+  const dpr = window.devicePixelRatio||1;
+  const W = Math.max(canvas.parentElement.clientWidth, 280), H = 280;
+  canvas.style.width = W+"px"; canvas.style.height = H+"px";
+  canvas.width = W*dpr; canvas.height = H*dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+
+  const PL=56, PR=12, PT=16, PB=34, cW=W-PL-PR, cH=H-PT-PB;
+  const maxMonto = Math.max(1, ...series.flatMap(s=>s.montos));
+  const step = maxMonto/4;
+  const cy = v => PT+cH-(v/maxMonto)*cH;
+
+  // Líneas guía horizontales + eje Y
+  for(let i=0;i<=4;i++){
+    const v = step*i, y = cy(v);
+    ctx.beginPath();
+    ctx.strokeStyle = i===0 ? "#E8DDD0" : "#F2ECE1";
+    ctx.lineWidth = i===0 ? 1 : 0.6;
+    ctx.moveTo(PL,y); ctx.lineTo(PL+cW,y); ctx.stroke();
+    ctx.fillStyle = "#AAA"; ctx.font = "10px Lato,sans-serif"; ctx.textAlign = "right";
+    ctx.fillText("$"+Math.round(v).toLocaleString("es-MX"), PL-6, y+3);
+  }
+  // Eje X — meses (centrado sobre cada grupo de barras)
+  for(let i=0;i<12;i++){
+    ctx.fillStyle = "#3A2A1A"; ctx.font = "10px Lato,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(MESES_CORTOS[i], PL + (cW/12)*i + (cW/12)/2, H-10);
+  }
+
+  // Barras agrupadas por mes — una barra por concepto/cuenta
+  const grupoW = cW/12;
+  const barW = (grupoW*0.8) / Math.max(series.length,1);
+  series.forEach((serie,idx)=>{
+    const color = serie.id===null ? "#AAAAAA" : COLORES_LINEA[idx % COLORES_LINEA.length];
+    serie.montos.forEach((monto,i)=>{
+      if(monto<=0) return;
+      const x = PL + grupoW*i + grupoW*0.1 + barW*idx;
+      const y = cy(monto);
+      const alto = PT+cH-y;
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, barW*0.9, alto);
+    });
+  });
+
+  // Eje base
+  ctx.beginPath(); ctx.strokeStyle="#E8DDD0"; ctx.lineWidth=1;
+  ctx.moveTo(PL,PT+cH); ctx.lineTo(PL+cW,PT+cH); ctx.stroke();
+
+  // Leyenda (HTML, debajo de la gráfica)
+  if(legendEl){
+    legendEl.innerHTML = series.map((serie,idx)=>{
+      const color = serie.id===null ? "#AAAAAA" : COLORES_LINEA[idx % COLORES_LINEA.length];
+      const totalSerie = serie.montos.reduce((s,m)=>s+m,0);
+      return `<div style="display:flex;align-items:center;gap:.35rem;font-size:.72rem;color:var(--texto)">
+        <span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block"></span>
+        ${serie.nombre} — <strong>$${totalSerie.toLocaleString("es-MX")}</strong>
+      </div>`;
+    }).join("");
+  }
+
+  const totalesEl = document.getElementById("ingresos-totales-mes");
+  if(totalesEl){
+    const totalesPorMes = MESES_CORTOS.map((_,i)=> series.reduce((s,serie)=>s+serie.montos[i],0));
+    totalesEl.innerHTML = '<div style="width:100%;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:#AAA;margin-bottom:.3rem">Total recibido por mes (todas las cuentas)</div>'
+      + totalesPorMes.map((total,i)=>
+        `<div style="flex:1;min-width:70px;text-align:center;background:var(--bg);border-radius:4px;padding:.3rem .2rem">
+          <div style="font-size:.65rem;color:#AAA">${MESES_CORTOS[i]}</div>
+          <div style="font-size:.74rem;font-weight:700;color:${total>0?'var(--dorado-d)':'#CCC'}">$${total.toLocaleString("es-MX")}</div>
+        </div>`
+      ).join("");
+  }
+}
+window.addEventListener("resize", ()=>{
+  const sec = document.getElementById("sec-pagos-ingresos");
+  if(sec && sec.classList.contains("active")) setTimeout(renderIngresosMensuales,80);
+});
 
 // Verifica si el usuario actual (worker) tiene permiso para una sección
 function tienePermiso(secId){
@@ -4955,10 +5596,21 @@ function generarContrato(c){
         <input type="number" id="edit-anticipo" placeholder="0" oninput="calcEditTotal()">
         <div style="font-size:.65rem;color:var(--rojo);margin-top:.2rem">⚠️ Si es un pago nuevo, regístralo como abono — no aquí.</div>
       </div>
-      <div class="field"><label>Forma de pago</label><input type="text" id="edit-fpago" placeholder="Efectivo, transferencia..." oninput="toggleEditCuentaAnticipo()"></div>
+      <div class="field"><label>Forma de pago</label>
+        <select id="edit-fpago" onchange="toggleEditCuentaAnticipo()">
+          <option value="">Seleccionar...</option>
+          <option>Efectivo</option>
+          <option>Transferencia</option>
+          <option>Tarjeta</option>
+        </select>
+      </div>
       <div class="field" id="fi-edit-cuenta-anticipo" style="display:none">
         <label>Cuenta destino (anticipo)</label>
-        <input type="text" id="edit-cuenta-anticipo" placeholder="Ej. BBVA, Banamex, HSBC...">
+        <select id="edit-cuenta-anticipo"></select>
+      </div>
+      <div class="field" id="fi-edit-ref-anticipo" style="display:none">
+        <label>Número de referencia (opcional)</label>
+        <input type="text" id="edit-ref-anticipo" placeholder="Número de transferencia...">
       </div>
     </div>
 
