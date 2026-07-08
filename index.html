@@ -316,6 +316,34 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 .paso-nota-input{width:100%;border:none;border-bottom:1px dashed #DDD;padding:.3rem 0;font-family:"Lato",sans-serif;font-size:.76rem;color:var(--texto);background:transparent;outline:none;resize:none;transition:border-color .2s;}
 .paso-nota-input:focus{border-color:var(--dorado);}
 
+/* ══ MATRIZ DE MODELO (Buscar modelo) ══ */
+.matriz-modelo{background:#FFFDF9;border:1px solid var(--borde);border-radius:6px;padding:1.1rem 1.2rem;margin-bottom:1rem;box-shadow:0 3px 14px rgba(122,79,42,.08);}
+.matriz-header-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.4rem;gap:.6rem;}
+.matriz-modelo-nombre{font-family:"Cormorant Garamond",serif;font-size:1.3rem;font-weight:500;color:var(--dorado-d);letter-spacing:.01em;}
+.matriz-header-stats{text-align:right;flex-shrink:0;}
+.matriz-total-piezas{font-size:.68rem;color:#B39B7A;}
+.matriz-rango-precio{font-size:.76rem;color:var(--texto);font-weight:600;}
+.matriz-categoria{display:inline-block;background:#F5EDE0;color:var(--dorado-d);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;padding:.2rem .6rem;border-radius:10px;margin-bottom:.9rem;}
+.matriz-header-bottom{padding-bottom:.8rem;margin-bottom:.9rem;border-bottom:1px solid var(--borde);}
+.matriz-color-block{display:flex;gap:.75rem;padding-bottom:.9rem;margin-bottom:.9rem;border-bottom:1px dashed var(--borde);}
+.matriz-color-block:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+.matriz-color-foto{width:56px;height:56px;background:var(--crema);border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;object-fit:cover;}
+.matriz-color-body{flex:1;min-width:0;}
+.matriz-color-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;}
+.matriz-color-nombre{display:flex;align-items:center;gap:.45rem;font-family:"Lato",sans-serif;font-size:.85rem;color:var(--texto);}
+.matriz-color-dot{width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.1);flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.08);}
+.matriz-color-cuenta{font-size:.68rem;color:#B39B7A;}
+.matriz-tallas-row{display:flex;gap:.6rem;flex-wrap:wrap;}
+.matriz-talla-item{text-align:center;}
+.matriz-talla-label{font-family:"Lato",sans-serif;font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#B39B7A;margin-top:.2rem;}
+.matriz-badge{width:30px;height:30px;border-radius:50%;background:var(--dorado-g);color:#FFF8EC;border:none;font-family:"Lato",sans-serif;font-weight:700;font-size:.75rem;cursor:pointer;box-shadow:0 2px 7px rgba(122,79,42,.3);transition:transform .15s ease,box-shadow .15s ease;}
+.matriz-badge:hover{transform:scale(1.1);box-shadow:0 3px 10px rgba(122,79,42,.4);}
+.matriz-badge.activa{background:var(--dorado-d);transform:scale(1.05);}
+.matriz-vacia{display:inline-flex;width:30px;height:30px;border-radius:50%;align-items:center;justify-content:center;color:#E3D9C8;font-size:.9rem;font-weight:300;}
+.matriz-detalle{margin-top:.2rem;}
+.matriz-detalle-inner{margin-top:.8rem;padding-top:.8rem;border-top:1px dashed var(--borde);animation:matrizFadeIn .25s ease;}
+@keyframes matrizFadeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+
 .proceso-card{background:#fff;border-radius:4px;box-shadow:0 2px 10px rgba(122,79,42,.07);margin-bottom:1rem;overflow:hidden;}
 .proceso-card-header{
   display:flex;align-items:center;justify-content:space-between;
@@ -3721,6 +3749,108 @@ function renderInventario(){
   lista.innerHTML = inv.map(a => buildInvCard(a)).join("");
 }
 
+function ordenarTallas(tallas){
+  const orden = ["XXS","XS","S","M","L","XL","XXL","XXXL","3XL","4XL"];
+  return tallas.slice().sort((a,b)=>{
+    const ia = orden.indexOf((a||"").toUpperCase());
+    const ib = orden.indexOf((b||"").toUpperCase());
+    if(ia>-1 && ib>-1) return ia-ib;
+    if(ia>-1) return -1;
+    if(ib>-1) return 1;
+    return (a||"").localeCompare((b||""), undefined, {numeric:true});
+  });
+}
+
+window._matrizCeldas = {};
+
+function buildMatrizModelo(modelo, articulos){
+  const tallas = ordenarTallas([...new Set(articulos.map(a=>a.talla||"—"))]);
+  const coloresMap = {};
+  articulos.forEach(a=>{
+    const key = (a.colorNombre||a.colorHex||"—").toLowerCase();
+    if(!coloresMap[key]) coloresMap[key] = {nombre:a.colorNombre||"—", hex:a.colorHex||"#CCC", articulos:[]};
+    coloresMap[key].articulos.push(a);
+  });
+  const colores = Object.keys(coloresMap);
+  const modelKey = (modelo||"modelo").replace(/[^a-zA-Z0-9]/g,"_")||"modelo";
+
+  const totalPiezas = articulos.reduce((s,a)=>s+(Number(a.cantidad)||0),0);
+  const precios = articulos.map(a=>Number(a.precio)||0).filter(p=>p>0);
+  const precioMin = precios.length ? Math.min(...precios) : 0;
+  const precioMax = precios.length ? Math.max(...precios) : 0;
+  const rangoPrecio = precios.length
+    ? (precioMin===precioMax
+        ? "$"+precioMin.toLocaleString("es-MX")
+        : "$"+precioMin.toLocaleString("es-MX")+" – $"+precioMax.toLocaleString("es-MX"))
+    : "Sin precio";
+  const categoria = articulos[0]?.categoria || "";
+
+  const bloquesColor = colores.map(ck=>{
+    const c = coloresMap[ck];
+    const totalColor = c.articulos.reduce((s,a)=>s+(Number(a.cantidad)||0),0);
+    const foto = c.articulos.find(a=>a.tieneFoto) ? (localStorage.getItem("foto_"+c.articulos.find(a=>a.tieneFoto).id)||"") : "";
+    const fotoHTML = foto
+      ? `<img src="${foto}" class="matriz-color-foto" style="object-fit:cover">`
+      : `<div class="matriz-color-foto">👗</div>`;
+
+    const tallasHTML = tallas.map(t=>{
+      const matches = c.articulos.filter(a=>(a.talla||"—")===t);
+      if(!matches.length) return `<div class="matriz-talla-item"><span class="matriz-vacia">–</span><div class="matriz-talla-label">${t}</div></div>`;
+      const total = matches.reduce((s,a)=>s+(Number(a.cantidad)||0),0);
+      const cellId = modelKey+"__"+t.replace(/\W/g,"")+"__"+ck.replace(/\W/g,"");
+      window._matrizCeldas[cellId] = matches.map(a=>a.id);
+      return `<div class="matriz-talla-item">
+        <button class="matriz-badge" id="badge-${cellId}" onclick="toggleDetalleInvCelda('${cellId}','${modelKey}')">${total}</button>
+        <div class="matriz-talla-label">${t}</div>
+      </div>`;
+    }).join("");
+
+    return `<div class="matriz-color-block">
+      ${fotoHTML}
+      <div class="matriz-color-body">
+        <div class="matriz-color-top">
+          <div class="matriz-color-nombre"><span class="matriz-color-dot" style="background:${c.hex}"></span>${c.nombre}</div>
+          <div class="matriz-color-cuenta">${totalColor} pieza${totalColor===1?"":"s"}</div>
+        </div>
+        <div class="matriz-tallas-row">${tallasHTML}</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  return `<div class="matriz-modelo">
+    <div class="matriz-header-bottom">
+      <div class="matriz-header-top">
+        <div class="matriz-modelo-nombre">${modelo}</div>
+        <div class="matriz-header-stats">
+          <div class="matriz-total-piezas">${totalPiezas} pieza${totalPiezas===1?"":"s"} en existencia</div>
+          <div class="matriz-rango-precio">${rangoPrecio}</div>
+        </div>
+      </div>
+      ${categoria?`<span class="matriz-categoria">${categoria}</span>`:""}
+    </div>
+    ${bloquesColor}
+    <div class="matriz-detalle" id="detalle-${modelKey}"></div>
+  </div>`;
+}
+
+function toggleDetalleInvCelda(cellId, modelKey){
+  const cont = document.getElementById("detalle-"+modelKey);
+  if(!cont) return;
+  const prevBadge = document.getElementById("badge-"+cont.dataset.activo);
+  if(prevBadge) prevBadge.classList.remove("activa");
+  if(cont.dataset.activo===cellId){
+    cont.innerHTML=""; cont.dataset.activo="";
+    return;
+  }
+  const ids = window._matrizCeldas[cellId]||[];
+  const inv = window._invData||[];
+  const piezas = ids.map(id=>inv.find(a=>a.id===id)).filter(Boolean);
+  cont.innerHTML = '<div class="matriz-detalle-inner">' + piezas.map(a=>buildInvCard(a)).join("") + '</div>';
+  cont.dataset.activo = cellId;
+  const badge = document.getElementById("badge-"+cellId);
+  if(badge) badge.classList.add("activa");
+}
+
 function buscarModeloInventario(q){
   const cont = document.getElementById("inv-buscar-resultados");
   if(!cont) return;
@@ -3739,9 +3869,16 @@ function buscarModeloInventario(q){
     cont.innerHTML = '<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin coincidencias para "'+q+'".</p>';
     return;
   }
+  window._matrizCeldas = {};
+  const grupos = {};
+  coincidencias.forEach(a=>{
+    const key = (a.modelo||"").trim() || "(sin modelo)";
+    if(!grupos[key]) grupos[key]=[];
+    grupos[key].push(a);
+  });
   cont.innerHTML =
-    '<p style="font-size:.72rem;color:var(--dorado-d);margin-bottom:.5rem">'+coincidencias.length+' resultado(s) encontrado(s):</p>' +
-    coincidencias.map(a => buildInvCard(a)).join("");
+    '<p style="font-size:.72rem;color:var(--dorado-d);margin-bottom:.5rem">'+Object.keys(grupos).length+' modelo(s) encontrado(s):</p>' +
+    Object.keys(grupos).map(m => buildMatrizModelo(m, grupos[m])).join("");
 }
 
 function buildInvCard(a){
