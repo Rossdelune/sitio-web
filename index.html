@@ -1184,6 +1184,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
           <div class="card-title" style="margin:0">Artículos en stock</div>
           <div style="display:flex;gap:.5rem">
             <button class="btn-sec" id="btn-lote-flotante" onclick="abrirModalLote()" style="display:none;font-size:.78rem">🖨️ Lote (<span id="lote-count">0</span>)</button>
+            <button class="btn-sec" id="btn-migrar-fotos" onclick="migrarFotosACloudinary()" style="display:none;font-size:.78rem">☁️ Migrar fotos</button>
             <button class="btn-new" onclick="goSec('inv-nuevo')">+ Agregar</button>
           </div>
         </div>
@@ -1750,6 +1751,8 @@ function enterPanel(){
     document.getElementById("admin-sub-cuentas").style.display="none";
     document.getElementById("admin-sub-hist").style.display="none";
     document.getElementById("admin-sub-micuenta").style.display="none";
+    const btnMigrarFotos = document.getElementById("btn-migrar-fotos");
+    if(btnMigrarFotos) btnMigrarFotos.style.display="none";
     // Mostrar botones del nav — bloqueados con 🔒, permitidos normal
     const permisos = currentUser.permisos||{};
     SECCIONES_CTRL.forEach(s=>{
@@ -1775,6 +1778,8 @@ function enterPanel(){
     document.getElementById("admin-sub-cuentas").style.display="";
     document.getElementById("admin-sub-hist").style.display="";
     document.getElementById("admin-sub-micuenta").style.display="";
+    const btnMigrarFotos = document.getElementById("btn-migrar-fotos");
+    if(btnMigrarFotos) btnMigrarFotos.style.display="";
     SECCIONES_CTRL.forEach(s=>{
       const nb = document.getElementById("nb-"+s.id);
       if(!nb) return;
@@ -4720,7 +4725,8 @@ function buildMatrizModelo(modelo, articulos){
   const bloquesColor = colores.map(ck=>{
     const c = coloresMap[ck];
     const totalColor = c.articulos.reduce((s,a)=>s+(Number(a.cantidad)||0),0);
-    const foto = c.articulos.find(a=>a.tieneFoto) ? (localStorage.getItem("foto_"+c.articulos.find(a=>a.tieneFoto).id)||"") : "";
+    const artConFoto = c.articulos.find(a=>a.fotoUrl) || c.articulos.find(a=>a.tieneFoto);
+    const foto = artConFoto ? (artConFoto.fotoUrl || localStorage.getItem("foto_"+artConFoto.id) || "") : "";
     const fotoHTML = foto
       ? `<img src="${foto}" class="matriz-color-foto" style="object-fit:cover">`
       : `<div class="matriz-color-foto">👗</div>`;
@@ -4814,7 +4820,7 @@ function buscarModeloInventario(q){
 }
 
 function buildInvCard(a){
-  const foto = a.tieneFoto ? (localStorage.getItem("foto_"+a.id)||"") : "";
+  const foto = a.fotoUrl || (a.tieneFoto ? (localStorage.getItem("foto_"+a.id)||"") : "");
   const fotoHTML = foto
     ? `<img src="${foto}" style="width:64px;height:64px;object-fit:cover;border-radius:3px;border:1px solid #EEE;flex-shrink:0">`
     : `<div style="width:64px;height:64px;background:#F5F0E8;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">👗</div>`;
@@ -4843,7 +4849,7 @@ function verQR(artId){
   const a = (window._invData||[]).find(x=>x.id===artId);
   if(!a) return;
   goSec("inv-detalle");
-  const fotoDetalle = a.tieneFoto ? (localStorage.getItem("foto_"+a.id)||"") : "";
+  const fotoDetalle = a.fotoUrl || (a.tieneFoto ? (localStorage.getItem("foto_"+a.id)||"") : "");
   const card = document.getElementById("inv-detalle-card");
   card.innerHTML = `
     <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start">
@@ -5019,6 +5025,24 @@ function previewInvFoto(input){
   reader.readAsDataURL(file);
 }
 
+// Sube una foto (base64) a Cloudinary y regresa la URL pública del archivo.
+// Usa un "unsigned upload preset" configurado en la cuenta de Cloudinary de Ross de Lune,
+// por lo que no requiere API secret expuesta en el código.
+const CLOUDINARY_CLOUD  = "fbuz82vi";
+const CLOUDINARY_PRESET = "archivo_rossdelune";
+async function subirFotoCloudinary(base64){
+  const formData = new FormData();
+  formData.append("file", base64);
+  formData.append("upload_preset", CLOUDINARY_PRESET);
+  const resp = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+    method: "POST",
+    body: formData
+  });
+  if(!resp.ok) throw new Error("Cloudinary respondió con error");
+  const data = await resp.json();
+  return data.secure_url;
+}
+
 function limpiarFormInv(){
   ["inv-categoria","inv-modelo","inv-talla","inv-color-nombre","inv-precio","inv-cantidad","inv-notas"].forEach(id=>{
     const el=document.getElementById(id);
@@ -5054,7 +5078,7 @@ function editarArticulo(artId){
   document.getElementById("inv-cantidad").value = a.cantidad||1;
   document.getElementById("inv-notas").value = a.notas||"";
   const fotoPreview = document.getElementById("inv-foto-preview");
-  const fotoActual = a.tieneFoto ? (localStorage.getItem("foto_"+artId)||"") : "";
+  const fotoActual = a.fotoUrl || (a.tieneFoto ? (localStorage.getItem("foto_"+artId)||"") : "");
   if(fotoActual){ fotoPreview.src=fotoActual; fotoPreview.style.display="block"; }
   const titulo=document.getElementById("inv-nuevo-title");
   if(titulo) titulo.textContent="Editar artículo";
@@ -5072,15 +5096,30 @@ async function guardarArticuloInv(){
 
   const editId = window._editandoArticuloId||null;
   const fotoPreview = document.getElementById("inv-foto-preview");
-  const fotoBase64 = fotoPreview.style.display!=="none" ? fotoPreview.src : "";
+  const fotoActual = fotoPreview.style.display!=="none" ? fotoPreview.src : "";
   const artId = editId || ("INV"+Date.now());
 
-  // Foto se guarda en localStorage (no en JSONBin para no exceder el límite de tamaño)
-  if(fotoBase64){
-    try{ localStorage.setItem("foto_"+artId, fotoBase64); }catch(e){}
-  } else if(editId){
-    try{ localStorage.removeItem("foto_"+artId); }catch(e){}
+  const btn = document.getElementById("btn-guardar-articulo");
+  const btnTextoOriginal = btn ? btn.textContent : "";
+  if(btn){ btn.disabled = true; btn.textContent = "⏳ Subiendo foto..."; }
+
+  // Si fotoActual empieza con "data:" es una foto nueva recién seleccionada → hay que subirla.
+  // Si ya es una URL (https://...) es una foto existente sin cambios → no se vuelve a subir.
+  let fotoUrl = "";
+  try{
+    if(fotoActual.startsWith("data:")){
+      fotoUrl = await subirFotoCloudinary(fotoActual);
+    } else if(fotoActual){
+      fotoUrl = fotoActual;
+    }
+  }catch(e){
+    console.error("Error subiendo foto a Cloudinary:", e);
+    msg.textContent = "No se pudo subir la foto. Verifica tu conexión e intenta de nuevo.";
+    if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
+    return;
   }
+
+  if(btn) btn.textContent = "💾 Guardando...";
 
   try{
     const data = await loadData();
@@ -5097,7 +5136,8 @@ async function guardarArticuloInv(){
       precio: document.getElementById("inv-precio").value,
       cantidad: document.getElementById("inv-cantidad").value||1,
       notas: document.getElementById("inv-notas").value.trim(),
-      tieneFoto: !!fotoBase64,
+      fotoUrl: fotoUrl,
+      tieneFoto: !!fotoUrl,
       creadoEn: existente ? existente.creadoEn : new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"}),
       actualizadoEn: existente ? new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"}) : undefined
     };
@@ -5114,6 +5154,9 @@ async function guardarArticuloInv(){
     toast(existente?"Artículo actualizado ✓":"Artículo guardado ✓");
     goSec("inv-qr");
   }catch(e){console.error("guardarArticuloInv error:",e);msg.textContent="Error al guardar. Verifica tu conexión.";}
+  finally{
+    if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
+  }
 }
 
 async function eliminarArticulo(artId){
@@ -5123,9 +5166,70 @@ async function eliminarArticulo(artId){
     const inv = (data.inventario||[]).filter(x=>x.id!==artId);
     await saveData({...data, inventario:inv});
     window._invData = inv;
+    try{ localStorage.removeItem("foto_"+artId); }catch(e){}
     renderInventario();
     toast("Artículo eliminado ✓");
   }catch(e){toast("Error al eliminar","err");}
+}
+
+// Migración única: sube a Cloudinary las fotos que quedaron guardadas en localStorage
+// de artículos creados antes de este cambio, y guarda la URL resultante en cada artículo.
+// Solo disponible para admins. Debe ejecutarse desde la misma computadora/navegador
+// donde se subieron esas fotos originalmente (ahí es donde vive el localStorage).
+async function migrarFotosACloudinary(){
+  const inv = window._invData||[];
+  const pendientes = inv.filter(a=>!a.fotoUrl && a.tieneFoto && localStorage.getItem("foto_"+a.id));
+  if(!pendientes.length){
+    toast("No hay fotos pendientes de migrar en este navegador ✓");
+    return;
+  }
+  if(!confirm(`Se encontraron ${pendientes.length} foto(s) guardadas en este navegador que aún no están en Cloudinary. ¿Migrarlas ahora? Puede tardar unos minutos — no cierres esta pestaña mientras termina.`)) return;
+
+  const btn = document.getElementById("btn-migrar-fotos");
+  const btnTextoOriginal = btn ? btn.textContent : "";
+  if(btn) btn.disabled = true;
+
+  let exitosas = 0, fallidas = 0;
+  let data, inventarioActualizado;
+  try{
+    data = await loadData();
+    inventarioActualizado = [...(data.inventario||[])];
+  }catch(e){
+    toast("No se pudo cargar el inventario. Verifica tu conexión.","err");
+    if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
+    return;
+  }
+
+  for(let i=0;i<pendientes.length;i++){
+    const art = pendientes[i];
+    if(btn) btn.textContent = `☁️ Migrando ${i+1}/${pendientes.length}...`;
+    const fotoBase64 = localStorage.getItem("foto_"+art.id);
+    if(!fotoBase64) continue;
+    try{
+      const url = await subirFotoCloudinary(fotoBase64);
+      const idx = inventarioActualizado.findIndex(x=>x.id===art.id);
+      if(idx!==-1) inventarioActualizado[idx] = {...inventarioActualizado[idx], fotoUrl:url};
+      try{ localStorage.removeItem("foto_"+art.id); }catch(e){}
+      exitosas++;
+    }catch(e){
+      console.error("Error migrando foto de "+art.id+":", e);
+      fallidas++;
+    }
+  }
+
+  try{
+    await saveData({...data, inventario:inventarioActualizado});
+    window._invData = inventarioActualizado;
+    renderInventario();
+  }catch(e){
+    console.error("Error guardando inventario migrado:", e);
+    toast("Fotos subidas a Cloudinary, pero hubo un error al guardar el inventario. Intenta de nuevo.","err");
+    if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
+    return;
+  }
+
+  if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
+  toast(`Migración completa: ${exitosas} foto(s) migradas${fallidas?`, ${fallidas} con error`:""} ✓`);
 }
 
 function buscarPorQR(){
