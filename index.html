@@ -247,6 +247,8 @@ input[type="color"]{opacity:0;position:absolute;width:0;height:0;}
 .tbl{width:100%;border-collapse:collapse;font-size:.8rem;}
 .tbl th{text-align:left;padding:.55rem .7rem;font-size:.63rem;letter-spacing:.13em;text-transform:uppercase;color:#AAA;font-weight:400;border-bottom:1px solid #EEE;}
 .tbl td{padding:.65rem .7rem;border-bottom:1px solid #F5F0E8;vertical-align:middle;}
+.col-sticky{position:sticky;left:0;z-index:15;background:#FFFFFF;box-shadow:2px 0 4px rgba(0,0,0,.06);}
+.tbl th.col-sticky{z-index:16;background:var(--card);}
 .tbl tr:last-child td{border-bottom:none;}
 .tbl tr:hover td{background:#FDFAF6;}
 .color-dot{width:14px;height:14px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.1);vertical-align:middle;margin-right:.4rem;}
@@ -275,6 +277,10 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 .bb{background:#FDEDEC;color:var(--rojo);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .55rem;border-radius:12px;}
 .ba{background:#F0E6D3;color:var(--dorado-d);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .55rem;border-radius:12px;}
 .ic-btn{background:none;border:none;cursor:pointer;font-size:.95rem;padding:.2rem .35rem;border-radius:3px;transition:background .15s;}
+.menu-toggle{font-size:1.15rem;font-weight:700;line-height:1;padding:.25rem .5rem;}
+.cliente-menu{position:absolute;right:0;top:100%;margin-top:2px;background:#fff;border:1px solid #E8DDD0;border-radius:5px;box-shadow:0 4px 16px rgba(0,0,0,.14);z-index:80;min-width:200px;padding:.3rem 0;}
+.cliente-menu button{display:block;width:100%;text-align:left;background:none;border:none;padding:.55rem .9rem;font-size:.8rem;cursor:pointer;font-family:'Lato',sans-serif;color:#333;white-space:nowrap;}
+.cliente-menu button:hover{background:#FDF8F0;}
 .ic-btn:hover{background:#F5F0E8;}
 .hdr-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem;}
 .btn-new{padding:.5rem 1.1rem;background:transparent;color:var(--dorado-d);border:1px solid var(--dorado);border-radius:2px;font-family:"Lato",sans-serif;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:all .2s;}
@@ -823,7 +829,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
             <thead><tr>
               <th>Fecha</th>
               <th>Contrato</th>
-              <th>Nombre</th>
+              <th class="col-sticky">Nombre</th>
               <th>Celular</th>
               <th>Teléfono</th>
               <th>Correo</th>
@@ -1191,8 +1197,6 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
           <div class="card-title" style="margin:0">Artículos en stock</div>
           <div style="display:flex;gap:.5rem">
             <button class="btn-sec" id="btn-lote-flotante" onclick="abrirModalLote()" style="display:none;font-size:.78rem">🖨️ Lote (<span id="lote-count">0</span>)</button>
-            <button class="btn-sec" id="btn-migrar-fotos" onclick="migrarFotosACloudinary()" style="display:none;font-size:.78rem">☁️ Migrar fotos</button>
-            <button class="btn-sec" id="btn-traspasar-fotos" onclick="traspasarFotosCuentaNueva()" style="display:none;font-size:.78rem">🔁 Traspasar a cuenta negocio</button>
             <button class="btn-new" onclick="goSec('inv-nuevo')">+ Agregar</button>
           </div>
         </div>
@@ -1757,10 +1761,6 @@ function enterPanel(){
     document.getElementById("admin-sub-cuentas").style.display="none";
     document.getElementById("admin-sub-hist").style.display="none";
     document.getElementById("admin-sub-micuenta").style.display="none";
-    const btnMigrarFotos = document.getElementById("btn-migrar-fotos");
-    if(btnMigrarFotos) btnMigrarFotos.style.display="none";
-    const btnTraspasarFotos = document.getElementById("btn-traspasar-fotos");
-    if(btnTraspasarFotos) btnTraspasarFotos.style.display="none";
     // Mostrar botones del nav — bloqueados con 🔒, permitidos normal
     const permisos = currentUser.permisos||{};
     SECCIONES_CTRL.forEach(s=>{
@@ -1786,10 +1786,6 @@ function enterPanel(){
     document.getElementById("admin-sub-cuentas").style.display="";
     document.getElementById("admin-sub-hist").style.display="";
     document.getElementById("admin-sub-micuenta").style.display="";
-    const btnMigrarFotos = document.getElementById("btn-migrar-fotos");
-    if(btnMigrarFotos) btnMigrarFotos.style.display="";
-    const btnTraspasarFotos = document.getElementById("btn-traspasar-fotos");
-    if(btnTraspasarFotos) btnTraspasarFotos.style.display="";
     SECCIONES_CTRL.forEach(s=>{
       const nb = document.getElementById("nb-"+s.id);
       if(!nb) return;
@@ -2263,6 +2259,21 @@ function abrirEditarCliente(id){
   document.getElementById("edit-estatus").value      = c.estatus||"Pedido Realizado";
   document.getElementById("edit-obs").value          = c.observaciones||"";
 
+  // Contrato firmado: limpiar selección previa y mostrar el guardado (si existe)
+  window._contratoEditBase64 = null;
+  const contratoInput = document.getElementById("edit-contrato-input");
+  if(contratoInput) contratoInput.value = "";
+  const contratoPreview = document.getElementById("edit-contrato-preview");
+  if(contratoPreview){
+    if(c.contratoUrl){
+      contratoPreview.style.display = "block";
+      contratoPreview.innerHTML = `📎 Ya hay un contrato guardado — <a href="${c.contratoUrl}" target="_blank" rel="noopener">ver documento</a>`;
+    } else {
+      contratoPreview.style.display = "none";
+      contratoPreview.innerHTML = "";
+    }
+  }
+
   initEditAdicionales(c.paquete?.adicionales||[]);
   editToggleParcialidades();
   calcEditTotal();
@@ -2426,8 +2437,23 @@ async function guardarEdicionCliente(){
     const original = allClientes[idx];
     const hex = document.getElementById("edit-color-picker").value;
 
+    let contratoUrl = original.contratoUrl || "";
+    if(window._contratoEditBase64){
+      btn.innerHTML='<span class="spinner"></span>Subiendo contrato...';
+      try{
+        contratoUrl = await subirDocumentoCloudinary(window._contratoEditBase64);
+      }catch(e){
+        console.error("Error subiendo contrato:", e);
+        msg.textContent = "No se pudo subir el contrato. Verifica tu conexión e intenta de nuevo.";
+        btn.disabled=false; btn.innerHTML='💾 Guardar cambios';
+        return;
+      }
+      btn.innerHTML='<span class="spinner"></span>Guardando...';
+    }
+
     allClientes[idx] = {
       ...original,
+      contratoUrl,
       folio:       folioNormalizado,
       fecha:       document.getElementById("edit-fecha").value,
       nombre,
@@ -2469,6 +2495,7 @@ async function guardarEdicionCliente(){
 
     await saveData({...data, clientes:allClientes});
     toast("Cliente actualizado ✓ — Folio "+folioNormalizado);
+    window._contratoEditBase64 = null;
     cerrarEditarCliente();
     renderClientes();
   }catch(e){
@@ -2479,6 +2506,23 @@ async function guardarEdicionCliente(){
 }
 
 // ══ RENDER CLIENTES ══
+// ══ MENÚ DESPLEGABLE DE ACCIONES POR CLIENTE ══
+function toggleClienteMenu(id){
+  const menu = document.getElementById("menu-"+id);
+  if(!menu) return;
+  const yaAbierto = menu.style.display==="block";
+  cerrarClienteMenus();
+  if(!yaAbierto) menu.style.display="block";
+}
+function cerrarClienteMenus(){
+  document.querySelectorAll(".cliente-menu").forEach(m=>m.style.display="none");
+}
+document.addEventListener("click", function(e){
+  if(!e.target.closest(".menu-toggle") && !e.target.closest(".cliente-menu")){
+    cerrarClienteMenus();
+  }
+});
+
 function renderClientes(lista){
   const tbody=document.getElementById("clientes-tbody");
   const data=[...(lista||allClientes)].sort((a,b)=>{
@@ -2518,7 +2562,7 @@ function renderClientes(lista){
     return `<tr>
       <td style="font-size:.74rem;white-space:nowrap">${fContrato}</td>
       <td style="font-size:.74rem;color:#888">${c.esNotaSencilla?"Sin folio":(c.folio||"—")}</td>
-      <td style="white-space:nowrap"><strong style="font-weight:500;font-size:.82rem">${c.nombre}</strong></td>
+      <td class="col-sticky" style="white-space:nowrap"><strong style="font-weight:500;font-size:.82rem">${c.nombre}</strong></td>
       <td style="font-size:.76rem;white-space:nowrap">${c.cel||"—"}</td>
       <td style="font-size:.76rem;white-space:nowrap">${c.tel||"—"}</td>
       <td style="font-size:.74rem">${c.correo||"—"}</td>
@@ -2539,16 +2583,23 @@ function renderClientes(lista){
       <td><span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}" style="white-space:nowrap">${c.estatus||"—"}</span></td>
       <td style="font-size:.72rem;max-width:160px">${adicionales}</td>
       <td style="font-size:.74rem">${c.elaboracion==="Sobre pedido"?"✓":"—"}</td>
-      <td style="white-space:nowrap">
+      <td style="position:relative">
         ${c.esNotaSencilla?
-          `<button class="ic-btn" onclick="verNotaSencillaGuardada('${c.id}')" title="Ver nota">🧾</button>
-        ${currentUser.role==="admin"?`<button class="ic-btn" onclick="eliminarCliente('${c.id}','${c.nombre}')" title="Eliminar venta directa" style="color:var(--rojo)">🗑️</button>`:""}`
+          `<button class="ic-btn menu-toggle" onclick="toggleClienteMenu('${c.id}')" title="Más opciones">⋮</button>
+        <div class="cliente-menu" id="menu-${c.id}" style="display:none">
+          <button onclick="verNotaSencillaGuardada('${c.id}');cerrarClienteMenus()">🧾 Ver nota</button>
+          ${currentUser.role==="admin"?`<button onclick="eliminarCliente('${c.id}','${c.nombre}');cerrarClienteMenus()" style="color:var(--rojo)">🗑️ Eliminar venta directa</button>`:""}
+        </div>`
           :
-          `<button class="ic-btn" onclick="verPagos('${c.id}')" title="Pagos">💳</button>
-        <button class="ic-btn" onclick="verContrato('${c.id}')" title="Contrato">📄</button>
-        <button class="ic-btn" onclick="verNotaVenta('${c.id}')" title="Nota de venta">🧾</button>
-        <button class="ic-btn" onclick="verFormatoEntrega('${c.id}')" title="Formato de entrega">📦</button>
-        ${currentUser.role==="admin"?`<button class="ic-btn" onclick="abrirEditarCliente('${c.id}')" title="Editar cliente">✏️</button><button class="ic-btn" onclick="eliminarCliente('${c.id}','${c.nombre}')" title="Eliminar cliente" style="color:var(--rojo)">🗑️</button>`:""}`
+          `<button class="ic-btn menu-toggle" onclick="toggleClienteMenu('${c.id}')" title="Más opciones">⋮</button>
+        <div class="cliente-menu" id="menu-${c.id}" style="display:none">
+          <button onclick="verPagos('${c.id}');cerrarClienteMenus()">💳 Pagos</button>
+          <button onclick="verContrato('${c.id}');cerrarClienteMenus()">📄 Contrato</button>
+          ${c.contratoUrl?`<button onclick="window.open('${c.contratoUrl}','_blank');cerrarClienteMenus()">📎 Documento firmado</button>`:""}
+          <button onclick="verNotaVenta('${c.id}');cerrarClienteMenus()">🧾 Nota de venta</button>
+          <button onclick="verFormatoEntrega('${c.id}');cerrarClienteMenus()">📦 Formato de entrega</button>
+          ${currentUser.role==="admin"?`<button onclick="abrirEditarCliente('${c.id}');cerrarClienteMenus()">✏️ Editar cliente</button><button onclick="eliminarCliente('${c.id}','${c.nombre}');cerrarClienteMenus()" style="color:var(--rojo)">🗑️ Eliminar cliente</button>`:""}
+        </div>`
         }
       </td>
     </tr>`;
@@ -5133,6 +5184,40 @@ async function subirFotoCloudinary(base64){
   return data.secure_url;
 }
 
+// Vista previa del contrato firmado seleccionado (imagen o PDF), antes de subirlo.
+// prefix es "c" (Nuevo cliente) o "edit" (Editar cliente).
+function previewContratoCliente(input, prefix){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    if(prefix==="c") window._contratoNuevoBase64 = dataUrl;
+    else window._contratoEditBase64 = dataUrl;
+    const preview = document.getElementById(prefix+"-contrato-preview");
+    if(preview){
+      preview.style.display = "block";
+      preview.textContent = "📎 "+file.name+" listo para subir al guardar";
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+// Sube el contrato firmado (imagen o PDF) a Cloudinary. Usa /auto/upload en vez de
+// /image/upload porque detecta automáticamente si el archivo es imagen o PDF.
+async function subirDocumentoCloudinary(base64){
+  const formData = new FormData();
+  formData.append("file", base64);
+  formData.append("upload_preset", CLOUDINARY_PRESET);
+  const resp = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/auto/upload`, {
+    method: "POST",
+    body: formData
+  });
+  if(!resp.ok) throw new Error("Cloudinary respondió con error");
+  const data = await resp.json();
+  return data.secure_url;
+}
+
 function limpiarFormInv(){
   ["inv-categoria","inv-modelo","inv-talla","inv-color-nombre","inv-precio","inv-cantidad","inv-notas"].forEach(id=>{
     const el=document.getElementById(id);
@@ -5260,146 +5345,6 @@ async function eliminarArticulo(artId){
     renderInventario();
     toast("Artículo eliminado ✓");
   }catch(e){toast("Error al eliminar","err");}
-}
-
-// Migración única: sube a Cloudinary las fotos que quedaron guardadas en localStorage
-// de artículos creados antes de este cambio, y guarda la URL resultante en cada artículo.
-// Solo disponible para admins. Debe ejecutarse desde la misma computadora/navegador
-// donde se subieron esas fotos originalmente (ahí es donde vive el localStorage).
-async function migrarFotosACloudinary(){
-  const inv = window._invData||[];
-  const pendientes = inv.filter(a=>!a.fotoUrl && a.tieneFoto && localStorage.getItem("foto_"+a.id));
-  if(!pendientes.length){
-    toast("No hay fotos pendientes de migrar en este navegador ✓");
-    return;
-  }
-  if(!confirm(`Se encontraron ${pendientes.length} foto(s) guardadas en este navegador que aún no están en Cloudinary. ¿Migrarlas ahora? Puede tardar unos minutos — no cierres esta pestaña mientras termina.`)) return;
-
-  const btn = document.getElementById("btn-migrar-fotos");
-  const btnTextoOriginal = btn ? btn.textContent : "";
-  if(btn) btn.disabled = true;
-
-  let exitosas = 0, fallidas = 0;
-  let data, inventarioActualizado;
-  try{
-    data = await loadData();
-    inventarioActualizado = [...(data.inventario||[])];
-  }catch(e){
-    toast("No se pudo cargar el inventario. Verifica tu conexión.","err");
-    if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
-    return;
-  }
-
-  for(let i=0;i<pendientes.length;i++){
-    const art = pendientes[i];
-    if(btn) btn.textContent = `☁️ Migrando ${i+1}/${pendientes.length}...`;
-    const fotoBase64 = localStorage.getItem("foto_"+art.id);
-    if(!fotoBase64) continue;
-    try{
-      const url = await subirFotoCloudinary(fotoBase64);
-      const idx = inventarioActualizado.findIndex(x=>x.id===art.id);
-      if(idx!==-1) inventarioActualizado[idx] = {...inventarioActualizado[idx], fotoUrl:url};
-      try{ localStorage.removeItem("foto_"+art.id); }catch(e){}
-      exitosas++;
-    }catch(e){
-      console.error("Error migrando foto de "+art.id+":", e);
-      fallidas++;
-    }
-  }
-
-  try{
-    await saveData({...data, inventario:inventarioActualizado});
-    window._invData = inventarioActualizado;
-    renderInventario();
-  }catch(e){
-    console.error("Error guardando inventario migrado:", e);
-    toast("Fotos subidas a Cloudinary, pero hubo un error al guardar el inventario. Intenta de nuevo.","err");
-    if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
-    return;
-  }
-
-  if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
-  toast(`Migración completa: ${exitosas} foto(s) migradas${fallidas?`, ${fallidas} con error`:""} ✓`);
-}
-
-// Descarga una imagen ya publicada (ej. una foto en Cloudinary) y la regresa como base64,
-// lista para volver a subirse con subirFotoCloudinary().
-async function descargarComoBase64(url){
-  const resp = await fetch(url);
-  if(!resp.ok) throw new Error("No se pudo descargar la foto original");
-  const blob = await resp.blob();
-  return new Promise((resolve, reject)=>{
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
-// Traspaso único: mueve las fotos que todavía viven en la cuenta anterior de Cloudinary
-// (fbuz82vi, personal) hacia la cuenta del negocio (CLOUDINARY_CLOUD actual), descargando
-// cada imagen y volviéndola a subir. Solo disponible para admins. Puede correr desde
-// cualquier computadora con internet — a diferencia de la migración de localStorage,
-// aquí las fotos ya viven en la nube, no en el navegador.
-async function traspasarFotosCuentaNueva(){
-  const inv = window._invData||[];
-  const pendientes = inv.filter(a=>a.fotoUrl && a.fotoUrl.includes(`/${CLOUDINARY_CLOUD_ANTERIOR}/`));
-  if(!pendientes.length){
-    toast("No hay fotos pendientes de traspasar a la cuenta del negocio ✓");
-    return;
-  }
-  if(!confirm(`Se encontraron ${pendientes.length} foto(s) todavía en la cuenta anterior. ¿Traspasarlas ahora a la cuenta del negocio? Puede tardar unos minutos — no cierres esta pestaña mientras termina.`)) return;
-
-  const btn = document.getElementById("btn-traspasar-fotos");
-  const btnTextoOriginal = btn ? btn.textContent : "";
-  if(btn) btn.disabled = true;
-
-  let exitosas = 0, fallidas = 0;
-  const idsActualizados = {}; // id del artículo → nueva URL en la cuenta del negocio
-
-  for(let i=0;i<pendientes.length;i++){
-    const art = pendientes[i];
-    if(btn) btn.textContent = `🔁 Traspasando ${i+1}/${pendientes.length}...`;
-    try{
-      const base64 = await descargarComoBase64(art.fotoUrl);
-      const nuevaUrl = await subirFotoCloudinary(base64);
-      idsActualizados[art.id] = nuevaUrl;
-      exitosas++;
-    }catch(e){
-      console.error("Error traspasando foto de "+art.id+":", e);
-      fallidas++;
-    }
-  }
-
-  // Antes de guardar, recargamos el inventario más reciente de JSONBin y solo
-  // actualizamos fotoUrl en los artículos traspasados — así no se pisa ningún
-  // cambio que alguien más haya hecho mientras corría el traspaso.
-  let data, inventarioActualizado;
-  try{
-    data = await loadData();
-    inventarioActualizado = (data.inventario||[]).map(a =>
-      idsActualizados[a.id] ? {...a, fotoUrl: idsActualizados[a.id]} : a
-    );
-  }catch(e){
-    console.error("Error recargando inventario tras traspaso:", e);
-    toast("Fotos traspasadas, pero no se pudo guardar el inventario actualizado. Verifica tu conexión e inténtalo de nuevo.","err");
-    if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
-    return;
-  }
-
-  try{
-    await saveData({...data, inventario:inventarioActualizado});
-    window._invData = inventarioActualizado;
-    renderInventario();
-  }catch(e){
-    console.error("Error guardando inventario tras traspaso:", e);
-    toast("Fotos traspasadas, pero hubo un error al guardar el inventario. Intenta de nuevo.","err");
-    if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
-    return;
-  }
-
-  if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
-  toast(`Traspaso completo: ${exitosas} foto(s) movidas a la cuenta del negocio${fallidas?`, ${fallidas} con error`:""} ✓`);
 }
 
 function buscarPorQR(){
@@ -6131,6 +6076,12 @@ function generarContrato(c){
       </select>
     </div>
     <div class="field"><label>Observaciones</label><textarea id="edit-obs" rows="3" style="width:100%;border:1px solid #E8DDD0;border-radius:3px;padding:.5rem;font-family:'Lato',sans-serif;font-size:.82rem;resize:vertical;outline:none" placeholder="Notas adicionales..."></textarea></div>
+    <div class="field">
+      <label style="font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--dorado-d);display:block;margin-bottom:.4rem">Contrato firmado</label>
+      <input type="file" id="edit-contrato-input" accept="image/*,.pdf" onchange="previewContratoCliente(this,'edit')" style="display:none">
+      <button type="button" class="btn-sec" style="width:100%" onclick="document.getElementById('edit-contrato-input').click()">📄 Seleccionar / reemplazar contrato</button>
+      <div id="edit-contrato-preview" style="display:none;margin-top:.5rem;font-size:.8rem;color:var(--dorado-d)"></div>
+    </div>
     <div class="msg-err" id="edit-cliente-msg"></div>
     <button class="btn-primary" onclick="guardarEdicionCliente()" id="btn-guardar-edicion" style="width:100%;margin-top:.5rem">💾 Guardar cambios</button>
   </div>
