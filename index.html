@@ -1192,6 +1192,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
           <div style="display:flex;gap:.5rem">
             <button class="btn-sec" id="btn-lote-flotante" onclick="abrirModalLote()" style="display:none;font-size:.78rem">🖨️ Lote (<span id="lote-count">0</span>)</button>
             <button class="btn-sec" id="btn-migrar-fotos" onclick="migrarFotosACloudinary()" style="display:none;font-size:.78rem">☁️ Migrar fotos</button>
+            <button class="btn-sec" id="btn-traspasar-fotos" onclick="traspasarFotosCuentaNueva()" style="display:none;font-size:.78rem">🔁 Traspasar a cuenta negocio</button>
             <button class="btn-new" onclick="goSec('inv-nuevo')">+ Agregar</button>
           </div>
         </div>
@@ -1593,7 +1594,6 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 
 <script>
 // ══ CONFIG ══
-
 const MASTER_KEY = "$2a$10$mKCTBP96l4oINrx2Z3uXbOTEGW/08f1Gd2g.ndODEp1eLEqu7p83W";
 const ACCESS_KEY = "$2a$10$9VfaQRuaCX9fyS6yiO1dhuh5DeDt89523dzWLH/.6jPYvy3wOcPv.";
 const BIN_ID     = "6a4e18a2da38895dfe3f7872";
@@ -1759,6 +1759,8 @@ function enterPanel(){
     document.getElementById("admin-sub-micuenta").style.display="none";
     const btnMigrarFotos = document.getElementById("btn-migrar-fotos");
     if(btnMigrarFotos) btnMigrarFotos.style.display="none";
+    const btnTraspasarFotos = document.getElementById("btn-traspasar-fotos");
+    if(btnTraspasarFotos) btnTraspasarFotos.style.display="none";
     // Mostrar botones del nav — bloqueados con 🔒, permitidos normal
     const permisos = currentUser.permisos||{};
     SECCIONES_CTRL.forEach(s=>{
@@ -1786,6 +1788,8 @@ function enterPanel(){
     document.getElementById("admin-sub-micuenta").style.display="";
     const btnMigrarFotos = document.getElementById("btn-migrar-fotos");
     if(btnMigrarFotos) btnMigrarFotos.style.display="";
+    const btnTraspasarFotos = document.getElementById("btn-traspasar-fotos");
+    if(btnTraspasarFotos) btnTraspasarFotos.style.display="";
     SECCIONES_CTRL.forEach(s=>{
       const nb = document.getElementById("nb-"+s.id);
       if(!nb) return;
@@ -5111,8 +5115,11 @@ function previewInvFoto(input){
 // Sube una foto (base64) a Cloudinary y regresa la URL pública del archivo.
 // Usa un "unsigned upload preset" configurado en la cuenta de Cloudinary de Ross de Lune,
 // por lo que no requiere API secret expuesta en el código.
-const CLOUDINARY_CLOUD  = "fbuz82vi";
+const CLOUDINARY_CLOUD  = "htaj9bcz";
 const CLOUDINARY_PRESET = "archivo_rossdelune";
+// Cuenta anterior (personal), usada antes del traspaso a la cuenta del negocio.
+// Se conserva solo como referencia para identificar fotos aún no traspasadas.
+const CLOUDINARY_CLOUD_ANTERIOR = "fbuz82vi";
 async function subirFotoCloudinary(base64){
   const formData = new FormData();
   formData.append("file", base64);
@@ -5313,6 +5320,86 @@ async function migrarFotosACloudinary(){
 
   if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
   toast(`Migración completa: ${exitosas} foto(s) migradas${fallidas?`, ${fallidas} con error`:""} ✓`);
+}
+
+// Descarga una imagen ya publicada (ej. una foto en Cloudinary) y la regresa como base64,
+// lista para volver a subirse con subirFotoCloudinary().
+async function descargarComoBase64(url){
+  const resp = await fetch(url);
+  if(!resp.ok) throw new Error("No se pudo descargar la foto original");
+  const blob = await resp.blob();
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Traspaso único: mueve las fotos que todavía viven en la cuenta anterior de Cloudinary
+// (fbuz82vi, personal) hacia la cuenta del negocio (CLOUDINARY_CLOUD actual), descargando
+// cada imagen y volviéndola a subir. Solo disponible para admins. Puede correr desde
+// cualquier computadora con internet — a diferencia de la migración de localStorage,
+// aquí las fotos ya viven en la nube, no en el navegador.
+async function traspasarFotosCuentaNueva(){
+  const inv = window._invData||[];
+  const pendientes = inv.filter(a=>a.fotoUrl && a.fotoUrl.includes(`/${CLOUDINARY_CLOUD_ANTERIOR}/`));
+  if(!pendientes.length){
+    toast("No hay fotos pendientes de traspasar a la cuenta del negocio ✓");
+    return;
+  }
+  if(!confirm(`Se encontraron ${pendientes.length} foto(s) todavía en la cuenta anterior. ¿Traspasarlas ahora a la cuenta del negocio? Puede tardar unos minutos — no cierres esta pestaña mientras termina.`)) return;
+
+  const btn = document.getElementById("btn-traspasar-fotos");
+  const btnTextoOriginal = btn ? btn.textContent : "";
+  if(btn) btn.disabled = true;
+
+  let exitosas = 0, fallidas = 0;
+  const idsActualizados = {}; // id del artículo → nueva URL en la cuenta del negocio
+
+  for(let i=0;i<pendientes.length;i++){
+    const art = pendientes[i];
+    if(btn) btn.textContent = `🔁 Traspasando ${i+1}/${pendientes.length}...`;
+    try{
+      const base64 = await descargarComoBase64(art.fotoUrl);
+      const nuevaUrl = await subirFotoCloudinary(base64);
+      idsActualizados[art.id] = nuevaUrl;
+      exitosas++;
+    }catch(e){
+      console.error("Error traspasando foto de "+art.id+":", e);
+      fallidas++;
+    }
+  }
+
+  // Antes de guardar, recargamos el inventario más reciente de JSONBin y solo
+  // actualizamos fotoUrl en los artículos traspasados — así no se pisa ningún
+  // cambio que alguien más haya hecho mientras corría el traspaso.
+  let data, inventarioActualizado;
+  try{
+    data = await loadData();
+    inventarioActualizado = (data.inventario||[]).map(a =>
+      idsActualizados[a.id] ? {...a, fotoUrl: idsActualizados[a.id]} : a
+    );
+  }catch(e){
+    console.error("Error recargando inventario tras traspaso:", e);
+    toast("Fotos traspasadas, pero no se pudo guardar el inventario actualizado. Verifica tu conexión e inténtalo de nuevo.","err");
+    if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
+    return;
+  }
+
+  try{
+    await saveData({...data, inventario:inventarioActualizado});
+    window._invData = inventarioActualizado;
+    renderInventario();
+  }catch(e){
+    console.error("Error guardando inventario tras traspaso:", e);
+    toast("Fotos traspasadas, pero hubo un error al guardar el inventario. Intenta de nuevo.","err");
+    if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
+    return;
+  }
+
+  if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
+  toast(`Traspaso completo: ${exitosas} foto(s) movidas a la cuenta del negocio${fallidas?`, ${fallidas} con error`:""} ✓`);
 }
 
 function buscarPorQR(){
