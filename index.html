@@ -519,7 +519,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · PRODUCCIÓN v28.0</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · PRODUCCIÓN v29.4</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -676,6 +676,15 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
             </div>
           </div>
         </div>
+        <!-- Medidas vestido 1 -->
+        <div class="card-title" style="margin-top:.5rem">Medidas — Vestido 1</div>
+        <div class="fg3">
+          <div class="fi"><label>Busto (cm)</label><input type="number" id="m-busto" placeholder="82"></div>
+          <div class="fi"><label>Cintura (cm)</label><input type="number" id="m-cintura" placeholder="64"></div>
+          <div class="fi"><label>Cadera (cm)</label><input type="number" id="m-cadera" placeholder="90"></div>
+          <div class="fi"><label>Copa</label><input type="text" id="m-copa" placeholder="A, B, C..."></div>
+          <div class="fi"><label>Largo (cm)</label><input type="number" id="m-largo" placeholder="120"></div>
+        </div>
 
         <!-- Segundo vestido (caso aislado: doble boda, gemelas, etc.) -->
         <div class="fi" id="fi-toggle-vestido2" style="margin-top:.4rem">
@@ -712,6 +721,16 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
               </div>
             </div>
           </div>
+          <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--dorado-d);margin:.6rem 0 .4rem">Medidas — Vestido 2</div>
+          <div class="fg3">
+            <div class="fi"><label>Busto (cm)</label><input type="number" id="m-busto2" placeholder="82"></div>
+            <div class="fi"><label>Cintura (cm)</label><input type="number" id="m-cintura2" placeholder="64"></div>
+            <div class="fi"><label>Cadera (cm)</label><input type="number" id="m-cadera2" placeholder="90"></div>
+          </div>
+          <div class="fg2">
+            <div class="fi"><label>Copa</label><input type="text" id="m-copa2" placeholder="A, B, C..."></div>
+            <div class="fi"><label>Largo (cm)</label><input type="number" id="m-largo2" placeholder="120"></div>
+          </div>
         </div>
         <div class="fg2">
           <div class="fi"><label>Elaboración</label>
@@ -729,15 +748,6 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
               <option>En parcialidades</option>
             </select>
           </div>
-        </div>
-        <!-- Medidas -->
-        <div class="card-title" style="margin-top:.5rem">Medidas</div>
-        <div class="fg3">
-          <div class="fi"><label>Busto (cm)</label><input type="number" id="m-busto" placeholder="82"></div>
-          <div class="fi"><label>Cintura (cm)</label><input type="number" id="m-cintura" placeholder="64"></div>
-          <div class="fi"><label>Cadera (cm)</label><input type="number" id="m-cadera" placeholder="90"></div>
-          <div class="fi"><label>Copa</label><input type="text" id="m-copa" placeholder="A, B, C..."></div>
-          <div class="fi"><label>Largo (cm)</label><input type="number" id="m-largo" placeholder="120"></div>
         </div>
       </div>
 
@@ -781,7 +791,9 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
           </div>
         </div>
         <div class="fg2">
-          <div class="fi"><label>Precio vestido ($)</label><input type="number" id="c-precio" placeholder="0" oninput="calcTotal()"></div>
+          <div class="fi"><label>Precio vestido ($)</label><input type="number" id="c-precio" placeholder="0" oninput="calcTotal()">
+            <div id="precio-auto-warn" style="display:none;font-size:.68rem;color:var(--dorado-d);margin-top:.2rem">⚠️ Precio autocompletado por escaneo — verifica antes de guardar.</div>
+          </div>
           <div class="fi"><label>Anticipo ($)</label><input type="number" id="c-anticipo" placeholder="0" oninput="calcTotal()"></div>
         </div>
         <div class="fi"><label>Forma de pago</label>
@@ -1272,6 +1284,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
           </div>
           <div class="fi"><label>Modelo / Nombre</label><input type="text" id="inv-modelo" placeholder="Ej: wf875, Tiara perla..."></div>
         </div>
+        <div class="fi"><label>Marca</label><input type="text" id="inv-marca" placeholder="Ej: Morilee, Jovani..."></div>
         <div class="fg2">
           <div class="fi"><label>Talla</label><input type="text" id="inv-talla" placeholder="XS, S, M, L..."></div>
           <div class="fi">
@@ -1635,9 +1648,9 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 
 <script>
 // ══ CONFIG ══
-const MASTER_KEY = "$2a$10$mKCTBP96l4oINrx2Z3uXbOTEGW/08f1Gd2g.ndODEp1eLEqu7p83W";
-const ACCESS_KEY = "$2a$10$9VfaQRuaCX9fyS6yiO1dhuh5DeDt89523dzWLH/.6jPYvy3wOcPv.";
-const BIN_ID     = "6a4e18a2da38895dfe3f7872";
+const MASTER_KEY = "REEMPLAZAR_MASTER_KEY";
+const ACCESS_KEY = "REEMPLAZAR_ACCESS_KEY";
+const BIN_ID     = "REEMPLAZAR_BIN_ID";
 const BIN_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 let currentUser = null, allUsers = [], allClientes = [];
@@ -1998,6 +2011,10 @@ function limpiarFormularioCliente(){
   const scanInput=document.getElementById("inv-scan-input");
   if(scanInput) scanInput.value="";
   window._qrArticuloActual=null;
+  window._qrPrecio1=0;
+  window._qrPrecio2=0;
+  const precioWarn=document.getElementById("precio-auto-warn");
+  if(precioWarn) precioWarn.style.display="none";
   // Segundo vestido: colapsar y limpiar por completo
   const bloqueV2=document.getElementById("bloque-vestido2");
   if(bloqueV2 && bloqueV2.style.display!=="none") toggleSegundoVestido();
@@ -2028,7 +2045,7 @@ function toggleSegundoVestido(){
   bloque.style.display = abrir ? "block" : "none";
   if(!abrir){
     // Al quitar el segundo vestido, limpiar sus campos y su vínculo
-    ["c-marca2","c-modelo2","c-talla2","c-color-name2","inv-scan-input2"].forEach(id=>{
+    ["c-marca2","c-modelo2","c-talla2","c-color-name2","inv-scan-input2","m-busto2","m-cintura2","m-cadera2","m-copa2","m-largo2"].forEach(id=>{
       const el=document.getElementById(id); if(el) el.value="";
     });
     document.getElementById("color-picker2").value="#C8A8D0";
@@ -2036,6 +2053,8 @@ function toggleSegundoVestido(){
     const msg2=document.getElementById("inv-scan-msg2");
     if(msg2){msg2.style.color="";msg2.innerHTML="";}
     window._qrArticuloActual2 = null;
+    window._qrPrecio2 = 0;
+    actualizarPrecioAutoSuma();
   }
   document.getElementById("fi-toggle-vestido2").style.display = abrir ? "none" : "block";
 }
@@ -2054,11 +2073,14 @@ function buscarPorQR2(){
     return;
   }
   document.getElementById("c-modelo2").value = art.modelo||"";
+  document.getElementById("c-marca2").value = art.marca||"";
   document.getElementById("c-talla2").value = art.talla||"";
   document.getElementById("c-color-name2").value = art.colorNombre||"";
   document.getElementById("color-picker2").value = art.colorHex||"#C8A8D0";
   document.getElementById("color-preview-box2").style.background = art.colorHex||"#C8A8D0";
   window._qrArticuloActual2 = art.id;
+  window._qrPrecio2 = Number(art.precio)||0;
+  actualizarPrecioAutoSuma();
   msg.style.color="var(--dorado-d)";
   msg.innerHTML = "✓ "+art.categoria+" · "+art.modelo+" · Talla "+art.talla+" · "+art.colorNombre+
     ' <button type="button" onclick="quitarArticuloEscaneado2()" style="background:none;border:none;color:var(--rojo);cursor:pointer;font-size:.68rem;text-decoration:underline;padding:0">✕ Quitar</button>';
@@ -2072,6 +2094,8 @@ function quitarArticuloEscaneado2(){
   document.getElementById("color-picker2").value="#C8A8D0";
   document.getElementById("color-preview-box2").style.background="";
   window._qrArticuloActual2=null;
+  window._qrPrecio2 = 0;
+  actualizarPrecioAutoSuma();
   const msg=document.getElementById("inv-scan-msg2");
   if(msg){ msg.style.color=""; msg.innerHTML=""; }
 }
@@ -2266,6 +2290,7 @@ async function saveCliente(){
           modelo: document.getElementById("c-modelo2").value.trim(),
           talla: document.getElementById("c-talla2").value.trim(),
           color: {hex:document.getElementById("color-picker2").value, nombre:document.getElementById("c-color-name2").value.trim()||document.getElementById("color-picker2").value},
+          medidas: {busto:document.getElementById("m-busto2").value,cintura:document.getElementById("m-cintura2").value,cadera:document.getElementById("m-cadera2").value,copa:document.getElementById("m-copa2").value,largo:document.getElementById("m-largo2").value},
           articuloId: window._qrArticuloActual2||null
         }
       : null,
@@ -2364,6 +2389,11 @@ function abrirEditarCliente(id){
     const hex2 = c.vestido2.color?.hex||"#C8A8D0";
     document.getElementById("edit-color-picker2").value = hex2;
     document.getElementById("edit-color-preview2").style.background = hex2;
+    document.getElementById("edit-busto2").value   = c.vestido2.medidas?.busto||"";
+    document.getElementById("edit-cintura2").value = c.vestido2.medidas?.cintura||"";
+    document.getElementById("edit-cadera2").value  = c.vestido2.medidas?.cadera||"";
+    document.getElementById("edit-copa2").value    = c.vestido2.medidas?.copa||"";
+    document.getElementById("edit-largo2").value   = c.vestido2.medidas?.largo||"";
     window._editArticuloVinculado2 = c.vestido2.articuloId || null;
     const scanMsg2 = document.getElementById("edit-inv-scan-msg2");
     if(scanMsg2){
@@ -2530,7 +2560,19 @@ function buscarPorQREdicion(){
     msg.textContent="✕ Artículo no encontrado en inventario.";
     return;
   }
-  // Solo se guarda el vínculo — NO se toca modelo/talla/color/precio del cliente
+  // Autocompletar campos del cliente (mismo comportamiento que Nuevo cliente)
+  const catLower = (art.categoria||"").toLowerCase();
+  if(catLower.includes("quinceañera")||catLower.includes("quinceanera")){
+    document.getElementById("edit-tipo").value = "xv";
+  } else if(catLower.includes("novia")){
+    document.getElementById("edit-tipo").value = "novia";
+  }
+  document.getElementById("edit-marca").value = art.marca||"";
+  document.getElementById("edit-modelo").value = art.modelo||"";
+  document.getElementById("edit-talla").value = art.talla||"";
+  document.getElementById("edit-color-nombre").value = art.colorNombre||"";
+  document.getElementById("edit-color-picker").value = art.colorHex||"#C8A8D0";
+  editColorChange(art.colorHex||"#C8A8D0");
   window._editArticuloVinculado = art.id;
   msg.style.color="var(--dorado-d)";
   msg.innerHTML = "✓ "+art.categoria+" · "+art.modelo+" · Talla "+art.talla+" · "+art.colorNombre+
@@ -2549,7 +2591,7 @@ function toggleSegundoVestidoEdicion(){
   const abrir = bloque.style.display==="none";
   bloque.style.display = abrir ? "block" : "none";
   if(!abrir){
-    ["edit-marca2","edit-modelo2","edit-talla2","edit-color-nombre2","edit-inv-scan-input2"].forEach(id=>{
+    ["edit-marca2","edit-modelo2","edit-talla2","edit-color-nombre2","edit-inv-scan-input2","edit-busto2","edit-cintura2","edit-cadera2","edit-copa2","edit-largo2"].forEach(id=>{
       const el=document.getElementById(id); if(el) el.value="";
     });
     document.getElementById("edit-color-picker2").value="#C8A8D0";
@@ -2577,6 +2619,12 @@ function buscarPorQREdicion2(){
     msg.textContent="✕ Artículo no encontrado en inventario.";
     return;
   }
+  document.getElementById("edit-marca2").value = art.marca||"";
+  document.getElementById("edit-modelo2").value = art.modelo||"";
+  document.getElementById("edit-talla2").value = art.talla||"";
+  document.getElementById("edit-color-nombre2").value = art.colorNombre||"";
+  document.getElementById("edit-color-picker2").value = art.colorHex||"#C8A8D0";
+  editColorChange2(art.colorHex||"#C8A8D0");
   window._editArticuloVinculado2 = art.id;
   msg.style.color="var(--dorado-d)";
   msg.innerHTML = "✓ "+art.categoria+" · "+art.modelo+" · Talla "+art.talla+" · "+art.colorNombre+
@@ -2674,6 +2722,13 @@ async function guardarEdicionCliente(){
             modelo: document.getElementById("edit-modelo2").value.trim(),
             talla: document.getElementById("edit-talla2").value.trim(),
             color: {hex:document.getElementById("edit-color-picker2").value, nombre:document.getElementById("edit-color-nombre2").value.trim()||document.getElementById("edit-color-picker2").value},
+            medidas: {
+              busto:   document.getElementById("edit-busto2").value,
+              cintura: document.getElementById("edit-cintura2").value,
+              cadera:  document.getElementById("edit-cadera2").value,
+              copa:    document.getElementById("edit-copa2").value,
+              largo:   document.getElementById("edit-largo2").value
+            },
             articuloId: window._editArticuloVinculado2||null
           }
         : null,
@@ -4044,6 +4099,9 @@ function generarFormatoAjuste(c){
   const medidasRows = [["Busto",c.medidas?.busto],["Cintura",c.medidas?.cintura],["Cadera",c.medidas?.cadera],["Copa",c.medidas?.copa],["Largo",c.medidas?.largo]]
     .map(([lab,val])=>`<tr><td style="border:1px solid #999;padding:.35rem .5rem;background:#FAFAFA;font-weight:600;width:45%">${lab}</td><td style="border:1px solid #999;padding:.35rem .5rem">${val||"&nbsp;"}</td></tr>`).join("");
 
+  const medidasRows2 = c.vestido2 ? [["Busto",c.vestido2.medidas?.busto],["Cintura",c.vestido2.medidas?.cintura],["Cadera",c.vestido2.medidas?.cadera],["Copa",c.vestido2.medidas?.copa],["Largo",c.vestido2.medidas?.largo]]
+    .map(([lab,val])=>`<tr><td style="border:1px solid #999;padding:.35rem .5rem;background:#FAFAFA;font-weight:600;width:45%">${lab}</td><td style="border:1px solid #999;padding:.35rem .5rem">${val||"&nbsp;"}</td></tr>`).join("") : "";
+
   const notas = PASOS_PEDIDO.map(p=>{
     const nota = prog[p.id+"_nota"]||"";
     return `<div style="border-bottom:1px dashed #CCC;padding:.35rem 0">
@@ -4095,7 +4153,7 @@ function generarFormatoAjuste(c){
       <!-- CUADRANTES SUPERIORES: MEDIDAS + PRUEBAS -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10pt;margin-bottom:8pt">
         <div>
-          <div style="font-weight:700;font-size:7.5pt;letter-spacing:.08em;text-transform:uppercase;color:#7A4F2A;margin-bottom:4pt">Medidas</div>
+          <div style="font-weight:700;font-size:7.5pt;letter-spacing:.08em;text-transform:uppercase;color:#7A4F2A;margin-bottom:4pt">${c.vestido2?"Medidas — Vestido 1":"Medidas"}</div>
           <table style="width:100%;border-collapse:collapse;font-size:8.5pt">${medidasRows}</table>
         </div>
         <div>
@@ -4111,6 +4169,11 @@ function generarFormatoAjuste(c){
           </table>
         </div>
       </div>
+      ${c.vestido2 ? `
+      <div style="margin-bottom:8pt">
+        <div style="font-weight:700;font-size:7.5pt;letter-spacing:.08em;text-transform:uppercase;color:#7A4F2A;margin-bottom:4pt">Medidas — Vestido 2</div>
+        <table style="width:100%;border-collapse:collapse;font-size:8.5pt">${medidasRows2}</table>
+      </div>` : ""}
 
       <!-- NOTAS POR AJUSTE (divididas) -->
       <div style="margin-bottom:10pt">
@@ -5507,7 +5570,7 @@ async function subirDocumentoCloudinary(base64){
 }
 
 function limpiarFormInv(){
-  ["inv-categoria","inv-modelo","inv-talla","inv-color-nombre","inv-precio","inv-cantidad","inv-notas"].forEach(id=>{
+  ["inv-categoria","inv-marca","inv-modelo","inv-talla","inv-color-nombre","inv-precio","inv-cantidad","inv-notas"].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.value = id==="inv-cantidad"?"1":"";
   });
@@ -5531,6 +5594,7 @@ function editarArticulo(artId){
   goSec("inv-nuevo"); // dispara limpiarFormInv(); llenamos los campos después
   window._editandoArticuloId = artId;
   document.getElementById("inv-categoria").value = a.categoria||"";
+  document.getElementById("inv-marca").value = a.marca||"";
   document.getElementById("inv-modelo").value = a.modelo||"";
   document.getElementById("inv-talla").value = a.talla||"";
   document.getElementById("inv-color-picker").value = a.colorHex||"#C8A8D0";
@@ -5592,6 +5656,7 @@ async function guardarArticuloInv(){
     const articulo = {
       id: artId,
       categoria,
+      marca: document.getElementById("inv-marca").value.trim(),
       modelo,
       talla: document.getElementById("inv-talla").value.trim(),
       colorHex: document.getElementById("inv-color-picker").value,
@@ -5635,6 +5700,21 @@ async function eliminarArticulo(artId){
   }catch(e){toast("Error al eliminar","err");}
 }
 
+// ══ AUTO-SUMA DE PRECIO POR ESCANEO ══
+window._qrPrecio1 = 0;
+window._qrPrecio2 = 0;
+function actualizarPrecioAutoSuma(){
+  const suma = (window._qrPrecio1||0) + (window._qrPrecio2||0);
+  const warn = document.getElementById("precio-auto-warn");
+  if(suma>0){
+    document.getElementById("c-precio").value = suma;
+    calcTotal();
+    if(warn) warn.style.display="block";
+  } else {
+    if(warn) warn.style.display="none";
+  }
+}
+
 function buscarPorQR(){
   const input = document.getElementById("inv-scan-input");
   const msg = document.getElementById("inv-scan-msg");
@@ -5649,11 +5729,21 @@ function buscarPorQR(){
     return;
   }
   // Autocompletar campos del formulario
+  const catLower = (art.categoria||"").toLowerCase();
+  if(catLower.includes("quinceañera")||catLower.includes("quinceanera")){
+    document.getElementById("c-tipo").value = "xv";
+    updatePkg();
+  } else if(catLower.includes("novia")){
+    document.getElementById("c-tipo").value = "novia";
+    updatePkg();
+  }
   document.getElementById("c-modelo").value = art.modelo||"";
+  document.getElementById("c-marca").value = art.marca||"";
   document.getElementById("c-talla").value = art.talla||"";
   document.getElementById("c-color-name").value = art.colorNombre||"";
   document.getElementById("color-picker").value = art.colorHex||"#C8A8D0";
-  if(art.precio) document.getElementById("c-precio").value = art.precio;
+  window._qrPrecio1 = Number(art.precio)||0;
+  actualizarPrecioAutoSuma();
   // Actualizar el color visualmente si existe la función
   if(typeof onColorChange==="function") onColorChange(art.colorHex||"#C8A8D0");
   if(typeof onColorNameInput==="function") onColorNameInput(art.colorNombre||"");
@@ -5674,6 +5764,8 @@ function quitarArticuloEscaneado(){
   const colorPicker=document.getElementById("color-picker");
   if(colorPicker) colorPicker.value=selectedColor;
   window._qrArticuloActual=null;
+  window._qrPrecio1 = 0;
+  actualizarPrecioAutoSuma();
   const msg=document.getElementById("inv-scan-msg");
   if(msg){ msg.style.color=""; msg.innerHTML=""; }
 }
@@ -5879,15 +5971,15 @@ function generarNotaVenta(c){
         <td style="border:1px solid #CCC;padding:.4rem .6rem">${fEntrega}</td>
       </tr>
       <tr>
-        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Tipo:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>${c.vestido2?"Vestido 1 — Tipo:":"Tipo:"}</strong></td>
         <td style="border:1px solid #CCC;padding:.4rem .6rem">${tipos[c.tipo]||"—"}</td>
-        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Talla:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>${c.vestido2?"Vestido 1 — Talla:":"Talla:"}</strong></td>
         <td style="border:1px solid #CCC;padding:.4rem .6rem">${c.talla||"—"}</td>
       </tr>
       <tr>
-        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Modelo:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>${c.vestido2?"Vestido 1 — Modelo:":"Modelo:"}</strong></td>
         <td style="border:1px solid #CCC;padding:.4rem .6rem">${c.modelo||"—"} ${c.marca?"("+c.marca+")":""}</td>
-        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Color:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>${c.vestido2?"Vestido 1 — Color:":"Color:"}</strong></td>
         <td style="border:1px solid #CCC;padding:.4rem .6rem">
           <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c.color?.hex||"#CCC"};vertical-align:middle;margin-right:4px;border:1px solid #999;-webkit-print-color-adjust:exact;print-color-adjust:exact"></span>
           ${c.color?.nombre||"—"}
@@ -5895,9 +5987,9 @@ function generarNotaVenta(c){
       </tr>
       ${c.vestido2 ? `
       <tr>
-        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>2do Vestido — Modelo:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Vestido 2 — Modelo:</strong></td>
         <td style="border:1px solid #CCC;padding:.4rem .6rem">${c.vestido2.modelo||"—"} ${c.vestido2.marca?"("+c.vestido2.marca+")":""}</td>
-        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>2do Vestido — Talla/Color:</strong></td>
+        <td style="border:1px solid #CCC;padding:.4rem .6rem"><strong>Vestido 2 — Talla/Color:</strong></td>
         <td style="border:1px solid #CCC;padding:.4rem .6rem">
           ${c.vestido2.talla||"—"} ·
           <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c.vestido2.color?.hex||"#CCC"};vertical-align:middle;margin-right:4px;border:1px solid #999;-webkit-print-color-adjust:exact;print-color-adjust:exact"></span>
@@ -5912,7 +6004,7 @@ function generarNotaVenta(c){
 
     <!-- MEDIDAS -->
     <table style="width:100%;border-collapse:collapse;border:2px solid #1a1a1a;border-top:none">
-      <tr><td colspan="6" style="background:#F0F0F0;font-weight:700;text-align:center;border:1px solid #CCC;padding:.3rem">Medidas</td></tr>
+      <tr><td colspan="6" style="background:#F0F0F0;font-weight:700;text-align:center;border:1px solid #CCC;padding:.3rem">${c.vestido2?"Medidas — Vestido 1":"Medidas"}</td></tr>
       <tr>
         <td style="border:1px solid #CCC;padding:.3rem .5rem;font-weight:600;text-align:center">Busto</td>
         <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.medidas?.busto||""}</td>
@@ -5928,6 +6020,24 @@ function generarNotaVenta(c){
         <td colspan="3" style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.medidas?.largo||""}</td>
       </tr>
     </table>
+    ${c.vestido2 ? `
+    <table style="width:100%;border-collapse:collapse;border:2px solid #1a1a1a;border-top:none">
+      <tr><td colspan="6" style="background:#F0F0F0;font-weight:700;text-align:center;border:1px solid #CCC;padding:.3rem">Medidas — Vestido 2</td></tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;font-weight:600;text-align:center">Busto</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.vestido2.medidas?.busto||""}</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;font-weight:600;text-align:center">Cintura</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.vestido2.medidas?.cintura||""}</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;font-weight:600;text-align:center">Cadera</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.vestido2.medidas?.cadera||""}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;font-weight:600;text-align:center">Copa</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.vestido2.medidas?.copa||""}</td>
+        <td style="border:1px solid #CCC;padding:.3rem .5rem;font-weight:600;text-align:center">Largo</td>
+        <td colspan="3" style="border:1px solid #CCC;padding:.3rem .5rem;text-align:center">${c.vestido2.medidas?.largo||""}</td>
+      </tr>
+    </table>` : ""}
 
     <!-- ACCESORIOS -->
     <table style="width:100%;border-collapse:collapse;border:2px solid #1a1a1a;border-top:none">
@@ -6345,6 +6455,16 @@ function generarContrato(c){
           <button type="button" class="btn-sec" onclick="buscarPorQREdicion2()">BUSCAR</button>
         </div>
         <div id="edit-inv-scan-msg2" style="font-size:.72rem;margin-top:.25rem;min-height:.9rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap"></div>
+      </div>
+      <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dorado-d);margin:.8rem 0 .5rem">Medidas segundo vestido</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem">
+        <div class="field"><label>Busto</label><input type="text" id="edit-busto2" placeholder="—"></div>
+        <div class="field"><label>Cintura</label><input type="text" id="edit-cintura2" placeholder="—"></div>
+        <div class="field"><label>Cadera</label><input type="text" id="edit-cadera2" placeholder="—"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.6rem">
+        <div class="field"><label>Copa</label><input type="text" id="edit-copa2" placeholder="—"></div>
+        <div class="field"><label>Largo</label><input type="text" id="edit-largo2" placeholder="—"></div>
       </div>
     </div>
     <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dorado-d);margin:.8rem 0 .5rem">Medidas</div>
