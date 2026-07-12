@@ -505,6 +505,10 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- ══ FIREBASE — SOLO AUTHENTICATION (Spark, sin Firestore/Storage por ahora) ══ -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -519,7 +523,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · PRODUCCIÓN v29.4</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · PRODUCCIÓN v30.0</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -617,6 +621,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
         <button class="sub-item" onclick="goSec('permisos')" id="admin-sub-permisos">🔐 Permisos</button>
         <button class="sub-item" onclick="goSec('cuentas-config')" id="admin-sub-cuentas">🏦 Cuentas</button>
         <button class="sub-item" onclick="goSec('historial-accesos')" id="admin-sub-hist">🕐 Historial accesos</button>
+        <button class="sub-item" onclick="goSec('migrar-fs')" id="admin-sub-migrarfs">☁️ Migrar a Firestore</button>
       </div>
     </div>
 
@@ -1424,6 +1429,15 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
       </div>
     </div>
 
+    <div class="section" id="sec-migrar-fs">
+      <div class="sec-title">Migrar a Firestore</div>
+      <div class="card">
+        <p style="color:#AAA;font-size:.78rem;margin-bottom:.8rem">Copia clientes, inventario y notas sencillas de JSONBin a Firestore. No borra ni modifica nada en JSONBin — es una copia, puedes repetirla si algo falla.</p>
+        <button class="btn-save" id="btn-migrar-fs" onclick="migrarAFirestore()">☁️ Migrar a Firestore</button>
+        <div id="migrar-fs-progreso" style="font-size:.8rem;margin-top:.8rem;color:var(--cafe);white-space:pre-line"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1653,6 +1667,44 @@ const ACCESS_KEY = "$2a$10$9VfaQRuaCX9fyS6yiO1dhuh5DeDt89523dzWLH/.6jPYvy3wOcPv.
 const BIN_ID     = "6a4e18a2da38895dfe3f7872";
 const BIN_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
+// ══ FIREBASE — SOLO AUTHENTICATION ══
+// Piver: llena esto localmente con el config real del proyecto Firebase
+// nuevo (Firebase Console → Configuración del proyecto → tus apps → Web app).
+// NUNCA se comparte en el chat.
+const firebaseConfig = {
+  apiKey: "AIzaSyDEaVniPdpXhbiRT6qYWEJuu9hyTkghnaY",
+  authDomain: "rdl-production.firebaseapp.com",
+  projectId: "rdl-production",
+  storageBucket: "rdl-production.firebasestorage.app",
+  messagingSenderId: "510898405169",
+  appId: "1:510898405169:web:77f36cf5215f82be013a10",
+  measurementId: "G-KENSFN9PPR"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+// Instancia secundaria de Firebase, SOLO para verificar credenciales de un
+// segundo admin (modal de autorización de supervisor) sin cerrar la sesión
+// del usuario que ya inició sesión — signInWithEmailAndPassword en la
+// instancia principal reemplazaría la sesión activa, por eso se usa una
+// instancia aislada aparte.
+const secondaryApp = firebase.initializeApp(firebaseConfig,"secondary");
+// Colección "users" en Firestore: un documento por persona, ID = nombre de usuario.
+// Reemplaza la lectura de JSONBin solo para rol/permisos/nombre/bloqueo del login.
+// JSONBin sigue siendo el backend de datos de negocio (clientes, inventario, pedidos).
+
+// Firebase Authentication exige formato de correo, pero el formulario de
+// login solo pide "usuario". Este sufijo arma un correo interno a partir
+// del usuario: usuario "gerente" -> correo "gerente@rossdelune.app".
+// No es un correo real, Firebase nunca le envía nada — solo lo usa como
+// identificador único.
+//
+// IMPORTANTE: en Firebase Console → Authentication → Users, cada cuenta
+// que crees ahí debe tener EXACTAMENTE este correo (usuario en minúsculas
+// + este sufijo, sin espacios). Si no coincide letra por letra, el login
+// falla sin mostrar un error claro.
+const EMAIL_DOMAIN = "@rossdelune.app";
+
 let currentUser = null, allUsers = [], allClientes = [];
 let allCuentas = [];
 let allGastos = [];
@@ -1785,17 +1837,51 @@ async function doLogin(){
   const err=document.getElementById("login-err");
   err.textContent="";btn.innerHTML='<span class="spinner"></span>Verificando...';btn.disabled=true;
   try{
+    // PASO 1 — Firebase Authentication valida usuario+contraseña.
+    // El correo interno se arma con EMAIL_DOMAIN (ver comentario arriba).
+    try{
+      await auth.signInWithEmailAndPassword(u+EMAIL_DOMAIN, p);
+    }catch(authErr){
+      console.error("Firebase Auth error:",authErr);
+      err.textContent="Usuario o contraseña incorrectos.";
+      btn.innerHTML="Entrar";btn.disabled=false;return;
+    }
+    // PASO 2 — Ya autenticado en Firebase, se consulta Firestore (colección
+    // "users", documento con ID = usuario) para obtener rol/permisos/nombre/
+    // bloqueo. Ya NO se lee JSONBin para esto (antes sí, en la versión anterior).
+    let match;
+    try{
+      const snap=await db.collection("users").doc(u).get();
+      if(!snap.exists){
+        err.textContent="Usuario válido en Firebase, pero sin documento en Firestore. Contacta al administrador.";
+        btn.innerHTML="Entrar";btn.disabled=false;
+        auth.signOut();
+        return;
+      }
+      match=snap.data();match.user=u;
+    }catch(fsErr){
+      console.error("Firestore error:",fsErr);
+      err.textContent="Error al leer Firestore: "+fsErr.message;
+      btn.innerHTML="Entrar";btn.disabled=false;
+      auth.signOut();
+      return;
+    }
+    if(match.role!==loginRole){
+      err.textContent="Usuario o contraseña incorrectos.";
+      btn.innerHTML="Entrar";btn.disabled=false;
+      auth.signOut();
+      return;
+    }
+    if(match.blocked){err.textContent="Cuenta bloqueada. Contacta al administrador.";btn.innerHTML="Entrar";btn.disabled=false;auth.signOut();return;}
+    // Datos de negocio (clientes, inventario) SIGUEN en JSONBin — sin cambios aquí.
     const data=await loadData();
-    allUsers=data.users||[];allClientes=data.clientes||[];window._invData=data.inventario||[];
+    allClientes=data.clientes||[];window._invData=data.inventario||[];
     allCuentas=await asegurarCuentas(data);
-    const match=allUsers.find(x=>x.user===u&&x.pass===p&&x.role===loginRole);
-    if(!match){err.textContent="Usuario o contraseña incorrectos.";btn.innerHTML="Entrar";btn.disabled=false;return;}
-    if(match.blocked){err.textContent="Cuenta bloqueada. Contacta al administrador.";btn.innerHTML="Entrar";btn.disabled=false;return;}
     const now=new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"});
     if(!match.accesos)match.accesos=[];
     match.accesos.unshift(now);
-    const idx=allUsers.findIndex(x=>x.user===u);allUsers[idx]=match;
-    await saveData({...data,users:allUsers,clientes:allClientes});
+    try{await db.collection("users").doc(u).update({accesos:match.accesos});}
+    catch(updErr){console.error("No se pudo registrar el acceso en Firestore:",updErr);}
     currentUser=match;closeLogin();enterPanel();
   }catch(e){console.error("doLogin error:",e);err.textContent="Error de conexión: "+e.message;btn.innerHTML="Entrar";btn.disabled=false;}
 }
@@ -1810,6 +1896,7 @@ function enterPanel(){
     document.getElementById("admin-sub-permisos").style.display="none";
     document.getElementById("admin-sub-cuentas").style.display="none";
     document.getElementById("admin-sub-hist").style.display="none";
+    document.getElementById("admin-sub-migrarfs").style.display="none";
     document.getElementById("admin-sub-micuenta").style.display="none";
     // Mostrar botones del nav — bloqueados con 🔒, permitidos normal
     const permisos = currentUser.permisos||{};
@@ -1835,6 +1922,7 @@ function enterPanel(){
     document.getElementById("admin-sub-permisos").style.display="";
     document.getElementById("admin-sub-cuentas").style.display="";
     document.getElementById("admin-sub-hist").style.display="";
+    document.getElementById("admin-sub-migrarfs").style.display="";
     document.getElementById("admin-sub-micuenta").style.display="";
     SECCIONES_CTRL.forEach(s=>{
       const nb = document.getElementById("nb-"+s.id);
@@ -1846,6 +1934,7 @@ function enterPanel(){
   }
   document.getElementById("my-display").value=currentUser.display||"";
   document.getElementById("my-user").value=currentUser.user||"";
+  document.getElementById("my-user").disabled=true;
   renderClientes();
   initColorPicker();
   initAdicionales();
@@ -1854,6 +1943,7 @@ function enterPanel(){
 }
 
 function doLogout(){
+  auth.signOut().catch(e=>console.error("Firebase signOut error:",e));
   currentUser=null;allUsers=[];allClientes=[];loginRole=null;window._invData=[];_desbloqueosTemp=new Set();window._lotePrint=[];
   document.getElementById("screen-panel").classList.remove("show");
   document.getElementById("screen-welcome").style.display="flex";
@@ -2920,28 +3010,33 @@ function verCliente(id){toast("Expediente completo · próxima fase 🎀","ok");
 // ══ MI CUENTA ══
 async function saveMyAccount(){
   const display=document.getElementById("my-display").value.trim();
-  const user=document.getElementById("my-user").value.trim().toLowerCase();
   const p1=document.getElementById("my-p1").value;
   const p2=document.getElementById("my-p2").value;
   const msg=document.getElementById("my-msg");
   msg.style.color="var(--rojo)";msg.textContent="";
-  if(!display||!user){msg.textContent="Nombre y usuario son obligatorios.";return;}
+  if(!display){msg.textContent="El nombre es obligatorio.";return;}
   if(p1&&p1!==p2){msg.textContent="Las contraseñas no coinciden.";return;}
   if(p1&&p1.length<6){msg.textContent="Mínimo 6 caracteres.";return;}
   try{
-    const data=await loadData();allUsers=data.users;
-    const dup=allUsers.find(x=>x.user===user&&x.user!==currentUser.user);
-    if(dup){msg.textContent="Ese usuario ya está en uso.";return;}
-    const idx=allUsers.findIndex(x=>x.user===currentUser.user);
-    allUsers[idx].display=display;allUsers[idx].user=user;
-    if(p1)allUsers[idx].pass=p1;
-    currentUser=allUsers[idx];
-    await saveData({...data,users:allUsers,clientes:data.clientes||[]});
-    document.getElementById("top-user").textContent="@"+user;
+    await db.collection("users").doc(currentUser.user).update({display});
+    currentUser.display=display;
+    document.getElementById("top-user").textContent="@"+currentUser.user;
+    if(p1){
+      try{
+        await auth.currentUser.updatePassword(p1);
+      }catch(pwErr){
+        console.error("Error al actualizar contraseña:",pwErr);
+        document.getElementById("my-p1").value="";document.getElementById("my-p2").value="";
+        msg.textContent = pwErr.code==="auth/requires-recent-login"
+          ? "El nombre se guardó. Por seguridad, cierra sesión y vuelve a entrar antes de cambiar tu contraseña."
+          : "El nombre se guardó, pero la contraseña no pudo actualizarse: "+pwErr.message;
+        return;
+      }
+    }
     document.getElementById("my-p1").value="";document.getElementById("my-p2").value="";
     msg.style.color="var(--verde)";msg.textContent="✓ Cambios guardados.";
     toast("Cuenta actualizada ✓");
-  }catch(e){msg.textContent="Error al guardar.";}
+  }catch(e){console.error(e);msg.textContent="Error al guardar.";}
 }
 
 async function saveClaveDesbloqueo(){
@@ -2953,23 +3048,24 @@ async function saveClaveDesbloqueo(){
   if(cd1!==cd2){msg.textContent="Las claves no coinciden.";return;}
   if(cd1.length<6){msg.textContent="Mínimo 6 caracteres.";return;}
   try{
-    const data=await loadData();allUsers=data.users;
-    const idx=allUsers.findIndex(x=>x.user===currentUser.user);
-    allUsers[idx].claveDesbloqueo=cd1;
-    currentUser=allUsers[idx];
-    await saveData({...data,users:allUsers,clientes:data.clientes||[]});
+    await db.collection("users").doc(currentUser.user).update({claveDesbloqueo:cd1});
+    currentUser.claveDesbloqueo=cd1;
     document.getElementById("my-cd1").value="";document.getElementById("my-cd2").value="";
     msg.style.color="var(--verde)";msg.textContent="✓ Clave de desbloqueo guardada.";
     toast("Clave de desbloqueo actualizada ✓");
-  }catch(e){msg.textContent="Error al guardar.";}
+  }catch(e){console.error(e);msg.textContent="Error al guardar.";}
 }
 
 // ══ COLABORADORES ══
 async function loadWorkers(){
   const tbody=document.getElementById("workers-tbody");
   tbody.innerHTML='<tr><td colspan="5" style="color:#AAA;padding:1rem"><span class="spinner"></span>Cargando...</td></tr>';
-  try{const data=await loadData();allUsers=data.users||[];renderWorkers();}
-  catch(e){tbody.innerHTML='<tr><td colspan="5" style="color:var(--rojo)">Error de conexión.</td></tr>';}
+  try{
+    const snap=await db.collection("users").get();
+    allUsers=snap.docs.map(d=>({...d.data(),user:d.id}));
+    renderWorkers();
+  }
+  catch(e){console.error("Firestore error:",e);tbody.innerHTML='<tr><td colspan="5" style="color:var(--rojo)">Error de conexión.</td></tr>';}
 }
 function renderWorkers(){
   const tbody=document.getElementById("workers-tbody");
@@ -2988,19 +3084,24 @@ function renderWorkers(){
 function openWorkerModal(username){
   editingWorker=username;
   document.getElementById("wm-msg").textContent="";
+  document.getElementById("wm-msg").style.color="var(--cafe)";
+  const passField=document.getElementById("w-pass");
+  const passWrap=passField.closest(".field");
   if(username){
     const u=allUsers.find(x=>x.user===username);
     document.getElementById("wm-badge").textContent="Editar cuenta";
     document.getElementById("wm-title").textContent=u.display;
     document.getElementById("w-display").value=u.display;
     document.getElementById("w-user").value=u.user;
-    document.getElementById("w-pass").value="";
-    document.getElementById("w-pass").placeholder="Dejar vacío para no cambiar";
+    document.getElementById("w-user").disabled=true;
+    if(passWrap)passWrap.style.display="none";
   }else{
     document.getElementById("wm-badge").textContent="Nueva cuenta";
     document.getElementById("wm-title").textContent="Colaborador";
     document.getElementById("w-display").value="";document.getElementById("w-user").value="";
-    document.getElementById("w-pass").value="";document.getElementById("w-pass").placeholder="••••••••";
+    document.getElementById("w-pass").value="";
+    document.getElementById("w-user").disabled=false;
+    if(passWrap)passWrap.style.display="";
   }
   document.getElementById("modal-worker").classList.add("open");
 }
@@ -3009,33 +3110,45 @@ async function saveWorker(){
   const display=document.getElementById("w-display").value.trim();
   const user=document.getElementById("w-user").value.trim().toLowerCase();
   const pass=document.getElementById("w-pass").value;
-  const msg=document.getElementById("wm-msg");msg.textContent="";
-  if(!display||!user){msg.textContent="Nombre y usuario son obligatorios.";return;}
-  if(!editingWorker&&!pass){msg.textContent="La contraseña es obligatoria.";return;}
-  if(pass&&pass.length<6){msg.textContent="Mínimo 6 caracteres.";return;}
+  const msg=document.getElementById("wm-msg");
+  if(!display||!user){msg.style.color="var(--rojo)";msg.textContent="Nombre y usuario son obligatorios.";return;}
   try{
-    const data=await loadData();allUsers=data.users;
     if(editingWorker){
-      const idx=allUsers.findIndex(x=>x.user===editingWorker);
-      allUsers[idx].display=display;allUsers[idx].user=user;
-      if(pass)allUsers[idx].pass=pass;
+      // Solo se actualiza el nombre a mostrar — el usuario (ID del documento) no se
+      // puede cambiar aquí porque está ligado a la cuenta real de Firebase Authentication.
+      await db.collection("users").doc(editingWorker).update({display});
     }else{
-      if(allUsers.find(x=>x.user===user)){msg.textContent="Ese usuario ya existe.";return;}
-      allUsers.push({user,pass,display,role:"worker",blocked:false,accesos:[]});
+      if(!pass){msg.style.color="var(--rojo)";msg.textContent="La contraseña es obligatoria.";return;}
+      if(pass.length<6){msg.style.color="var(--rojo)";msg.textContent="Mínimo 6 caracteres.";return;}
+      const snap=await db.collection("users").doc(user).get();
+      if(snap.exists){msg.style.color="var(--rojo)";msg.textContent="Ese usuario ya existe en Firestore.";return;}
+      // Se crea la cuenta real en Firebase Authentication usando la instancia
+      // secundaria — así no se cierra la sesión del admin que está creando el colaborador.
+      try{
+        await secondaryApp.auth().createUserWithEmailAndPassword(user+EMAIL_DOMAIN,pass);
+        await secondaryApp.auth().signOut();
+      }catch(authErr){
+        console.error("Error al crear cuenta en Firebase Auth:",authErr);
+        msg.style.color="var(--rojo)";
+        msg.textContent = authErr.code==="auth/email-already-in-use"
+          ? "Ya existe una cuenta de Firebase Authentication con ese usuario."
+          : "No se pudo crear la cuenta: "+authErr.message;
+        return;
+      }
+      await db.collection("users").doc(user).set({user,display,role:"worker",blocked:false,accesos:[],permisos:{clientes:true,pagos:true,pedidos:true,progreso:true,inventario:true}});
     }
-    await saveData({...data,users:allUsers,clientes:data.clientes||[]});
-    closeWorkerModal();renderWorkers();
-    toast(editingWorker?"Cuenta actualizada ✓":"Cuenta creada ✓");
-  }catch(e){msg.textContent="Error al guardar.";}
+    closeWorkerModal();loadWorkers();
+    toast(editingWorker?"Cuenta actualizada ✓":"Colaborador creado ✓");
+  }catch(e){console.error(e);msg.style.color="var(--rojo)";msg.textContent="Error al guardar.";}
 }
 async function toggleBlock(username){
   try{
-    const data=await loadData();allUsers=data.users;
     const idx=allUsers.findIndex(x=>x.user===username);
-    allUsers[idx].blocked=!allUsers[idx].blocked;
-    await saveData({...data,users:allUsers,clientes:data.clientes||[]});
-    renderWorkers();toast(allUsers[idx].blocked?"Bloqueado 🔒":"Desbloqueado 🔓");
-  }catch(e){toast("Error de conexión","err");}
+    const nuevoEstado=!allUsers[idx].blocked;
+    await db.collection("users").doc(username).update({blocked:nuevoEstado});
+    allUsers[idx].blocked=nuevoEstado;
+    renderWorkers();toast(nuevoEstado?"Bloqueado 🔒":"Desbloqueado 🔓");
+  }catch(e){console.error(e);toast("Error de conexión","err");}
 }
 
 // ══ HISTORIAL ══
@@ -3059,6 +3172,59 @@ async function loadHistorial(){
         </div>
       </div>`).join("");
   }catch(e){list.innerHTML='<p style="color:var(--rojo)">Error de conexión.</p>';}
+}
+
+// ══ MIGRACIÓN A FIRESTORE ══
+// Copia clientes, inventario y notasSencillas de JSONBin a Firestore.
+// No borra ni modifica JSONBin — es una copia, se puede repetir sin riesgo.
+async function migrarAFirestore(){
+  const btn=document.getElementById("btn-migrar-fs");
+  const prog=document.getElementById("migrar-fs-progreso");
+  btn.disabled=true;
+  prog.textContent="Leyendo JSONBin...";
+  try{
+    const data=await loadData();
+    const clientes=data.clientes||[];
+    const inventario=data.inventario||[];
+    const notasSencillas=data.notasSencillas||[];
+
+    // Clientes → colección "clientes", ID de documento = folio (como texto)
+    for(let i=0;i<clientes.length;i++){
+      const c=clientes[i];
+      prog.textContent=`Migrando cliente ${i+1} de ${clientes.length}...`;
+      await db.collection("clientes").doc(String(c.folio)).set(c);
+    }
+
+    // Inventario → colección "inventario", ID de documento = id del artículo
+    for(let i=0;i<inventario.length;i++){
+      const a=inventario[i];
+      prog.textContent=`Migrando artículo ${i+1} de ${inventario.length}...`;
+      await db.collection("inventario").doc(String(a.id)).set(a);
+    }
+
+    // Notas sencillas → un solo documento con el array completo
+    prog.textContent="Migrando notas sencillas...";
+    await db.collection("notasSencillas").doc("data").set({lista:notasSencillas});
+
+    // Verificación: comparar conteos JSONBin vs Firestore
+    prog.textContent="Verificando conteos...";
+    const [snapClientes,snapInventario]=await Promise.all([
+      db.collection("clientes").get(),
+      db.collection("inventario").get()
+    ]);
+    const okClientes=snapClientes.size===clientes.length;
+    const okInventario=snapInventario.size===inventario.length;
+    prog.innerHTML=
+      `Clientes: ${clientes.length} en JSONBin → ${snapClientes.size} en Firestore ${okClientes?"✓":"⚠️ NO COINCIDE"}\n`+
+      `Inventario: ${inventario.length} en JSONBin → ${snapInventario.size} en Firestore ${okInventario?"✓":"⚠️ NO COINCIDE"}\n`+
+      `Notas sencillas: ${notasSencillas.length} migradas ✓\n`+
+      (okClientes&&okInventario?"Migración completa, sin diferencias.":"Revisa las diferencias antes de confiar en estos datos.");
+  }catch(e){
+    console.error("Error en migración a Firestore:",e);
+    prog.textContent="Error durante la migración: "+e.message+" — JSONBin no fue modificado, puedes reintentar.";
+  }finally{
+    btn.disabled=false;
+  }
 }
 
 // inicializar color preview
@@ -4470,15 +4636,13 @@ async function guardarPermisos(){
     permisos[s.id] = document.getElementById("perm-"+s.id)?.checked !== false;
   });
   try{
-    const data = await loadData();
-    allUsers = data.users||[];
-    const idx = allUsers.findIndex(x=>x.user===_permisosWorkerActual);
-    if(idx>-1) allUsers[idx].permisos = permisos;
-    await saveData({...data, users:allUsers, clientes:data.clientes||[]});
+    await db.collection("users").doc(_permisosWorkerActual).update({permisos});
+    const idx=allUsers.findIndex(x=>x.user===_permisosWorkerActual);
+    if(idx>-1) allUsers[idx].permisos=permisos;
     msg.style.color="var(--verde)";
     msg.textContent="✓ Permisos guardados";
     toast("Permisos actualizados ✓");
-  }catch(e){msg.style.color="var(--rojo)";msg.textContent="Error al guardar.";}
+  }catch(e){console.error(e);msg.style.color="var(--rojo)";msg.textContent="Error al guardar.";}
 }
 
 // ══ CUENTAS — Config (crear/renombrar/desactivar) ══
@@ -5125,13 +5289,31 @@ async function verificarAuthSuper(){
   const err = document.getElementById("auth-super-err");
   err.textContent="";
   try{
-    const data = await loadData();
-    const admin = (data.users||[]).find(x=>x.user===u&&(x.claveDesbloqueo?x.claveDesbloqueo===p:x.pass===p)&&x.role==="admin"&&!x.blocked);
-    if(!admin){err.textContent="Credenciales incorrectas.";return;}
+    // Primero se busca el documento del admin en Firestore para saber si ya
+    // configuró su propia clave de desbloqueo (independiente de su login).
+    const snap = await db.collection("users").doc(u).get();
+    const admin = snap.exists ? snap.data() : null;
+    if(!admin || admin.role!=="admin" || admin.blocked){err.textContent="Credenciales incorrectas.";return;}
+
+    let ok=false;
+    if(admin.claveDesbloqueo){
+      // Tiene clave de desbloqueo propia: se compara directo, sin tocar Firebase Auth.
+      ok = admin.claveDesbloqueo===p;
+    }else{
+      // Sin clave de desbloqueo configurada todavía: se usa su contraseña real
+      // de login como respaldo, verificada contra Firebase Auth (instancia
+      // secundaria, para no cerrar la sesión del usuario actual).
+      try{
+        await secondaryApp.auth().signInWithEmailAndPassword(u+EMAIL_DOMAIN,p);
+        await secondaryApp.auth().signOut();
+        ok=true;
+      }catch(authErr){ok=false;}
+    }
+    if(!ok){err.textContent="Credenciales incorrectas.";return;}
     const cb = _authSuperCallback; // guardamos el callback ANTES de cerrar el modal, que lo pone en null
     cerrarAuthSuper();
     if(cb) cb();
-  }catch(e){err.textContent="Credenciales incorrectas.";}
+  }catch(e){console.error("Error de autorización de supervisor:",e);err.textContent="Credenciales incorrectas.";}
 }
 
 // ══ INVENTARIO ══
