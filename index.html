@@ -523,7 +523,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · PRODUCCIÓN v31.1</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · PRODUCCIÓN v36.0</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -621,7 +621,6 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
         <button class="sub-item" onclick="goSec('permisos')" id="admin-sub-permisos">🔐 Permisos</button>
         <button class="sub-item" onclick="goSec('cuentas-config')" id="admin-sub-cuentas">🏦 Cuentas</button>
         <button class="sub-item" onclick="goSec('historial-accesos')" id="admin-sub-hist">🕐 Historial accesos</button>
-        <button class="sub-item" onclick="goSec('migrar-fs')" id="admin-sub-migrarfs">☁️ Migrar a Firestore</button>
       </div>
     </div>
 
@@ -1434,15 +1433,6 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
       </div>
     </div>
 
-    <div class="section" id="sec-migrar-fs">
-      <div class="sec-title">Migrar a Firestore</div>
-      <div class="card">
-        <p style="color:#AAA;font-size:.78rem;margin-bottom:.8rem">Copia clientes, inventario, notas sencillas, cuentas, gastos y accesorios de JSONBin a Firestore. No borra ni modifica nada en JSONBin — es una copia, puedes repetirla si algo falla.</p>
-        <button class="btn-save" id="btn-migrar-fs" onclick="migrarAFirestore()">☁️ Migrar a Firestore</button>
-        <div id="migrar-fs-progreso" style="font-size:.8rem;margin-top:.8rem;color:var(--cafe);white-space:pre-line"></div>
-      </div>
-    </div>
-
   </div>
 </div>
 
@@ -1667,12 +1657,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 
 <script>
 // ══ CONFIG ══
-const MASTER_KEY = "$2a$10$mKCTBP96l4oINrx2Z3uXbOTEGW/08f1Gd2g.ndODEp1eLEqu7p83W";
-const ACCESS_KEY = "$2a$10$9VfaQRuaCX9fyS6yiO1dhuh5DeDt89523dzWLH/.6jPYvy3wOcPv.";
-const BIN_ID     = "6a4e18a2da38895dfe3f7872";
-const BIN_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-// ══ FIREBASE — SOLO AUTHENTICATION ══
 const firebaseConfig = {
   apiKey: "AIzaSyDEaVniPdpXhbiRT6qYWEJuu9hyTkghnaY",
   authDomain: "rdl-production.firebaseapp.com",
@@ -1692,8 +1677,6 @@ const db = firebase.firestore();
 // instancia aislada aparte.
 const secondaryApp = firebase.initializeApp(firebaseConfig,"secondary");
 // Colección "users" en Firestore: un documento por persona, ID = nombre de usuario.
-// Reemplaza la lectura de JSONBin solo para rol/permisos/nombre/bloqueo del login.
-// JSONBin sigue siendo el backend de datos de negocio (clientes, inventario, pedidos).
 
 // Firebase Authentication exige formato de correo, pero el formulario de
 // login solo pide "usuario". Este sufijo arma un correo interno a partir
@@ -1714,25 +1697,11 @@ let allAccesorios = [];
 let editingWorker = null;
 let selectedColor = "#C8A8D0";
 
-// ══ JSONBin ══
-async function loadData(){
-  const r = await fetch(BIN_URL+"/latest?t="+Date.now(),{cache:"no-store",headers:{"X-Master-Key":MASTER_KEY,"X-Access-Key":ACCESS_KEY}});
-  if(!r.ok){
-    let detalle="";
-    try{ detalle=(await r.json()).message||""; }catch(_){}
-    throw new Error(`JSONBin ${r.status}${detalle?": "+detalle:""}`);
-  }
-  const j = await r.json(); return j.record;
-}
-async function saveData(d){
-  await fetch(BIN_URL,{method:"PUT",headers:{"Content-Type":"application/json","X-Master-Key":MASTER_KEY,"X-Access-Key":ACCESS_KEY},body:JSON.stringify(d)});
-}
-
 // ══ CLIENTES EN VIVO EN FIRESTORE ══
-// Reemplaza JSONBin para clientes. Cada cliente = un documento en la
+// Cada cliente = un documento en la
 // colección "clientes", ID = folio (mismo criterio que usó el botón de
 // migración). Inventario/notasSencillas/folioActual/cuentas SIGUEN en
-// JSONBin — solo "clientes" se movió en esta fase.
+// colección "clientes" de Firestore.
 async function loadClientesFS(){
   const snap = await db.collection("clientes").get();
   return snap.docs.map(d=>d.data());
@@ -1759,7 +1728,7 @@ async function eliminarClienteFS(cliente){
 }
 
 // ══ INVENTARIO EN VIVO EN FIRESTORE ══
-// Reemplaza JSONBin para inventario. Cada artículo = un documento en la
+// Cada artículo = un documento en la
 // colección "inventario", ID = su "id" (INV..., siempre existe, sin casos
 // especiales como el folio null de clientes).
 async function loadInventarioFS(){
@@ -1934,7 +1903,7 @@ async function doLogin(){
     }
     // PASO 2 — Ya autenticado en Firebase, se consulta Firestore (colección
     // "users", documento con ID = usuario) para obtener rol/permisos/nombre/
-    // bloqueo. Ya NO se lee JSONBin para esto (antes sí, en la versión anterior).
+    // bloqueo.
     let match;
     try{
       const snap=await db.collection("users").doc(u).get();
@@ -1959,7 +1928,7 @@ async function doLogin(){
       return;
     }
     if(match.blocked){err.textContent="Cuenta bloqueada. Contacta al administrador.";btn.innerHTML="Entrar";btn.disabled=false;auth.signOut();return;}
-    // Clientes, inventario y cuentas ahora se leen EN VIVO de Firestore. JSONBin ya no se usa en el login.
+    // Clientes, inventario y cuentas se leen EN VIVO de Firestore.
     const [clientesFS,inventarioFS]=await Promise.all([loadClientesFS(),loadInventarioFS()]);
     allClientes=clientesFS;window._invData=inventarioFS;
     allCuentas=await asegurarCuentasFS();
@@ -1982,7 +1951,6 @@ function enterPanel(){
     document.getElementById("admin-sub-permisos").style.display="none";
     document.getElementById("admin-sub-cuentas").style.display="none";
     document.getElementById("admin-sub-hist").style.display="none";
-    document.getElementById("admin-sub-migrarfs").style.display="none";
     document.getElementById("admin-sub-micuenta").style.display="none";
     // Mostrar botones del nav — bloqueados con 🔒, permitidos normal
     const permisos = currentUser.permisos||{};
@@ -2008,7 +1976,6 @@ function enterPanel(){
     document.getElementById("admin-sub-permisos").style.display="";
     document.getElementById("admin-sub-cuentas").style.display="";
     document.getElementById("admin-sub-hist").style.display="";
-    document.getElementById("admin-sub-migrarfs").style.display="";
     document.getElementById("admin-sub-micuenta").style.display="";
     SECCIONES_CTRL.forEach(s=>{
       const nb = document.getElementById("nb-"+s.id);
@@ -3267,10 +3234,11 @@ async function loadHistorial(){
   const list=document.getElementById("log-list");
   list.innerHTML='<span class="spinner"></span> Cargando...';
   try{
-    const data=await loadData();
+    const snap=await db.collection("users").get();
     const entries=[];
-    (data.users||[]).forEach(u=>{
-      (u.accesos||[]).forEach(ts=>entries.push({display:u.display,user:u.user,role:u.role,ts}));
+    snap.docs.forEach(doc=>{
+      const u=doc.data();
+      (u.accesos||[]).forEach(ts=>entries.push({display:u.display,user:doc.id,role:u.role,ts}));
     });
     entries.sort((a,b)=>new Date(b.ts)-new Date(a.ts));
     if(!entries.length){list.innerHTML='<p style="color:#AAA;font-size:.82rem">Sin registros aún.</p>';return;}
@@ -3282,94 +3250,7 @@ async function loadHistorial(){
           <div class="log-time">@${e.user} · ${e.ts}</div>
         </div>
       </div>`).join("");
-  }catch(e){list.innerHTML='<p style="color:var(--rojo)">Error de conexión.</p>';}
-}
-
-// ══ MIGRACIÓN A FIRESTORE ══
-// Copia clientes, inventario y notasSencillas de JSONBin a Firestore.
-// No borra ni modifica JSONBin — es una copia, se puede repetir sin riesgo.
-async function migrarAFirestore(){
-  const btn=document.getElementById("btn-migrar-fs");
-  const prog=document.getElementById("migrar-fs-progreso");
-  btn.disabled=true;
-  prog.textContent="Leyendo JSONBin...";
-  try{
-    const data=await loadData();
-    const clientes=data.clientes||[];
-    const inventario=data.inventario||[];
-    const notasSencillas=data.notasSencillas||[];
-    const cuentas=data.cuentas||[];
-    const gastos=data.gastos||[];
-    const accesorios=data.accesoriosComprados||[];
-
-    // Clientes → colección "clientes", ID de documento = folio (como texto)
-    for(let i=0;i<clientes.length;i++){
-      const c=clientes[i];
-      prog.textContent=`Migrando cliente ${i+1} de ${clientes.length}...`;
-      await db.collection("clientes").doc(idDocCliente(c)).set(c);
-    }
-
-    // Inventario → colección "inventario", ID de documento = id del artículo
-    for(let i=0;i<inventario.length;i++){
-      const a=inventario[i];
-      prog.textContent=`Migrando artículo ${i+1} de ${inventario.length}...`;
-      await db.collection("inventario").doc(String(a.id)).set(a);
-    }
-
-    // Notas sencillas → un solo documento con el array completo
-    prog.textContent="Migrando notas sencillas...";
-    await db.collection("notasSencillas").doc("data").set({lista:notasSencillas});
-
-    // Cuentas → colección "cuentas", ID de documento = id de la cuenta
-    for(let i=0;i<cuentas.length;i++){
-      const cu=cuentas[i];
-      prog.textContent=`Migrando cuenta ${i+1} de ${cuentas.length}...`;
-      await db.collection("cuentas").doc(String(cu.id)).set(cu);
-    }
-
-    // Gastos → colección "gastos", ID de documento = id del gasto
-    for(let i=0;i<gastos.length;i++){
-      const g=gastos[i];
-      prog.textContent=`Migrando gasto ${i+1} de ${gastos.length}...`;
-      await db.collection("gastos").doc(String(g.id)).set(g);
-    }
-
-    // Accesorios → colección "accesorios", ID de documento = id del registro
-    for(let i=0;i<accesorios.length;i++){
-      const ac=accesorios[i];
-      prog.textContent=`Migrando accesorio ${i+1} de ${accesorios.length}...`;
-      await db.collection("accesorios").doc(String(ac.id)).set(ac);
-    }
-
-    // Verificación: comparar conteos JSONBin vs Firestore
-    prog.textContent="Verificando conteos...";
-    const [snapClientes,snapInventario,snapCuentas,snapGastos,snapAccesorios]=await Promise.all([
-      db.collection("clientes").get(),
-      db.collection("inventario").get(),
-      db.collection("cuentas").get(),
-      db.collection("gastos").get(),
-      db.collection("accesorios").get()
-    ]);
-    const okClientes=snapClientes.size===clientes.length;
-    const okInventario=snapInventario.size===inventario.length;
-    const okCuentas=snapCuentas.size===cuentas.length;
-    const okGastos=snapGastos.size===gastos.length;
-    const okAccesorios=snapAccesorios.size===accesorios.length;
-    const todoOk=okClientes&&okInventario&&okCuentas&&okGastos&&okAccesorios;
-    prog.innerHTML=
-      `Clientes: ${clientes.length} en JSONBin → ${snapClientes.size} en Firestore ${okClientes?"✓":"⚠️ NO COINCIDE"}\n`+
-      `Inventario: ${inventario.length} en JSONBin → ${snapInventario.size} en Firestore ${okInventario?"✓":"⚠️ NO COINCIDE"}\n`+
-      `Notas sencillas: ${notasSencillas.length} migradas ✓\n`+
-      `Cuentas: ${cuentas.length} en JSONBin → ${snapCuentas.size} en Firestore ${okCuentas?"✓":"⚠️ NO COINCIDE"}\n`+
-      `Gastos: ${gastos.length} en JSONBin → ${snapGastos.size} en Firestore ${okGastos?"✓":"⚠️ NO COINCIDE"}\n`+
-      `Accesorios: ${accesorios.length} en JSONBin → ${snapAccesorios.size} en Firestore ${okAccesorios?"✓":"⚠️ NO COINCIDE"}\n`+
-      (todoOk?"Migración completa, sin diferencias.":"Revisa las diferencias antes de confiar en estos datos.");
-  }catch(e){
-    console.error("Error en migración a Firestore:",e);
-    prog.textContent="Error durante la migración: "+e.message+" — JSONBin no fue modificado, puedes reintentar.";
-  }finally{
-    btn.disabled=false;
-  }
+  }catch(e){console.error(e);list.innerHTML='<p style="color:var(--rojo)">Error de conexión.</p>';}
 }
 
 // inicializar color preview
