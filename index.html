@@ -523,7 +523,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · PRODUCCIÓN v31.0</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · PRODUCCIÓN v31.1</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -1437,7 +1437,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <div class="section" id="sec-migrar-fs">
       <div class="sec-title">Migrar a Firestore</div>
       <div class="card">
-        <p style="color:#AAA;font-size:.78rem;margin-bottom:.8rem">Copia clientes, inventario y notas sencillas de JSONBin a Firestore. No borra ni modifica nada en JSONBin — es una copia, puedes repetirla si algo falla.</p>
+        <p style="color:#AAA;font-size:.78rem;margin-bottom:.8rem">Copia clientes, inventario, notas sencillas, cuentas, gastos y accesorios de JSONBin a Firestore. No borra ni modifica nada en JSONBin — es una copia, puedes repetirla si algo falla.</p>
         <button class="btn-save" id="btn-migrar-fs" onclick="migrarAFirestore()">☁️ Migrar a Firestore</button>
         <div id="migrar-fs-progreso" style="font-size:.8rem;margin-top:.8rem;color:var(--cafe);white-space:pre-line"></div>
       </div>
@@ -1667,14 +1667,12 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 
 <script>
 // ══ CONFIG ══
-
 const MASTER_KEY = "$2a$10$mKCTBP96l4oINrx2Z3uXbOTEGW/08f1Gd2g.ndODEp1eLEqu7p83W";
 const ACCESS_KEY = "$2a$10$9VfaQRuaCX9fyS6yiO1dhuh5DeDt89523dzWLH/.6jPYvy3wOcPv.";
 const BIN_ID     = "6a4e18a2da38895dfe3f7872";
 const BIN_URL    = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 // ══ FIREBASE — SOLO AUTHENTICATION ══
-
 const firebaseConfig = {
   apiKey: "AIzaSyDEaVniPdpXhbiRT6qYWEJuu9hyTkghnaY",
   authDomain: "rdl-production.firebaseapp.com",
@@ -3854,7 +3852,7 @@ function renderNotaSencilla(folio){
       <div id="ns-items-form"></div>
       <button onclick="addNsItem('${folio}')" style="background:none;border:1px dashed #DDD;padding:.3rem .8rem;border-radius:2px;font-size:.7rem;color:#AAA;cursor:pointer;margin-top:.4rem">+ Agregar artículo</button>
       <div style="margin-top:.8rem;display:flex;justify-content:flex-end;gap:.5rem">
-        <button onclick="generarEImprimirNotaSencilla('${folio}')" style="background:linear-gradient(135deg,#7A4F2A,#C9A84C);color:#FFF8EC;border:none;padding:.6rem 1.4rem;border-radius:2px;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;cursor:pointer">✅ Confirmar y preparar impresión</button>
+        <button id="btn-confirmar-nota-sencilla" onclick="generarEImprimirNotaSencilla('${folio}')" style="background:linear-gradient(135deg,#7A4F2A,#C9A84C);color:#FFF8EC;border:none;padding:.6rem 1.4rem;border-radius:2px;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;cursor:pointer">✅ Confirmar y preparar impresión</button>
       </div>
     </div>
 
@@ -3906,6 +3904,12 @@ function actualizarVistaNotaSencilla(folio){
 }
 
 async function generarEImprimirNotaSencilla(folio){
+  const btnConfirmar = document.getElementById("btn-confirmar-nota-sencilla");
+  if(btnConfirmar){
+    if(btnConfirmar.disabled) return; // ya se está procesando o ya se guardó — evita duplicados por doble clic
+    btnConfirmar.disabled = true;
+    btnConfirmar.style.opacity = ".6";
+  }
   const nombre  = document.getElementById("ns-nombre")?.value||"—";
   const tel     = document.getElementById("ns-tel")?.value||"—";
   const hoy     = new Date().toLocaleDateString("es-MX",{day:"2-digit",month:"2-digit",year:"numeric"});
