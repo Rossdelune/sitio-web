@@ -523,7 +523,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · DEMO v37.0.1 · Mensajería WA</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Production v37.0.1 · Mensajería WA</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -1737,12 +1737,16 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 
 <script>
 // ══ CONFIG ══
-
-// ══ FIREBASE — AUTHENTICATION + FIRESTORE (único backend, JSONBin retirado) ══
-// Piver: llena esto localmente con el config real del proyecto Firebase
-// (Firebase Console → Configuración del proyecto → tus apps → Web app).
-// NUNCA se comparte en el chat.
-//reemplazar configuración demo
+const firebaseConfig = {
+  apiKey: "AIzaSyDEaVniPdpXhbiRT6qYWEJuu9hyTkghnaY",
+  authDomain: "rdl-production.firebaseapp.com",
+  projectId: "rdl-production",
+  storageBucket: "rdl-production.firebasestorage.app",
+  messagingSenderId: "510898405169",
+  appId: "1:510898405169:web:77f36cf5215f82be013a10",
+  measurementId: "G-KENSFN9PPR"
+};
+  
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
