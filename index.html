@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ross de Lune</title>
@@ -262,6 +261,39 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 .s-recibido{background:#D1ECF1;color:#0C5460;}
 .s-entregado{background:#D4EDDA;color:#155724;}
 
+/* cotizaciones — estatus */
+.s-cot-pendiente{background:#FBF0D9;color:#B8860B;}
+.s-cot-agendada{background:#E3F3E8;color:#1E8449;}
+.s-cot-convertida{background:#E4EBF5;color:#3A6EA5;}
+.s-cot-noregreso{background:#FADBD8;color:#C0392B;}
+
+/* cotizaciones — calendario */
+.cq-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;}
+.cq-cal-mesnombre{font-family:"Cormorant Garamond",serif;font-size:1.2rem;color:var(--texto);}
+.cq-cal-nav{background:transparent;border:1px solid var(--dorado);color:var(--dorado-d);border-radius:2px;padding:.3rem .7rem;cursor:pointer;font-size:.85rem;}
+.cq-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cq-cal-dow{text-align:center;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;color:#AAA;padding-bottom:.3rem;}
+.cq-cal-day{position:relative;aspect-ratio:1;border:1px solid #F0E8DA;border-radius:4px;padding:.25rem;font-size:.76rem;color:var(--texto);cursor:pointer;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:.15rem;}
+.cq-cal-day.blank{visibility:hidden;pointer-events:none;}
+.cq-cal-day.today{border-color:var(--dorado);font-weight:700;}
+/* Color de fondo del día según el estatus más urgente de sus cotizaciones */
+.cq-cal-day.st-pendiente{background:#FBF0D9;}
+.cq-cal-day.st-agendada{background:#E3F3E8;}
+.cq-cal-day.st-convertida{background:#E4EBF5;}
+.cq-cal-day.st-no-regreso{background:#FADBD8;}
+.cq-cal-day.sel{background:var(--dorado-g)!important;color:#FFF8EC;}
+.cq-cal-count{font-size:.62rem;font-weight:700;color:var(--dorado-d);}
+.cq-cal-day.sel .cq-cal-count{color:#FFF8EC;}
+.cq-day-list{margin-top:1rem;}
+.cq-cot-card{background:var(--card);border:1px solid var(--borde);border-radius:8px;padding:.8rem .9rem;margin-bottom:.6rem;}
+.cq-cot-top{display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;margin-bottom:.4rem;}
+.cq-cot-nombre{font-family:"Cormorant Garamond",serif;font-size:1.05rem;font-weight:600;}
+.cq-cot-modelo{font-size:.72rem;color:#999;margin-top:.1rem;}
+.cq-cot-actions{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.55rem;}
+.cq-btn-mini{padding:.35rem .65rem;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;border-radius:3px;border:1px solid var(--dorado);background:transparent;color:var(--dorado-d);cursor:pointer;}
+.cq-btn-mini.solid{background:var(--dorado-g);color:#FFF8EC;border-color:transparent;}
+.cq-btn-mini.rojo{border-color:var(--rojo);color:var(--rojo);}
+
 /* mi cuenta */
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;}
 @media(max-width:500px){.form-row{grid-template-columns:1fr;}}
@@ -465,18 +497,18 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     align-items:center!important;justify-content:center!important;
   }
   #modal-qr-print.printing .no-print{display:none!important;}
-  #modal-contrato.open,#modal-nota.open,#modal-nota-sencilla.open,#modal-entrega.open,#modal-ajustes.open{
+  #modal-contrato.open,#modal-nota.open,#modal-nota-sencilla.open,#modal-entrega.open,#modal-ajustes.open,#modal-cotizacion-print.open{
     display:block!important;position:fixed!important;
     inset:0!important;overflow:auto!important;
     background:#fff!important;z-index:9999!important;
   }
-  #modal-contrato.open>div,#modal-nota.open>div,#modal-nota-sencilla.open>div,#modal-entrega.open>div,#modal-ajustes.open>div{
+  #modal-contrato.open>div,#modal-nota.open>div,#modal-nota-sencilla.open>div,#modal-entrega.open>div,#modal-ajustes.open>div,#modal-cotizacion-print.open>div{
     box-shadow:none!important;padding:.5cm!important;max-width:100%!important;
   }
-  #modal-contrato .no-print,#modal-nota .no-print,#modal-nota-sencilla .no-print,#modal-entrega .no-print,#modal-ajustes .no-print{
+  #modal-contrato .no-print,#modal-nota .no-print,#modal-nota-sencilla .no-print,#modal-entrega .no-print,#modal-ajustes .no-print,#modal-cotizacion-print .no-print{
     display:none!important;
   }
-  #modal-contrato button,#modal-nota button,#modal-nota-sencilla button,#modal-entrega button,#modal-ajustes button,
+  #modal-contrato button,#modal-nota button,#modal-nota-sencilla button,#modal-entrega button,#modal-ajustes button,#modal-cotizacion-print button,
   .no-print{display:none!important;}
   @page{margin:.4cm;size:letter portrait;}
   #contrato-content p{margin-bottom:3pt!important;margin-top:0!important;}
@@ -524,7 +556,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · production v41.0-columnaTalla </p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · PRODUCTION v46.0 · formatoAjuste</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -611,6 +643,14 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
         <button class="sub-item" onclick="goSec('inv-qr')">📦 Inventario</button>
         <button class="sub-item" onclick="goSec('inv-buscar')">🔍 Buscar modelo</button>
         <button class="sub-item" onclick="goSec('inv-paquetes')">🎁 Paquetes</button>
+      </div>
+    </div>
+
+    <div style="position:relative;flex-shrink:0">
+      <button class="nav-btn" id="nb-cotizaciones" onclick="toggleNav('cotizaciones')">📅 Cotizaciones <span class="arrow">▾</span></button>
+      <div class="subnav" id="sub-cotizaciones">
+        <button class="sub-item" onclick="goSec('nueva-cotizacion')">➕ Nueva cotización</button>
+        <button class="sub-item" onclick="goSec('cotizaciones-calendario')">📅 Calendario</button>
       </div>
     </div>
 
@@ -798,7 +838,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
             <label>Fecha límite de pago <span style="font-size:.65rem;color:var(--dorado-d)">(auto: +2 meses)</span></label>
             <input type="date" id="c-fecha-limite">
           </div>
-          <div class="fi"><label>Fecha de entrega</label><input type="date" id="c-entrega"></div>
+          <div class="fi"><label>Fecha de evento</label><input type="date" id="c-entrega"></div>
         </div>
         <div class="fg2" id="fi-parcialidades" style="display:none">
           <div class="fi">
@@ -1040,7 +1080,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
           <table class="tbl">
             <thead><tr>
               <th>#</th><th>Nombre</th><th>Tipo</th><th>Modelo</th><th>Color</th>
-              <th>Fecha de entrega</th><th>Total</th><th>Saldo</th><th>Estatus</th>
+              <th>Fecha de evento</th><th>Total</th><th>Saldo</th><th>Estatus</th>
             </tr></thead>
             <tbody id="entregas-tbody">
               <tr><td colspan="9" style="color:#AAA;padding:1.5rem;text-align:center;">Selecciona un mes o rango y presiona "Filtrar"</td></tr>
@@ -1502,6 +1542,89 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
       </div>
     </div>
 
+    <!-- ── NUEVA COTIZACIÓN ── -->
+    <div class="section" id="sec-nueva-cotizacion">
+      <div class="sec-title">Nueva cotización</div>
+
+      <div class="card">
+        <div class="card-title">Datos del prospecto</div>
+        <div class="fg2">
+          <div class="fi"><label>Nombre</label><input type="text" id="cq-nombre" placeholder="Nombre del prospecto"></div>
+          <div class="fi"><label>Teléfono</label><input type="tel" id="cq-tel" placeholder="921 000 0000"></div>
+        </div>
+        <div class="fi"><label>Modelo (marca / color — referencia libre)</label><input type="text" id="cq-modelo" placeholder="Ej: Morilee WF2813, azul rey"></div>
+        <div class="fi"><label>¿Cómo se enteró de nosotros?</label>
+          <select id="cq-origen">
+            <option value="">Seleccionar...</option>
+            <option>Redes sociales</option>
+            <option>Recomendación</option>
+            <option>Pasó por la tienda</option>
+            <option>Otro</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Paquete y precio ofrecido</div>
+        <div class="pkg-selector">
+          <button class="pkg-btn" onclick="cqSelPkg('xv')"     id="cq-pb-xv">Paquete XV</button>
+          <button class="pkg-btn" onclick="cqSelPkg('novia')"  id="cq-pb-novia">Paquete Novia</button>
+          <button class="pkg-btn" onclick="cqSelPkg('solo')"   id="cq-pb-solo">Solo vestido</button>
+          <button class="pkg-btn" onclick="cqSelPkg('custom')" id="cq-pb-custom">Personalizado</button>
+        </div>
+        <div class="fi" style="max-width:220px;margin-top:.6rem;">
+          <label>Precio del paquete ($)</label>
+          <input type="number" id="cq-precio-paquete" placeholder="0" oninput="cqCalcTotal()">
+        </div>
+        <div class="pkg-components" id="cq-pkg-components"></div>
+        <div class="fg2" style="margin-top:.6rem">
+          <div class="fi"><label>Precio vestido ($)</label><input type="number" id="cq-precio" placeholder="0" oninput="cqCalcTotal()"></div>
+          <div class="fi"><label>Promoción aplicada (opcional)</label><input type="text" id="cq-promocion" placeholder="Ej: 10% por apartado en el mes"></div>
+        </div>
+        <div style="margin-top:.6rem;background:var(--crema);border-radius:6px;padding:.7rem 1rem;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dorado-d)">Total estimado</span>
+          <strong id="cq-resumen-total" style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;color:var(--dorado-d)">$0</strong>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Agenda</div>
+        <div class="fg2">
+          <div class="fi"><label>Fecha de la cita</label><input type="date" id="cq-fecha-cita"></div>
+          <div class="fi"><label>Fecha del evento (XV / boda)</label><input type="date" id="cq-fecha-evento"></div>
+        </div>
+        <div class="fi" style="max-width:260px">
+          <label>Vigencia de la cotización (hasta)</label>
+          <input type="date" id="cq-vigencia">
+          <div style="font-size:.68rem;color:#AAA;margin-top:.3rem">Al vencerse se marca ⏰ Expirada, pero nunca deja de aparecer en el registro.</div>
+        </div>
+        <div class="fi"><label>Anotaciones</label><textarea id="cq-obs" placeholder="Detalles del prospecto..."></textarea></div>
+      </div>
+
+      <div class="actions-row">
+        <button class="btn-save" id="btn-guardar-cotizacion" onclick="guardarCotizacion()">💾 Guardar cotización</button>
+        <div class="msg-err" id="cotizacion-msg"></div>
+      </div>
+    </div>
+
+    <!-- ── CALENDARIO DE COTIZACIONES ── -->
+    <div class="section" id="sec-cotizaciones-calendario">
+      <div class="sec-title">Calendario de cotizaciones</div>
+      <div class="card">
+        <div class="cq-cal-head">
+          <button class="cq-cal-nav" onclick="cqCalMes(-1)">‹</button>
+          <div class="cq-cal-mesnombre" id="cq-cal-mesnombre">—</div>
+          <button class="cq-cal-nav" onclick="cqCalMes(1)">›</button>
+        </div>
+        <div class="cq-cal-grid" id="cq-cal-dow">
+          <div class="cq-cal-dow">D</div><div class="cq-cal-dow">L</div><div class="cq-cal-dow">M</div>
+          <div class="cq-cal-dow">M</div><div class="cq-cal-dow">J</div><div class="cq-cal-dow">V</div><div class="cq-cal-dow">S</div>
+        </div>
+        <div class="cq-cal-grid" id="cq-cal-grid"></div>
+      </div>
+      <div class="cq-day-list" id="cq-day-list"></div>
+    </div>
+
   </div>
 </div>
 
@@ -1682,6 +1805,26 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
   </div>
 </div>
 
+<!-- MODAL COTIZACIÓN IMPRIMIBLE -->
+<div class="overlay" id="modal-cotizacion-print" style="z-index:300;align-items:flex-start;padding:0;overflow-y:auto">
+  <div style="background:#fff;width:100%;max-width:780px;margin:0 auto;padding:2rem;position:relative;min-height:100vh">
+    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:.5rem;flex-wrap:wrap">
+      <button onclick="cqCerrarPrint()" style="background:none;border:1px solid #DDD;padding:.4rem .9rem;border-radius:2px;cursor:pointer;font-size:.75rem">✕ Cerrar</button>
+      <button onclick="cqEjecutarImpresion()" style="background:var(--dorado-g);color:#FFF8EC;border:none;padding:.5rem 1.2rem;border-radius:2px;cursor:pointer;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase">🖨️ Imprimir</button>
+    </div>
+    <div id="cotizacion-print-content"></div>
+    <div class="no-print" style="margin-top:1.5rem;border-top:1px dashed #DDD;padding-top:1rem">
+      <label style="font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--dorado-d);display:block;margin-bottom:.4rem">Respaldo escaneado (opcional)</label>
+      <div style="font-size:.72rem;color:#AAA;margin-bottom:.5rem">Una vez impresa, si la firman o sellan, puedes escanearla y subirla aquí como respaldo — igual que el contrato firmado.</div>
+      <input type="file" id="cq-respaldo-input" accept="image/*,.pdf" onchange="cqPreviewRespaldo(this)" style="display:none">
+      <button type="button" class="btn-sec" style="width:100%" onclick="document.getElementById('cq-respaldo-input').click()">📄 Seleccionar cotización escaneada</button>
+      <div id="cq-respaldo-preview" style="display:none;margin-top:.5rem;font-size:.8rem;color:var(--dorado-d)"></div>
+      <button type="button" class="btn-save" style="width:100%;margin-top:.6rem" id="cq-btn-subir-respaldo" onclick="cqSubirRespaldo()">📤 Subir respaldo</button>
+      <div class="msg-err" id="cq-respaldo-msg" style="margin-top:.4rem"></div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL NOTA DE VENTA -->
 <div class="overlay" id="modal-nota" style="z-index:300;align-items:flex-start;padding:0;overflow-y:auto">
   <div style="background:#fff;width:100%;max-width:780px;margin:0 auto;padding:2rem;position:relative;min-height:100vh">
@@ -1730,7 +1873,6 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 
 <script>
 // ══ CONFIG ══
-
 const firebaseConfig = {
   apiKey: "AIzaSyDEaVniPdpXhbiRT6qYWEJuu9hyTkghnaY",
   authDomain: "rdl-production.firebaseapp.com",
@@ -1805,7 +1947,7 @@ async function eliminarClienteFS(cliente){
 // colección "inventario", ID = su "id" (INV..., siempre existe, sin casos
 // especiales como el folio null de clientes).
 async function loadInventarioFS(){
-  const snap = await db.collection("inventario").get();
+  const snap = await db.collection("inventario").get({source:"server"});
   return snap.docs.map(d=>d.data());
 }
 async function saveUnArticulo(articulo){
@@ -2085,7 +2227,7 @@ function doLogout(){
 }
 
 // ══ NAVEGACIÓN ══
-const NAVS=["clientes","pagos","pedidos","progreso","inventario","mensajeria","config"];
+const NAVS=["clientes","pagos","pedidos","progreso","inventario","cotizaciones","mensajeria","config"];
 function toggleNav(name){
   const isOpen=document.getElementById("sub-"+name).classList.contains("open");
   NAVS.forEach(n=>{
@@ -2154,6 +2296,8 @@ function goSec(id){
   if(id==="progreso-agenda"){renderAgendaAjustes();}
   if(id==="progreso-diseno"){renderDiseno();}
   if(id==="progreso-formato"){renderFormatoAjustesLista();}
+  if(id==="nueva-cotizacion"){resetFormCotizacion();}
+  if(id==="cotizaciones-calendario"){cqCargarYRenderCalendario();}
   if(id==="inv-qr"){
     const lista=document.getElementById("inv-lista");
     if(lista) lista.innerHTML='<p style="color:#AAA;font-size:.82rem;padding:.5rem">⏳ Cargando inventario directo del servidor...</p>';
@@ -3127,6 +3271,7 @@ function renderClientes(lista){
           `<button class="ic-btn menu-toggle" onclick="toggleClienteMenu('${c.id}')" title="Más opciones">⋮</button>
         <div class="cliente-menu" id="menu-${c.id}" style="display:none">
           <button onclick="verPagos('${c.id}');cerrarClienteMenus()">💳 Pagos</button>
+          <button onclick="abrirAbonoModal('${c.id}');cerrarClienteMenus()">📝 Historial de abonos</button>
           <button onclick="verContrato('${c.id}');cerrarClienteMenus()">📄 Contrato</button>
           ${c.contratoUrl?`<button onclick="window.open('${c.contratoUrl}','_blank');cerrarClienteMenus()">📎 Documento firmado</button>`:""}
           <button onclick="verNotaVenta('${c.id}');cerrarClienteMenus()">🧾 Nota de venta</button>
@@ -4128,7 +4273,7 @@ function buildProcesoCard(c){
     </div>
     <div style="margin-top:.5rem">${pasos}</div>
     ${buildDiagnosticoInventarioCliente(c)}
-    <div class="proceso-entrega">📅 Entrega: <strong>${entrega}</strong></div>
+    <div class="proceso-entrega">📅 Fecha de evento: <strong>${entrega}</strong></div>
   </div>`;
 }
 
@@ -4396,11 +4541,14 @@ function generarFormatoAjuste(c){
   const filasPruebas = PASOS_PEDIDO.map((p,i)=>{
     const no = i<3 ? (i+1)+"a" : "Entrega";
     const done = prog[p.id] ? "✓" : "&nbsp;";
+    const horaPrueba = prog[p.id+"_horaPrueba"] || "&nbsp;";
     return `<tr>
       <td style="border:1px solid #999;padding:.3rem .4rem;text-align:center;font-weight:600">${no}</td>
       <td style="border:1px solid #999;padding:.3rem .4rem;text-align:center">${fmtFecha(prog[p.id+"_fechaPrueba"])}</td>
+      <td style="border:1px solid #999;padding:.3rem .4rem;text-align:center;font-size:8pt">${horaPrueba}</td>
       <td style="border:1px solid #999;padding:.3rem .4rem;text-align:center">${done}</td>
       <td style="border:1px solid #999;padding:.3rem .4rem;text-align:center">${fmtFecha(prog[p.id+"_fechaTerminado"])}</td>
+      <td style="border:1px solid #999;padding:.3rem .4rem;text-align:center">&nbsp;</td>
     </tr>`;
   }).join("");
 
@@ -4470,8 +4618,10 @@ function generarFormatoAjuste(c){
             <tr style="background:#FAFAFA">
               <td style="border:1px solid #999;padding:.25rem;font-weight:600">No.</td>
               <td style="border:1px solid #999;padding:.25rem;font-weight:600">Fecha</td>
+              <td style="border:1px solid #999;padding:.25rem;font-weight:600">Hora</td>
               <td style="border:1px solid #999;padding:.25rem;font-weight:600">Terminado</td>
               <td style="border:1px solid #999;padding:.25rem;font-weight:600">Fecha</td>
+              <td style="border:1px solid #999;padding:.25rem;font-weight:600">Hora</td>
             </tr>
             ${filasPruebas}
           </table>
@@ -4715,6 +4865,422 @@ async function eliminarSuministro(clienteId, idx_sumi){
   }catch(e){console.error(e);toast("Error al guardar","err");}
 }
 
+// ══ COTIZACIONES EN VIVO EN FIRESTORE ══
+// Cada cotización = un documento en la colección "cotizaciones", ID propio
+// ("cot_"+Date.now()), completamente separado de la colección "clientes"
+// y de su folio — así nunca se mezcla con compras reales.
+let allCotizaciones = [];
+let currentPkgCQ = "xv";
+let _cqCal = { year:null, month:null, selDate:null };
+
+async function loadCotizacionesFS(){
+  const snap = await db.collection("cotizaciones").get();
+  return snap.docs.map(d=>d.data());
+}
+async function saveUnaCotizacion(cot){
+  await db.collection("cotizaciones").doc(String(cot.id)).set(cot);
+}
+// Folio propio de cotizaciones — mismo criterio que getNextFolio() de clientes
+// (máximo existente + 1), pero en su propio contador ("COT-0001", "COT-0002"...).
+async function getNextFolioCotizacion(){
+  const cots = await loadCotizacionesFS();
+  if(!cots||cots.length===0) return "COT-0001";
+  const nums = cots.map(c=>parseInt(String(c.folio||"").replace("COT-",""),10)||0);
+  const max = Math.max(...nums);
+  return "COT-"+String(max+1).padStart(4,"0");
+}
+
+// ══ PAQUETE — reutiliza PKG_XV/PKG_NOVIA/PKG_CUSTOM (mismos datos que Nuevo
+// cliente), pero con su propio contenedor DOM (cq-pkg-components) para no
+// pisar los IDs del formulario de clientes. ══
+function cqSelPkg(type){
+  currentPkgCQ = type;
+  ["xv","novia","solo","custom"].forEach(t=>{
+    document.getElementById("cq-pb-"+t).classList.toggle("active", t===type);
+  });
+  cqInitPkgComponents(type);
+}
+function cqInitPkgComponents(type){
+  const cont = document.getElementById("cq-pkg-components");
+  if(type==="solo"){ cont.innerHTML='<p style="font-size:.8rem;color:#AAA;padding:.5rem 0">Sin paquete — solo vestido.</p>'; return; }
+  const items = type==="novia"?PKG_NOVIA:type==="custom"?PKG_CUSTOM:PKG_XV;
+  const isCustom = type==="custom";
+  cont.innerHTML = items.map(c=>`
+    <div class="comp-item" id="cq-ci-${c.id}">
+      <input type="checkbox" class="comp-check" id="cq-chk-${c.id}" ${!isCustom?"checked":""} onchange="cqToggleComp('${c.id}')">
+      <div class="comp-body">
+        <div class="comp-name">${c.name}</div>
+        <div class="comp-opts" id="cq-opts-${c.id}">
+          ${c.opts.map(o=>`<button class="comp-opt ${o===c.default?"sel":""}" onclick="cqSelOpt('${c.id}','${o}',this)">${o}</button>`).join("")}
+        </div>
+      </div>
+    </div>`).join("");
+}
+function cqSelOpt(compId,opt,btn){
+  document.querySelectorAll(`#cq-opts-${compId} .comp-opt`).forEach(b=>b.classList.remove("sel"));
+  btn.classList.add("sel");
+}
+function cqToggleComp(id){
+  const chk = document.getElementById("cq-chk-"+id);
+  const body = document.querySelector(`#cq-ci-${id} .comp-body`);
+  body.style.opacity = chk.checked ? "1" : ".35";
+}
+function cqGetPkgData(){
+  if(currentPkgCQ==="solo") return {tipo:"solo", componentes:[]};
+  const items = currentPkgCQ==="novia"?PKG_NOVIA:currentPkgCQ==="custom"?PKG_CUSTOM:PKG_XV;
+  const comps = items.map(c=>{
+    const chk = document.getElementById("cq-chk-"+c.id);
+    if(!chk||!chk.checked) return null;
+    const selBtn = document.querySelector(`#cq-opts-${c.id} .comp-opt.sel`);
+    return {id:c.id, name:c.name, opcion: selBtn?selBtn.textContent:""};
+  }).filter(Boolean);
+  return {tipo:currentPkgCQ, componentes:comps};
+}
+function cqCalcTotal(){
+  const vestido = parseFloat(document.getElementById("cq-precio").value)||0;
+  const paquete = parseFloat(document.getElementById("cq-precio-paquete").value)||0;
+  const total = vestido + paquete;
+  document.getElementById("cq-resumen-total").textContent = "$"+total.toLocaleString("es-MX");
+}
+
+function resetFormCotizacion(){
+  ["cq-nombre","cq-tel","cq-modelo","cq-precio","cq-precio-paquete","cq-promocion",
+   "cq-fecha-cita","cq-fecha-evento","cq-vigencia","cq-obs"].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value="";
+  });
+  const origen=document.getElementById("cq-origen"); if(origen) origen.value="";
+  const msg=document.getElementById("cotizacion-msg"); if(msg) msg.textContent="";
+  cqSelPkg("xv");
+  cqCalcTotal();
+}
+
+async function guardarCotizacion(){
+  const nombre = document.getElementById("cq-nombre").value.trim();
+  const msg = document.getElementById("cotizacion-msg");
+  const btn = document.getElementById("btn-guardar-cotizacion");
+  msg.textContent="";
+  if(!nombre){ msg.textContent="El nombre del prospecto es obligatorio."; return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Guardando...';
+  try{
+    const folio = await getNextFolioCotizacion();
+    const cot = {
+      id: "cot_"+Date.now(),
+      folio,
+      nombre,
+      telefono: document.getElementById("cq-tel").value.trim(),
+      modelo: document.getElementById("cq-modelo").value.trim(),
+      origen: document.getElementById("cq-origen").value,
+      paquete: cqGetPkgData(),
+      precio: parseFloat(document.getElementById("cq-precio").value)||0,
+      precioPaquete: parseFloat(document.getElementById("cq-precio-paquete").value)||0,
+      promocion: document.getElementById("cq-promocion").value.trim(),
+      fechaCita: document.getElementById("cq-fecha-cita").value,
+      fechaEvento: document.getElementById("cq-fecha-evento").value,
+      vigencia: document.getElementById("cq-vigencia").value,
+      anotaciones: document.getElementById("cq-obs").value.trim(),
+      estatus: "pendiente",
+      motivoNoRegreso: "",
+      clienteFolioConvertido: null,
+      impresiones: [],
+      cotizacionImagenUrl: "",
+      fechaCreacion: fechaLocalISO(),
+      creadoPor: currentUser ? currentUser.user : ""
+    };
+    await saveUnaCotizacion(cot);
+    toast("✓ Cotización "+folio+" guardada");
+    resetFormCotizacion();
+    goSec("cotizaciones-calendario");
+  }catch(e){
+    console.error(e);
+    msg.textContent = "Error al guardar la cotización.";
+  }finally{
+    btn.disabled = false; btn.innerHTML = "💾 Guardar cotización";
+  }
+}
+
+// ══ CALENDARIO ══
+async function cqCargarYRenderCalendario(){
+  allCotizaciones = await loadCotizacionesFS();
+  const hoy = new Date();
+  if(_cqCal.year===null){ _cqCal.year=hoy.getFullYear(); _cqCal.month=hoy.getMonth(); }
+  renderCqCalendario();
+}
+function cqCalMes(delta){
+  _cqCal.month += delta;
+  if(_cqCal.month<0){ _cqCal.month=11; _cqCal.year--; }
+  if(_cqCal.month>11){ _cqCal.month=0; _cqCal.year++; }
+  renderCqCalendario();
+}
+const CQ_MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+// Prioridad para colorear el día cuando hay varias cotizaciones con distinto
+// estatus el mismo día: se muestra el color del estatus que más necesita
+// atención (pendiente primero, convertida al final por ser ya un histórico).
+const CQ_PRIORIDAD_DIA = ["pendiente","agendada","no_regreso","convertida"];
+function cqClaseDelDia(citasDia){
+  if(!citasDia.length) return "";
+  for(const est of CQ_PRIORIDAD_DIA){
+    if(citasDia.some(c=>c.estatus===est)) return "st-"+est.replace("_","-");
+  }
+  return "";
+}
+function renderCqCalendario(){
+  const {year,month} = _cqCal;
+  document.getElementById("cq-cal-mesnombre").textContent = CQ_MESES[month]+" "+year;
+  const grid = document.getElementById("cq-cal-grid");
+  const primerDia = new Date(year,month,1).getDay();
+  const diasEnMes = new Date(year,month+1,0).getDate();
+  const hoyStr = fechaLocalISO();
+  let html = "";
+  for(let i=0;i<primerDia;i++) html += `<div class="cq-cal-day blank"></div>`;
+  for(let d=1; d<=diasEnMes; d++){
+    const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const citasDia = allCotizaciones.filter(c=>c.fechaCita===dateStr);
+    const cls = ["cq-cal-day", cqClaseDelDia(citasDia)];
+    if(dateStr===hoyStr) cls.push("today");
+    if(dateStr===_cqCal.selDate) cls.push("sel");
+    const contador = citasDia.length ? `<div class="cq-cal-count">${citasDia.length}</div>` : "";
+    html += `<div class="${cls.join(" ")}" onclick="cqSelectDay('${dateStr}')">${d}${contador}</div>`;
+  }
+  grid.innerHTML = html;
+  if(_cqCal.selDate) renderCqDayList(_cqCal.selDate);
+}
+function cqSelectDay(dateStr){
+  _cqCal.selDate = dateStr;
+  renderCqCalendario();
+}
+const CQ_ESTATUS_LABEL = {
+  pendiente:{label:"Pendiente", cls:"s-cot-pendiente"},
+  agendada:{label:"Agendada", cls:"s-cot-agendada"},
+  convertida:{label:"Convertida", cls:"s-cot-convertida"},
+  no_regreso:{label:"No regresó", cls:"s-cot-noregreso"}
+};
+function renderCqDayList(dateStr){
+  const cont = document.getElementById("cq-day-list");
+  const citas = allCotizaciones.filter(c=>c.fechaCita===dateStr);
+  if(!citas.length){
+    cont.innerHTML = `<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin cotizaciones para el ${dateStr}.</p>`;
+    return;
+  }
+  cont.innerHTML = citas.map(c=>{
+    const est = CQ_ESTATUS_LABEL[c.estatus] || CQ_ESTATUS_LABEL.pendiente;
+    const total = (c.precio||0) + (c.precioPaquete||0);
+    const puedeConvertir = c.estatus!=="convertida";
+    // Expirada: la vigencia ya pasó Y sigue sin concretarse (pendiente/agendada).
+    // NUNCA se oculta — solo se marca, como pidió el negocio.
+    const expirada = c.vigencia && c.vigencia < fechaLocalISO() && (c.estatus==="pendiente"||c.estatus==="agendada");
+    return `<div class="cq-cot-card">
+      <div class="cq-cot-top">
+        <div>
+          <div class="cq-cot-nombre">${c.nombre}</div>
+          <div class="cq-cot-modelo">${c.modelo||"—"} · Folio ${c.folio}</div>
+        </div>
+        <div style="display:flex;gap:.3rem;flex-wrap:wrap;justify-content:flex-end">
+          ${expirada?`<span class="status-badge" style="background:#F2E2E0;color:#8B4A42">⏰ Expirada</span>`:""}
+          <span class="status-badge ${est.cls}">${est.label}</span>
+        </div>
+      </div>
+      <div style="font-size:.78rem;color:#888">Evento: ${c.fechaEvento||"—"} · Total estimado: $${total.toLocaleString("es-MX")}</div>
+      ${c.vigencia?`<div style="font-size:.72rem;color:${expirada?"#8B4A42":"#AAA"}">Vigencia hasta: ${c.vigencia}</div>`:""}
+      ${c.motivoNoRegreso?`<div style="font-size:.72rem;color:var(--rojo);margin-top:.3rem">Motivo: ${c.motivoNoRegreso}</div>`:""}
+      ${c.cotizacionImagenUrl?`<div style="font-size:.72rem;margin-top:.3rem"><a href="${c.cotizacionImagenUrl}" target="_blank" rel="noopener">📎 Ver respaldo escaneado</a></div>`:""}
+      <div class="cq-cot-actions">
+        <button class="cq-btn-mini" onclick="cqImprimirCotizacion('${c.id}')">🖨️ Imprimir</button>
+        ${puedeConvertir?`<button class="cq-btn-mini" onclick="cqCambiarEstatus('${c.id}','agendada')">Marcar agendada</button>`:""}
+        ${puedeConvertir?`<button class="cq-btn-mini solid" onclick="cqConvertirCliente('${c.id}')">Convertir a cliente</button>`:""}
+        ${puedeConvertir?`<button class="cq-btn-mini rojo" onclick="cqAbrirNoRegreso('${c.id}')">No regresó</button>`:""}
+      </div>
+    </div>`;
+  }).join("");
+}
+async function cqCambiarEstatus(id, nuevoEstatus){
+  const cot = allCotizaciones.find(c=>c.id===id);
+  if(!cot) return;
+  cot.estatus = nuevoEstatus;
+  await saveUnaCotizacion(cot);
+  toast("✓ Estatus actualizado");
+  renderCqDayList(_cqCal.selDate);
+}
+const CQ_MOTIVOS = ["No encontró el modelo","No le gustó el color","Precio","No le convenció la promoción","Otro"];
+function cqAbrirNoRegreso(id){
+  const motivo = prompt("Motivo por el que no regresó a apartar:\n\n"+CQ_MOTIVOS.map((m,i)=>(i+1)+". "+m).join("\n")+"\n\nEscribe el número o el motivo:");
+  if(motivo===null) return;
+  const idx = parseInt(motivo,10);
+  const motivoFinal = (idx>=1 && idx<=CQ_MOTIVOS.length) ? CQ_MOTIVOS[idx-1] : motivo.trim();
+  if(!motivoFinal) return;
+  cqGuardarNoRegreso(id, motivoFinal);
+}
+async function cqGuardarNoRegreso(id, motivo){
+  const cot = allCotizaciones.find(c=>c.id===id);
+  if(!cot) return;
+  cot.estatus = "no_regreso";
+  cot.motivoNoRegreso = motivo;
+  await saveUnaCotizacion(cot);
+  toast("Registrado — no regresó a apartar");
+  renderCqDayList(_cqCal.selDate);
+}
+// Convertir a cliente: prellena el formulario real de Nuevo cliente con los
+// datos de la cotización. El folio de cliente se genera normal, al guardar,
+// con el flujo ya existente — no se duplica esa lógica aquí.
+async function cqConvertirCliente(id){
+  const cot = allCotizaciones.find(c=>c.id===id);
+  if(!cot) return;
+  goSec("nuevo-cliente");
+  setTimeout(()=>{
+    document.getElementById("c-nombre").value = cot.nombre;
+    document.getElementById("c-cel").value = cot.telefono||"";
+    if(cot.paquete && (cot.paquete.tipo==="xv"||cot.paquete.tipo==="novia")){
+      document.getElementById("c-tipo").value = cot.paquete.tipo;
+      updatePkg();
+    }
+    document.getElementById("c-precio").value = cot.precio||"";
+    document.getElementById("c-precio-paquete").value = cot.precioPaquete||"";
+    const obsPrevias = document.getElementById("c-obs").value;
+    const notaCot = `Convertido desde cotización ${cot.folio} — modelo: ${cot.modelo||"—"}${cot.promocion?" — promoción: "+cot.promocion:""}`;
+    document.getElementById("c-obs").value = obsPrevias ? obsPrevias+"\n"+notaCot : notaCot;
+    calcTotal();
+    toast("Formulario prellenado — revisa y guarda el cliente");
+  }, 150);
+  cot.estatus = "convertida";
+  cot.clienteFolioConvertido = null; // se desconoce hasta que se guarde el cliente
+  await saveUnaCotizacion(cot);
+}
+
+// ══ IMPRESIÓN DE COTIZACIÓN ══
+// El documento se genera desde los datos vivos de Firestore, así que puede
+// reimprimirse idéntico desde cualquier dispositivo — "la nube" es la propia
+// cotización guardada. Cada impresión se registra en el array "impresiones"
+// del documento (fecha + usuario), sin necesidad de Storage (plan Spark).
+let _cqPrintId = null;
+
+function cqImprimirCotizacion(id){
+  const c = allCotizaciones.find(x=>x.id===id);
+  if(!c) return;
+  _cqPrintId = id;
+  const total = (c.precio||0) + (c.precioPaquete||0);
+  const compsHtml = (c.paquete && c.paquete.componentes && c.paquete.componentes.length)
+    ? c.paquete.componentes.map(k=>`<tr>
+        <td style="border:1px solid #DDD;padding:.35rem .6rem">${k.name}</td>
+        <td style="border:1px solid #DDD;padding:.35rem .6rem">${k.opcion||"—"}</td>
+      </tr>`).join("")
+    : `<tr><td colspan="2" style="border:1px solid #DDD;padding:.35rem .6rem;color:#999">Solo vestido — sin paquete</td></tr>`;
+  const tipoPkgLabel = {xv:"Paquete XV",novia:"Paquete Novia",solo:"Solo vestido",custom:"Personalizado"}[c.paquete?c.paquete.tipo:"solo"]||"—";
+  document.getElementById("cotizacion-print-content").innerHTML = `
+    <div style="text-align:center;border-bottom:2px solid #C9A84C;padding-bottom:.8rem;margin-bottom:1rem">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.6rem;letter-spacing:.1em">Ross de Lune</div>
+      <div style="font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:#7A4F2A">Novias y Quinceañeras · Cotización</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:.82rem;margin-bottom:1rem">
+      <tr>
+        <td style="padding:.3rem 0"><strong>Folio:</strong> ${c.folio}</td>
+        <td style="padding:.3rem 0;text-align:right"><strong>Fecha:</strong> ${c.fechaCreacion||"—"}</td>
+      </tr>
+      <tr>
+        <td style="padding:.3rem 0"><strong>Prospecto:</strong> ${c.nombre}</td>
+        <td style="padding:.3rem 0;text-align:right"><strong>Teléfono:</strong> ${c.telefono||"—"}</td>
+      </tr>
+      <tr>
+        <td style="padding:.3rem 0" colspan="2"><strong>Modelo de referencia:</strong> ${c.modelo||"—"}</td>
+      </tr>
+    </table>
+    <div style="font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:#7A4F2A;margin-bottom:.4rem">${tipoPkgLabel}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:.8rem;margin-bottom:1rem">
+      <tr>
+        <th style="border:1px solid #DDD;padding:.35rem .6rem;background:#FAFAFA;text-align:left">Componente</th>
+        <th style="border:1px solid #DDD;padding:.35rem .6rem;background:#FAFAFA;text-align:left">Opción</th>
+      </tr>
+      ${compsHtml}
+    </table>
+    <table style="width:100%;border-collapse:collapse;font-size:.85rem;margin-bottom:1rem">
+      <tr><td style="padding:.25rem 0">Precio vestido:</td><td style="padding:.25rem 0;text-align:right">$${(c.precio||0).toLocaleString("es-MX")}</td></tr>
+      <tr><td style="padding:.25rem 0">Precio paquete:</td><td style="padding:.25rem 0;text-align:right">$${(c.precioPaquete||0).toLocaleString("es-MX")}</td></tr>
+      ${c.promocion?`<tr><td style="padding:.25rem 0">Promoción aplicada:</td><td style="padding:.25rem 0;text-align:right">${c.promocion}</td></tr>`:""}
+      <tr><td style="padding:.4rem 0;border-top:1px solid #C9A84C;font-weight:700">Total estimado:</td><td style="padding:.4rem 0;border-top:1px solid #C9A84C;text-align:right;font-weight:700;font-size:1rem">$${total.toLocaleString("es-MX")}</td></tr>
+    </table>
+    ${c.vigencia?`<div style="font-size:.78rem;margin-bottom:.5rem"><strong>Vigencia de esta cotización:</strong> hasta el ${c.vigencia}</div>`:""}
+    ${c.fechaEvento?`<div style="font-size:.78rem;margin-bottom:.5rem"><strong>Fecha del evento:</strong> ${c.fechaEvento}</div>`:""}
+    ${c.anotaciones?`<div style="font-size:.78rem;margin-bottom:.5rem"><strong>Anotaciones:</strong> ${c.anotaciones}</div>`:""}
+    <div style="text-align:center;margin-top:2rem;font-size:.68rem;color:#AAA">
+      Los precios y promociones de esta cotización ${c.vigencia?`son válidos hasta el ${c.vigencia}`:"están sujetos a cambio sin previo aviso"}.<br>
+      Ross de Lune · Novias y Quinceañeras
+    </div>`;
+  // Reset del bloque de respaldo cada vez que se abre el modal
+  window._cqRespaldoBase64 = null;
+  document.getElementById("cq-respaldo-input").value = "";
+  document.getElementById("cq-respaldo-msg").textContent = "";
+  const respaldoPreview = document.getElementById("cq-respaldo-preview");
+  if(c.cotizacionImagenUrl){
+    respaldoPreview.style.display = "block";
+    respaldoPreview.innerHTML = `📎 Ya hay un respaldo guardado — <a href="${c.cotizacionImagenUrl}" target="_blank" rel="noopener">ver documento</a>`;
+  }else{
+    respaldoPreview.style.display = "none";
+    respaldoPreview.innerHTML = "";
+  }
+  document.getElementById("modal-cotizacion-print").classList.add("open");
+}
+// Vista previa del archivo escaneado antes de subirlo (mismo patrón que previewContratoCliente).
+function cqPreviewRespaldo(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    window._cqRespaldoBase64 = e.target.result;
+    const preview = document.getElementById("cq-respaldo-preview");
+    preview.style.display = "block";
+    preview.textContent = "📎 "+file.name+" listo para subir";
+  };
+  reader.readAsDataURL(file);
+}
+// Sube el respaldo escaneado a Cloudinary reutilizando subirDocumentoCloudinary()
+// (misma función que usa el contrato firmado) — no se duplica lógica de subida.
+async function cqSubirRespaldo(){
+  const msg = document.getElementById("cq-respaldo-msg");
+  const btn = document.getElementById("cq-btn-subir-respaldo");
+  msg.textContent = "";
+  if(!window._cqRespaldoBase64){ msg.textContent = "Selecciona primero un archivo escaneado."; return; }
+  if(!_cqPrintId){ msg.textContent = "No se identificó la cotización."; return; }
+  const cot = allCotizaciones.find(x=>x.id===_cqPrintId);
+  if(!cot){ msg.textContent = "No se encontró la cotización."; return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Subiendo...';
+  try{
+    const url = await subirDocumentoCloudinary(window._cqRespaldoBase64);
+    cot.cotizacionImagenUrl = url;
+    await saveUnaCotizacion(cot);
+    window._cqRespaldoBase64 = null;
+    document.getElementById("cq-respaldo-input").value = "";
+    const preview = document.getElementById("cq-respaldo-preview");
+    preview.innerHTML = `📎 Respaldo guardado — <a href="${url}" target="_blank" rel="noopener">ver documento</a>`;
+    toast("✓ Respaldo subido a Cloudinary");
+    renderCqDayList(_cqCal.selDate);
+  }catch(e){
+    console.error(e);
+    msg.textContent = "Error al subir el respaldo. Verifica tu conexión.";
+  }finally{
+    btn.disabled = false; btn.innerHTML = "📤 Subir respaldo";
+  }
+}
+function cqCerrarPrint(){
+  document.getElementById("modal-cotizacion-print").classList.remove("open");
+  _cqPrintId = null;
+}
+async function cqEjecutarImpresion(){
+  // Registrar la impresión en Firestore ANTES de abrir el diálogo del sistema
+  if(_cqPrintId){
+    const c = allCotizaciones.find(x=>x.id===_cqPrintId);
+    if(c){
+      if(!Array.isArray(c.impresiones)) c.impresiones = [];
+      c.impresiones.push({fecha: fechaLocalISO(), usuario: currentUser?currentUser.user:""});
+      try{ await saveUnaCotizacion(c); }catch(e){ console.error("No se pudo registrar la impresión",e); }
+    }
+  }
+  // Mismo patrón que nota sencilla: ocultar barra, imprimir, restaurar
+  const noPrintBar = document.querySelector("#modal-cotizacion-print .no-print");
+  if(noPrintBar) noPrintBar.style.display="none";
+  setTimeout(()=>{
+    window.print();
+    if(noPrintBar) noPrintBar.style.display="flex";
+  },300);
+}
+
 // ══ PERMISOS ══
 const SECCIONES_CTRL = [
   {id:"clientes",       label:"👗 Clientes",          subs:["nuevo-cliente","lista-clientes"]},
@@ -4722,6 +5288,7 @@ const SECCIONES_CTRL = [
   {id:"pedidos",        label:"📋 Pedidos",            subs:["todos-pedidos","entregas-fecha","pedidos-accesorios"]},
   {id:"progreso",       label:"📦 Progreso",           subs:["progreso-pedido","progreso-agenda","progreso-diseno","progreso-formato"]},
   {id:"inventario",     label:"🏷️ Inventario",         subs:["inv-qr","inv-buscar","inv-paquetes"]},
+  {id:"cotizaciones",   label:"📅 Cotizaciones",       subs:["nueva-cotizacion","cotizaciones-calendario"]},
 ];
 
 let _permisosWorkerActual = null;
@@ -5613,14 +6180,16 @@ function buscarModeloInventario(q){
   }
   window._matrizCeldas = {};
   const grupos = {};
+  const etiquetas = {};
   coincidencias.forEach(a=>{
-    const key = (a.modelo||"").trim() || "(sin modelo)";
-    if(!grupos[key]) grupos[key]=[];
+    const original = (a.modelo||"").trim() || "(sin modelo)";
+    const key = original.toLowerCase().replace(/\s+/g," ");
+    if(!grupos[key]){ grupos[key]=[]; etiquetas[key]=original; }
     grupos[key].push(a);
   });
   cont.innerHTML =
     '<p style="font-size:.72rem;color:var(--dorado-d);margin-bottom:.5rem">'+Object.keys(grupos).length+' modelo(s) encontrado(s):</p>' +
-    Object.keys(grupos).map(m => buildMatrizModelo(m, grupos[m])).join("");
+    Object.keys(grupos).map(k => buildMatrizModelo(etiquetas[k], grupos[k])).join("");
 }
 
 function buildInvCard(a){
@@ -6024,26 +6593,54 @@ async function guardarArticuloInv(){
 
       if(filasExtra.length){
         const ahora = new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"});
-        const nuevos = [];
+        const modeloNorm = (camposComunes.modelo||"").trim().toLowerCase();
+        let agregadas = 0, actualizadas = 0;
         for(let i=0;i<filasExtra.length;i++){
-          const nuevoArt = {
-            id: "INV"+Date.now()+"_x"+i,
-            ...camposComunes,
-            talla: filasExtra[i].talla,
-            cantidad: filasExtra[i].cantidad,
-            creadoEn: ahora,
-            actualizadoEn: null
-          };
-          await saveUnArticulo(nuevoArt);
-          nuevos.push(nuevoArt);
+          const tallaNorm = (filasExtra[i].talla||"").trim().toLowerCase();
+          const existente = todos.find(x =>
+            (x.modelo||"").trim().toLowerCase()===modeloNorm &&
+            (x.talla||"").trim().toLowerCase()===tallaNorm
+          );
+          if(existente){
+            // Ya existe esa talla para este modelo — se suma la cantidad, no se duplica
+            const actualizado = {
+              ...existente,
+              cantidad: (Number(existente.cantidad)||0) + (Number(filasExtra[i].cantidad)||0),
+              actualizadoEn: ahora
+            };
+            await saveUnArticulo(actualizado);
+            todos = todos.map(x=>x.id===actualizado.id?actualizado:x);
+            actualizadas++;
+          } else {
+            const nuevoArt = {
+              id: "INV"+Date.now()+"_x"+i,
+              ...camposComunes,
+              talla: filasExtra[i].talla,
+              cantidad: filasExtra[i].cantidad,
+              creadoEn: ahora,
+              actualizadoEn: null
+            };
+            await saveUnArticulo(nuevoArt);
+            todos = [...todos, nuevoArt];
+            agregadas++;
+          }
         }
-        todos = [...todos, ...nuevos];
-        toast(`Artículo actualizado y ${nuevos.length} talla(s) nueva(s) agregada(s) ✓`);
+        let msg = [];
+        if(agregadas) msg.push(agregadas+" talla(s) nueva(s) agregada(s)");
+        if(actualizadas) msg.push(actualizadas+" talla(s) existente(s) sumada(s)");
+        toast("Artículo actualizado — "+msg.join(" y ")+" ✓");
       } else {
         toast("Artículo actualizado ✓");
       }
       window._invData = todos;
-      goSec("inv-qr");
+      // Mostramos el dato que ya tenemos en memoria (correcto) en vez de volver
+      // a pedirlo al servidor — evita la carrera con Firestore justo después
+      // de escribir varios documentos seguidos.
+      closeAllNav();
+      document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+      const secInv=document.getElementById("sec-inv-qr");
+      if(secInv) secInv.classList.add("active");
+      renderInventario();
       return;
     }
 
@@ -6061,22 +6658,48 @@ async function guardarArticuloInv(){
     });
 
     const ahora = new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"});
-    const nuevos = [];
+    const modeloNorm = (camposComunes.modelo||"").trim().toLowerCase();
+    let todosFinal = [...inv];
+    let agregadas2 = 0, actualizadas2 = 0;
     for(let i=0;i<filas.length;i++){
-      const articulo = {
-        id: i===0 ? artIdBase : artIdBase+"_"+i,
-        ...camposComunes,
-        talla: filas[i].talla,
-        cantidad: filas[i].cantidad,
-        creadoEn: ahora,
-        actualizadoEn: null
-      };
-      await saveUnArticulo(articulo);
-      nuevos.push(articulo);
+      const tallaNorm = (filas[i].talla||"").trim().toLowerCase();
+      const existente = todosFinal.find(x =>
+        (x.modelo||"").trim().toLowerCase()===modeloNorm &&
+        (x.talla||"").trim().toLowerCase()===tallaNorm
+      );
+      if(existente){
+        const actualizado = {
+          ...existente,
+          cantidad: (Number(existente.cantidad)||0) + (Number(filas[i].cantidad)||0),
+          actualizadoEn: ahora
+        };
+        await saveUnArticulo(actualizado);
+        todosFinal = todosFinal.map(x=>x.id===actualizado.id?actualizado:x);
+        actualizadas2++;
+      } else {
+        const articulo = {
+          id: i===0 ? artIdBase : artIdBase+"_"+i,
+          ...camposComunes,
+          talla: filas[i].talla,
+          cantidad: filas[i].cantidad,
+          creadoEn: ahora,
+          actualizadoEn: null
+        };
+        await saveUnArticulo(articulo);
+        todosFinal = [...todosFinal, articulo];
+        agregadas2++;
+      }
     }
-    window._invData = [...inv, ...nuevos];
-    toast(nuevos.length>1 ? `${nuevos.length} artículos guardados ✓ (uno por talla)` : "Artículo guardado ✓");
-    goSec("inv-qr");
+    window._invData = todosFinal;
+    let msg2 = [];
+    if(agregadas2) msg2.push(agregadas2+" nueva(s)");
+    if(actualizadas2) msg2.push(actualizadas2+" sumada(s) a talla existente");
+    toast("Guardado — "+msg2.join(" y ")+" ✓");
+    closeAllNav();
+    document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+    const secInv2=document.getElementById("sec-inv-qr");
+    if(secInv2) secInv2.classList.add("active");
+    renderInventario();
   }catch(e){console.error("guardarArticuloInv error:",e);msg.textContent="Error al guardar. Verifica tu conexión.";}
   finally{
     if(btn){ btn.disabled=false; btn.textContent=btnTextoOriginal; }
@@ -6252,7 +6875,7 @@ function generarFormatoEntrega(c){
         <tr>
           <td style="border:1px solid #DDD;padding:.4rem .6rem;background:#FAFAFA"><strong>Color</strong></td>
           <td style="border:1px solid #DDD;padding:.4rem .6rem">${colorBox}${c.colorNombre||c.colorHex||"—"}</td>
-          <td style="border:1px solid #DDD;padding:.4rem .6rem;background:#FAFAFA"><strong>Fecha de entrega</strong></td>
+          <td style="border:1px solid #DDD;padding:.4rem .6rem;background:#FAFAFA"><strong>Fecha de evento</strong></td>
           <td style="border:1px solid #DDD;padding:.4rem .6rem"><strong>${fEntrega}</strong></td>
         </tr>
         <tr>
@@ -6280,7 +6903,7 @@ function generarFormatoEntrega(c){
           </td>
           <td style="width:10%"></td>
           <td style="width:45%;text-align:center;padding-top:40pt;border-top:1pt solid #1a1a1a">
-            <div style="font-size:8.5pt">Fecha de entrega</div>
+            <div style="font-size:8.5pt">Fecha de evento</div>
             <div style="font-size:7.5pt;color:#888;margin-top:3pt">${fEntrega}</div>
           </td>
         </tr>
@@ -6479,14 +7102,6 @@ function generarNotaVenta(c){
     </div>
   </div>`;
 }
-
-
-function verPagos(id){
-  goSec("pagos-pendientes");
-  renderPagosPendientes();
-}
-
-// ══ NOTA SENCILLA ══
 
 // ══ RENDER PEDIDOS ══
 // ══ FILTRO ENTREGAS ══
@@ -6704,7 +7319,7 @@ function generarContrato(c){
         <td style="width:50%;padding:0 10pt"><div style="border-top:1pt solid #333;padding-top:3pt;margin-top:60pt">NOMBRE Y FIRMA DEL PROVEEDOR</div><div style="color:#666;margin-top:2pt">Ross de Lune</div></td>
       </tr>
     </table>
-    <div style="text-align:center;margin-top:4pt;font-size:6.5pt;color:#AAA">Fecha de entrega acordada: ${fE}</div>
+    <div style="text-align:center;margin-top:4pt;font-size:6.5pt;color:#AAA">Fecha de evento acordada: ${fE}</div>
   </div>`;
 }
 
@@ -7159,7 +7774,7 @@ async function waEnviarPrueba(){
     <div class="field" id="edit-fi-parcialidades"><label>Parcialidades (días)</label><input type="number" id="edit-parcialidades" placeholder="30"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
       <div class="field"><label>Fecha límite pago</label><input type="date" id="edit-fecha-limite"></div>
-      <div class="field"><label>Fecha de entrega</label><input type="date" id="edit-entrega"></div>
+      <div class="field"><label>Fecha de evento</label><input type="date" id="edit-entrega"></div>
     </div>
     <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dorado-d);margin:.8rem 0 .5rem">Otros</div>
     <div class="field"><label>Estatus</label>
