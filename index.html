@@ -556,7 +556,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · DEMO v46.1 · fixHora</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · DEMO v47.1 · fixColor</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -1872,7 +1872,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 
 
 <script>
-// ══ CONFIG ══
+// ══ CONFI
 
 const firebaseConfig = {
   apiKey: "AIzaSyDEaVniPdpXhbiRT6qYWEJuu9hyTkghnaY",
@@ -4548,7 +4548,7 @@ function imprimirAjuste(){window.print();}
 function generarFormatoAjuste(c){
   const prog = c.progreso?.pedido || {};
   const tipos = {"xv":"Quinceañera","novia":"Novia"};
-  const colorBox = c.colorHex ? `<span style="display:inline-block;width:11px;height:11px;background:${c.colorHex};border:1px solid #CCC;border-radius:2px;vertical-align:middle;margin-right:4px"></span>` : "";
+  const colorBox = c.color?.hex ? `<span style="display:inline-block;width:11px;height:11px;background:${c.color.hex};border:1px solid #CCC;border-radius:2px;vertical-align:middle;margin-right:4px"></span>` : "";
   const fmtFecha = v => v ? new Date(v+"T12:00:00").toLocaleDateString("es-MX",{day:"2-digit",month:"2-digit",year:"2-digit"}) : "&nbsp;";
 
   const filasPruebas = PASOS_PEDIDO.map((p,i)=>{
@@ -4611,7 +4611,7 @@ function generarFormatoAjuste(c){
           <td style="border:1px solid #999;padding:.3rem .5rem;background:#FAFAFA;font-weight:600">Tipo de vestido</td>
           <td style="border:1px solid #999;padding:.3rem .5rem">${tipos[c.tipo]||"—"}</td>
           <td style="border:1px solid #999;padding:.3rem .5rem;background:#FAFAFA;font-weight:600">Color</td>
-          <td style="border:1px solid #999;padding:.3rem .5rem">${colorBox}${c.colorNombre||c.colorHex||"—"}</td>
+          <td style="border:1px solid #999;padding:.3rem .5rem">${colorBox}${c.color?.nombre||c.color?.hex||"—"}</td>
         </tr>
         <tr>
           <td style="border:1px solid #999;padding:.3rem .5rem;background:#FAFAFA;font-weight:600">Cliente</td>
@@ -6841,7 +6841,7 @@ function generarFormatoEntrega(c){
   const tipos   = {"xv":"Quinceañera","novia":"Novia","solo":"Solo vestido","custom":"Personalizado"};
   const fEntrega = c.entrega ? new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX",{day:"2-digit",month:"long",year:"numeric"}) : "—";
   const fContrato= c.fecha   ? new Date(c.fecha+"T12:00:00").toLocaleDateString("es-MX",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
-  const colorBox = c.colorHex ? `<span style="display:inline-block;width:12px;height:12px;background:${c.colorHex};border:1px solid #CCC;border-radius:2px;vertical-align:middle;margin-right:4px"></span>` : "";
+  const colorBox = c.color?.hex ? `<span style="display:inline-block;width:12px;height:12px;background:${c.color.hex};border:1px solid #CCC;border-radius:2px;vertical-align:middle;margin-right:4px"></span>` : "";
 
   document.getElementById("entrega-content").innerHTML=`
   <div style="font-family:Arial,sans-serif;color:#1a1a1a;line-height:1.4;max-width:720px;margin:0 auto;font-size:10pt;position:relative">
@@ -6887,7 +6887,7 @@ function generarFormatoEntrega(c){
         </tr>
         <tr>
           <td style="border:1px solid #DDD;padding:.4rem .6rem;background:#FAFAFA"><strong>Color</strong></td>
-          <td style="border:1px solid #DDD;padding:.4rem .6rem">${colorBox}${c.colorNombre||c.colorHex||"—"}</td>
+          <td style="border:1px solid #DDD;padding:.4rem .6rem">${colorBox}${c.color?.nombre||c.color?.hex||"—"}</td>
           <td style="border:1px solid #DDD;padding:.4rem .6rem;background:#FAFAFA"><strong>Fecha de evento</strong></td>
           <td style="border:1px solid #DDD;padding:.4rem .6rem"><strong>${fEntrega}</strong></td>
         </tr>
