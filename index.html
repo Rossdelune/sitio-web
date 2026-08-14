@@ -560,7 +560,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Producction v55.0 · FixAccesorios</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Producction v56.0 · filtratEstatus</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -923,6 +923,17 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
           <span class="buscador-ic">🔍</span>
           <input type="text" id="buscar-cliente" placeholder="Buscar por folio o nombre..." oninput="filtrarClientes()">
           <span class="buscador-clear" id="buscar-cliente-clear" onclick="limpiarBuscarCliente()">✕</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem;margin:.5rem .6rem 0;flex-wrap:wrap">
+          <label for="filtro-estatus-cliente" style="font-size:.75rem;color:var(--dorado-d);white-space:nowrap">Filtrar por estatus:</label>
+          <select id="filtro-estatus-cliente" onchange="filtrarClientes()" style="font-size:.8rem;padding:.3rem .5rem;border:1px solid var(--borde);border-radius:4px;background:var(--bg);color:var(--texto)">
+            <option value="">Todos</option>
+            <option value="Pedido Realizado">Pedido Realizado</option>
+            <option value="En Compra">En Compra</option>
+            <option value="En Tienda">En Tienda</option>
+            <option value="Recibido">Recibido</option>
+            <option value="Entregado">Entregado</option>
+          </select>
         </div>
         <div class="buscador-count" id="buscar-cliente-count"></div>
         <div style="overflow-x:auto;">
@@ -3526,7 +3537,8 @@ function renderClientes(lista){
   const cEl=document.getElementById("buscar-cliente-count");
   if(cEl){
     const q=(document.getElementById("buscar-cliente")?.value||"").trim();
-    cEl.textContent=q?`${data.length} de ${allClientes.length} clientes`:"";
+    const estatusActivo=(document.getElementById("filtro-estatus-cliente")?.value||"");
+    cEl.textContent=(q||estatusActivo)?`${data.length} de ${allClientes.length} clientes`:"";
   }
 }
 function normTexto(s){
@@ -3536,10 +3548,16 @@ function filtrarClientes(){
   const inp=document.getElementById("buscar-cliente");
   const q=normTexto(inp.value.trim());
   document.getElementById("buscar-cliente-clear").style.display=q?"block":"none";
-  if(!q){renderClientes();return;}
-  const filtrados=allClientes.filter(c=>
-    normTexto(c.nombre).includes(q) || normTexto(c.folio).includes(q)
-  );
+  const estatusSel=document.getElementById("filtro-estatus-cliente");
+  const estatusFiltro=estatusSel?estatusSel.value:"";
+  if(!q && !estatusFiltro){renderClientes();return;}
+  let filtrados=allClientes;
+  if(q){
+    filtrados=filtrados.filter(c=>normTexto(c.nombre).includes(q) || normTexto(c.folio).includes(q));
+  }
+  if(estatusFiltro){
+    filtrados=filtrados.filter(c=>(c.estatus||"")===estatusFiltro);
+  }
   renderClientes(filtrados);
 }
 function limpiarBuscarCliente(){
