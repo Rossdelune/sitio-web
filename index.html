@@ -560,7 +560,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Producction v56.0 · filtratEstatus</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Production v57.0 · fixAbono</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -1922,6 +1922,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 
 
 <script>
+
 const firebaseConfig = {
   apiKey: "AIzaSyDEaVniPdpXhbiRT6qYWEJuu9hyTkghnaY",
   authDomain: "rdl-production.firebaseapp.com",
@@ -4160,8 +4161,13 @@ async function guardarAbono(){
   const msg = document.getElementById("abono-msg");
   msg.textContent="";
   const estabaEditando = editandoAbonoIndex !== null;
-  if(estabaEditando && (!monto || monto<=0)){msg.textContent="Escribe un monto válido.";return;}
-  if(monto && monto>0 && !fecha){msg.textContent="Selecciona la fecha del abono.";return;}
+  // Antes, esta validación solo corría si estabas EDITANDO un abono existente.
+  // Al registrar uno nuevo con el campo de monto vacío o en 0, no se mostraba
+  // ningún error: el botón simplemente cerraba el modal y mostraba
+  // "Abono registrado ✓" sin haber guardado ningún pago real — por eso parecía
+  // que "no dejaba registrar abonos". Ahora el monto se exige siempre.
+  if(!monto || monto<=0){msg.textContent="Escribe un monto válido para registrar el abono.";return;}
+  if(!fecha){msg.textContent="Selecciona la fecha del abono.";return;}
   try{
     allClientes = await loadClientesFS();
     const cuentaId = cuentaIdPorMetodo(metodo, cuentaSeleccionada);
