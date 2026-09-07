@@ -121,6 +121,13 @@ html,body{min-height:100vh;background:var(--crema);font-family:"Lato",sans-serif
   transition:color .2s,border-color .2s;white-space:nowrap;flex-shrink:0;
 }
 .nav-btn .arrow{font-size:.55rem;transition:transform .2s;display:inline-block;}
+.wa-badge{
+  display:none;align-items:center;justify-content:center;
+  min-width:16px;height:16px;padding:0 4px;
+  background:var(--rojo);color:#fff;border-radius:20px;
+  font-size:.62rem;font-weight:700;line-height:1;letter-spacing:0;
+  text-transform:none;
+}
 .nav-btn.open{color:var(--dorado-d);border-color:var(--dorado);}
 .nav-btn.open .arrow{transform:rotate(180deg);}
 .nav-btn:hover{color:var(--dorado-d);}
@@ -560,7 +567,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Production v57.0 · fixAbono</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Demo v58.0 · mensajeAutomatico</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -659,7 +666,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     </div>
 
     <div style="position:relative;flex-shrink:0">
-      <button class="nav-btn" id="nb-mensajeria" onclick="toggleNav('mensajeria')">📲 Mensajería <span class="arrow">▾</span></button>
+      <button class="nav-btn" id="nb-mensajeria" onclick="toggleNav('mensajeria')">📲 Mensajería <span id="wa-badge-count" class="wa-badge"></span> <span class="arrow">▾</span></button>
       <div class="subnav" id="sub-mensajeria">
         <button class="sub-item" onclick="goSec('mensajeria-recordatorios')" id="admin-sub-wa-rec">📋 Recordatorios</button>
         <button class="sub-item" onclick="goSec('mensajeria-historial')" id="admin-sub-wa-hist">📜 Historial envíos</button>
@@ -1919,7 +1926,19 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
   </div>
 </div>
 
-
+<!-- MODAL AVISO POST-LOGIN: RECORDATORIOS DE PAGO -->
+<div class="overlay" id="modal-wa-aviso" style="z-index:250">
+  <div class="modal" style="max-width:420px">
+    <button type="button" class="btn-close" onclick="closeAvisoWa()">✕</button>
+    <div class="badge" style="background:var(--rojo)">Recordatorios</div>
+    <div class="modal-title" id="wa-aviso-titulo" style="font-size:1.15rem">Recordatorios de pago</div>
+    <div id="wa-aviso-lista" style="max-height:280px;overflow-y:auto;margin-bottom:.6rem"></div>
+    <div id="wa-aviso-nota-worker" style="display:none;font-size:.76rem;color:#888;margin-bottom:.6rem">
+      Avísale a un administrador para que envíe estos recordatorios.
+    </div>
+    <button type="button" class="btn-primary" id="wa-aviso-btn" onclick="irARecordatoriosDesdeAviso()">Ir a Recordatorios</button>
+  </div>
+</div>
 
 <script>
 
@@ -1930,8 +1949,10 @@ const firebaseConfig = {
   storageBucket: "rdl-production.firebasestorage.app",
   messagingSenderId: "510898405169",
   appId: "1:510898405169:web:77f36cf5215f82be013a10",
-  measurementId: "G-KENSFN9PPR",
+  measurementId: "G-KENSFN9PPR"
 };
+
+
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -2202,7 +2223,9 @@ async function doLogin(){
     match.accesos.unshift(now);
     try{await db.collection("users").doc(u).update({accesos:match.accesos});}
     catch(updErr){console.error("No se pudo registrar el acceso en Firestore:",updErr);}
-    currentUser=match;closeLogin();waCargarConfig();enterPanel();
+    currentUser=match;closeLogin();enterPanel();
+    await waCargarConfig();
+    await waRefrescarBadge(true); // true = mostrar el aviso post-login si hay pendientes
   }catch(e){console.error("doLogin error:",e);err.textContent="Error de conexión: "+e.message;btn.innerHTML="Entrar";btn.disabled=false;}
 }
 
@@ -2365,7 +2388,7 @@ function goSec(id){
   if(id==="inv-nuevo"){limpiarFormInv();}
   if(id==="lista-clientes"){renderClientes();}
   if(id==="nuevo-cliente"){limpiarFormularioCliente();}
-  if(id==="mensajeria-recordatorios"){waMostrarRecordatorios();}
+  if(id==="mensajeria-recordatorios"){waMostrarRecordatorios();waRefrescarBadge(false);}
   if(id==="mensajeria-historial"){waLoadHistorial();}
   if(id==="mensajeria-config"){waCargarConfigUI();}
 }
@@ -8025,20 +8048,112 @@ function waCalcularPendientes(){
   return pendientes;
 }
 
-// Renderiza la lista de recordatorios pendientes — solo informativa, sin botones de envío
-function waMostrarRecordatorios(){
+// Devuelve la fecha de hoy en el mismo formato usado en waBanderas (dd/mm/aaaa)
+function waFechaHoy(){
+  return new Date().toLocaleDateString("es-MX",{timeZone:"America/Mexico_City",year:"numeric",month:"2-digit",day:"2-digit"});
+}
+
+// Consulta qué clientes ya fueron marcados como enviados hoy (automático o manual)
+// Devuelve un Set con los IDs de documento de waBanderas (clienteId_dd-mm-aaaa)
+async function waObtenerBanderasHoy(){
+  const hoy = waFechaHoy();
+  const set = new Set();
+  try{
+    const snap = await db.collection("waBanderas").where("fecha","==",hoy).get();
+    snap.forEach(doc=>set.add(doc.id));
+  }catch(e){ console.warn("waObtenerBanderasHoy:", e); }
+  return set;
+}
+
+// Marca o desmarca manualmente a un cliente como "enviado hoy" en waBanderas
+async function waSetBanderaHoy(clienteId, clienteNombre, marcar){
+  const hoy = waFechaHoy();
+  const docId = clienteId + "_" + hoy.replace(/\//g,"-");
+  try{
+    if(marcar){
+      await db.collection("waBanderas").doc(docId).set({clienteId, clienteNombre, fecha:hoy, enviado:true, manual:true});
+    } else {
+      await db.collection("waBanderas").doc(docId).delete();
+    }
+  }catch(e){ console.warn("waSetBanderaHoy:", e); }
+}
+
+// Clic en "📲 Enviar por WhatsApp" — abre el wa.me y marca el envío automáticamente
+async function waMarcarComoEnviado(clienteId, clienteNombre){
+  await waSetBanderaHoy(clienteId, clienteNombre, true);
+  await waRegistrarEnvio(clienteId, clienteNombre, "", "", "enviado (wa.me manual)");
+  waMostrarRecordatorios();
+  waRefrescarBadge(false);
+}
+
+// Checkbox "✓ Marcar como enviado" — control manual independiente del link
+async function waToggleMarcarEnviado(checkbox, clienteId, clienteNombre){
+  checkbox.disabled = true;
+  await waSetBanderaHoy(clienteId, clienteNombre, checkbox.checked);
+  if(checkbox.checked) await waRegistrarEnvio(clienteId, clienteNombre, "", "", "enviado (marcado manual)");
+  waMostrarRecordatorios();
+  waRefrescarBadge(false);
+}
+
+// Recalcula el badge rojo del nav y, si se pide, muestra el aviso post-login.
+// Solo cuenta clientes que todavía NO tienen bandera de "enviado" hoy.
+async function waRefrescarBadge(mostrarAviso){
+  const hoy = waFechaHoy();
+  const calculados = waCalcularPendientes();
+  const banderasHoy = await waObtenerBanderasHoy();
+  const pendientesReales = calculados.filter(p=>{
+    const clienteId = p.cliente.id || p.cliente.folio;
+    return clienteId && !banderasHoy.has(clienteId+"_"+hoy.replace(/\//g,"-"));
+  });
+  window._waPendientesHoy = pendientesReales;
+
+  const badge = document.getElementById("wa-badge-count");
+  if(badge){
+    if(pendientesReales.length){
+      badge.textContent = pendientesReales.length>99 ? "99+" : pendientesReales.length;
+      badge.style.display = "inline-flex";
+    } else {
+      badge.style.display = "none";
+    }
+  }
+  if(mostrarAviso && pendientesReales.length) waMostrarAvisoLogin(pendientesReales);
+}
+
+// Muestra el modal de aviso justo después de iniciar sesión
+function waMostrarAvisoLogin(pendientes){
+  const esAdmin = currentUser && currentUser.role==="admin";
+  document.getElementById("wa-aviso-lista").innerHTML = pendientes.map(p=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--borde);font-size:.82rem">
+      <span>${p.cliente.nombre||"—"} <span style="color:#888;font-size:.72rem">Folio ${p.cliente.folio||"—"}</span></span>
+      <span style="color:var(--dorado-d);font-size:.72rem">Faltan ${p.diasRestantes} día${p.diasRestantes===1?"":"s"}</span>
+    </div>`).join("");
+  document.getElementById("wa-aviso-titulo").textContent =
+    `📲 Tienes ${pendientes.length} recordatorio${pendientes.length===1?"":"s"} de pago pendiente${pendientes.length===1?"":"s"} hoy`;
+  document.getElementById("wa-aviso-btn").style.display = esAdmin ? "" : "none";
+  document.getElementById("wa-aviso-nota-worker").style.display = esAdmin ? "none" : "";
+  document.getElementById("modal-wa-aviso").classList.add("open");
+}
+function closeAvisoWa(){
+  document.getElementById("modal-wa-aviso").classList.remove("open");
+}
+function irARecordatoriosDesdeAviso(){
+  closeAvisoWa();
+  toggleNav("mensajeria");
+  goSec("mensajeria-recordatorios");
+}
+
+// Renderiza la lista de recordatorios pendientes.
+// Modo manual (sin token Meta): cada tarjeta trae el enlace wa.me/ + checkbox "marcar como enviado" — solo visibles para admin.
+// Modo automático (con token Meta): la lista se mantiene como bitácora informativa del envío ya realizado.
+async function waMostrarRecordatorios(){
   const lista = document.getElementById("wa-recordatorios-lista");
   const badge = document.getElementById("wa-modo-badge");
   const esReal = waModoReal();
+  const esAdmin = currentUser && currentUser.role==="admin";
 
   badge.innerHTML = esReal
     ? '<span style="color:var(--verde)">✅ Mensajería activa — los mensajes se envían automáticamente al iniciar sesión</span>'
-    : '<span style="color:var(--dorado-d)">🔶 Mensajería inactiva — ingresa el token en ⚙️ Configuración WA para activar</span>';
-
-  if(!esReal){
-    lista.innerHTML = '<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin configuración activa. Los recordatorios se mostrarán aquí una vez que configures las credenciales.</p>';
-    return;
-  }
+    : '<span style="color:var(--dorado-d)">🔶 Modo manual — envía los recordatorios con el enlace de WhatsApp</span>';
 
   const pendientes = waCalcularPendientes();
   if(!pendientes.length){
@@ -8046,24 +8161,45 @@ function waMostrarRecordatorios(){
     return;
   }
 
+  lista.innerHTML = '<span class="spinner"></span> Cargando estado de envíos...';
+  const hoy = waFechaHoy();
+  const banderasHoy = await waObtenerBanderasHoy();
+
   lista.innerHTML = pendientes.map(p=>{
+    const clienteId  = p.cliente.id || p.cliente.folio || "";
+    const flagId     = clienteId + "_" + hoy.replace(/\//g,"-");
+    const yaMarcado  = banderasHoy.has(flagId);
     const monto      = "$" + p.saldo.toLocaleString("es-MX");
     const fechaTexto = waFormatearFecha(p.fechaRef);
     const msgTexto   = waGenerarMensaje(p.cliente.nombre||"clienta", monto, fechaTexto);
     const numero     = (p.cliente.cel||p.cliente.tel||"").replace(/\D/g,"");
-    const numDisplay = numero
-      ? numero
-      : '<span style="color:var(--rojo)">Sin número registrado</span>';
-    return `<div style="border:1px solid var(--borde);border-radius:4px;padding:.8rem;margin-bottom:.7rem">
+    const numeroFinal= numero ? (numero.startsWith("52")?numero:"52"+numero) : "";
+    const numDisplay = numero ? numero : '<span style="color:var(--rojo)">Sin número registrado</span>';
+    const linkWa     = numeroFinal ? `https://wa.me/${numeroFinal}?text=${encodeURIComponent(msgTexto)}` : "";
+    const nombreEsc  = (p.cliente.nombre||"").replace(/'/g,"\\'");
+
+    const accionesAdmin = esAdmin ? `
+      <div style="display:flex;align-items:center;gap:.9rem;margin-top:.6rem;flex-wrap:wrap">
+        ${linkWa
+          ? `<a href="${linkWa}" target="_blank" class="btn-sec" style="text-decoration:none;display:inline-block" onclick="waMarcarComoEnviado('${clienteId}','${nombreEsc}')">📲 Enviar por WhatsApp</a>`
+          : '<span style="font-size:.72rem;color:var(--rojo)">Sin número — no se puede generar el enlace</span>'}
+        <label style="display:flex;align-items:center;gap:.35rem;font-size:.76rem;color:#666;cursor:pointer">
+          <input type="checkbox" ${yaMarcado?"checked":""} onchange="waToggleMarcarEnviado(this,'${clienteId}','${nombreEsc}')">
+          ✓ Marcar como enviado
+        </label>
+      </div>` : "";
+
+    return `<div style="border:1px solid var(--borde);border-radius:4px;padding:.8rem;margin-bottom:.7rem;${yaMarcado?"opacity:.6":""}">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem">
         <div>
           <strong style="font-size:.9rem">${p.cliente.nombre||"—"}</strong>
           <span style="font-size:.72rem;color:#888;margin-left:.5rem">Folio ${p.cliente.folio||"—"}</span>
         </div>
-        <span style="font-size:.7rem;background:#E8F8EE;color:var(--verde);border-radius:20px;padding:.18rem .7rem">Faltan ${p.diasRestantes} día${p.diasRestantes===1?"":"s"}</span>
+        <span style="font-size:.7rem;background:${yaMarcado?"#EEE":"#E8F8EE"};color:${yaMarcado?"#888":"var(--verde)"};border-radius:20px;padding:.18rem .7rem">${yaMarcado?"✓ Enviado hoy":`Faltan ${p.diasRestantes} día${p.diasRestantes===1?"":"s"}`}</span>
       </div>
       <div style="font-size:.75rem;color:#666;margin-bottom:.5rem">📱 ${numDisplay}</div>
       <div style="background:#F9F5EF;border-radius:3px;padding:.55rem .75rem;font-size:.78rem;white-space:pre-line;color:var(--texto);line-height:1.6">${msgTexto}</div>
+      ${accionesAdmin}
     </div>`;
   }).join("");
 }
