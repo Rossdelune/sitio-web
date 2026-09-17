@@ -567,7 +567,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Producction v58.1 · fixHitosRecordatorio</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Production v58.2 · fixAbonoRecordatorio</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -8035,7 +8035,18 @@ async function waCalcularPendientes(){
 
   (allClientes||[]).forEach(c=>{
     if(c.estatus === "Entregado") return;
-    const saldo = Number(c.precio||0) - Number(c.anticipo||0);
+    // FIX v58.2: antes solo se restaba el anticipo (precio-anticipo), ignorando
+    // abonos posteriores, paquete, adicionales e interés — igual que en las demás
+    // secciones de saldo de la app (Pagos, Abonos, Entregas).
+    const precio = Number(c.precio||0);
+    const paquete = Number(c.precioPaquete||0);
+    const extras = (c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
+    const total = precio+paquete+extras;
+    const anticipo = Number(c.anticipo||0);
+    const abonos = (c.pagos||[]).reduce((s,p)=>s+Number(p.monto||0),0);
+    const pagado = anticipo+abonos;
+    const interes = c.interes==="si" ? total*0.1 : 0;
+    const saldo = total+interes-pagado;
     if(saldo <= 0) return; // Sin saldo pendiente, no aplica
     const clienteId = c.id || c.folio;
     if(!clienteId) return;
