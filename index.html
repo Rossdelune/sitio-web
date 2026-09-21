@@ -359,7 +359,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 .proceso-entrega{font-size:.72rem;color:var(--dorado-d);margin-top:.5rem;border-top:1px solid #F0E8D8;padding-top:.4rem;}
 .paso-row{margin-bottom:.7rem;padding-bottom:.7rem;border-bottom:1px solid #F5F0E8;}
 .paso-row:last-child{border-bottom:none;margin-bottom:0;}
-.paso-nota-input{width:100%;border:none;border-bottom:1px dashed #DDD;padding:.3rem 0;font-family:"Lato",sans-serif;font-size:.76rem;color:var(--texto);background:transparent;outline:none;resize:none;transition:border-color .2s;}
+.paso-nota-input{width:100%;border:none;border-bottom:1px dashed #DDD;padding:.3rem 0;font-family:"Lato",sans-serif;font-size:.76rem;color:var(--texto);background:transparent;outline:none;resize:none;min-height:72px;overflow-y:hidden;line-height:1.4;transition:border-color .2s;}
 .paso-nota-input:focus{border-color:var(--dorado);}
 
 /* ══ MATRIZ DE MODELO (Buscar modelo) ══ */
@@ -567,7 +567,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Production v58.2 · fixAbonoRecordatorio</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Demo v58.1 · fixHitosRecordatorio</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -1951,6 +1951,7 @@ const firebaseConfig = {
   appId: "1:510898405169:web:77f36cf5215f82be013a10",
   measurementId: "G-KENSFN9PPR"
 };
+
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -4552,6 +4553,7 @@ function renderProceso(){
     return;
   }
   lista.innerHTML = activos.map(c => buildProcesoCard(c)).join("");
+  setTimeout(autoajustarTodasLasNotas, 0);
 }
 
 function filtrarProceso(q){
@@ -4567,6 +4569,7 @@ function filtrarProceso(q){
     return;
   }
   lista.innerHTML = filtrados.map(c => buildProcesoCard(c)).join("");
+  setTimeout(autoajustarTodasLasNotas, 0);
 }
 
 function buildDiagnosticoInventarioCliente(c){
@@ -4627,8 +4630,9 @@ function buildProcesoCard(c){
         <button type="button" title="Borrar hora" onclick="borrarHoraPrueba('${c.id}','${p.id}')"
           style="background:none;border:1px solid #E8DDD0;border-radius:2px;color:#C0392B;cursor:pointer;font-size:.62rem;padding:.15rem .4rem;line-height:1">🗑️</button>
       </div>
-      <textarea class="paso-nota-input" placeholder="Observaciones del ${p.label}..." rows="2"
-        onblur="guardarNotaPedido('${c.id}','${p.id+"_nota"}',this.value)">${nota}</textarea>
+      <textarea class="paso-nota-input" placeholder="Observaciones del ${p.label}..." rows="4"
+  oninput="autoajustarTextarea(this)"
+  onblur="guardarNotaPedido('${c.id}','${p.id+"_nota"}',this.value)">${nota}</textarea>
     </div>`;
   }).join("");
   return `<div class="proceso-card" id="pcard-${c.id}">
@@ -4727,6 +4731,18 @@ async function togglePasoPedido(clienteId, pasoId){
   }catch(e){alert("ERROR REAL en togglePasoPedido:\n\n"+e.message+"\n\n"+e.stack);toast("Error al guardar","err");}
 }
 
+// Ajusta la altura del textarea al contenido, sin límite de renglones
+function autoajustarTextarea(ta){
+  ta.style.height = "auto";
+  ta.style.height = ta.scrollHeight + "px";
+}
+
+// Ajusta todos los textarea de notas visibles de una vez (al abrir sección o filtrar)
+function autoajustarTodasLasNotas(){
+  document.querySelectorAll(".paso-nota-input").forEach(ta=>{
+    autoajustarTextarea(ta);
+  });
+}
 async function guardarNotaPedido(clienteId, campo, valor){
   allClientes = await loadClientesFS();
   const idx = allClientes.findIndex(x=>x.id===clienteId);
@@ -4940,7 +4956,7 @@ function generarFormatoAjuste(c){
     const nota = prog[p.id+"_nota"]||"";
     return `<div style="border-bottom:1px dashed #CCC;padding:.35rem 0">
       <div style="font-weight:700;font-size:7.5pt;color:#7A4F2A;margin-bottom:.15rem">${p.label}</div>
-      <div style="font-size:8.5pt;color:#333;min-height:12pt">${nota||"&nbsp;"}</div>
+      <div style="font-size:8.5pt;color:#333;min-height:12pt;white-space:pre-line;word-break:break-word">${nota||"&nbsp;"}</div>
     </div>`;
   }).join("");
 
@@ -5073,6 +5089,7 @@ function renderDiseno(){
     return;
   }
   lista.innerHTML = activos.map(c => buildDisenoCard(c)).join("");
+  setTimeout(autoajustarTodasLasNotas, 0);
 }
 
 function filtrarDiseno(q){
@@ -5105,7 +5122,8 @@ function buildDisenoCard(c){
           <span class="paso-check">${done?"✓":"○"}</span>${p.label}
         </button>
       </div>
-      <textarea class="paso-nota-input" placeholder="Observaciones..." rows="2"
+      <textarea class="paso-nota-input" placeholder="Observaciones..." rows="4"
+        oninput="autoajustarTextarea(this)"
         onblur="guardarNotaDiseno('${c.id}','${p.id+"_nota"}',this.value)">${nota}</textarea>
     </div>`;
   }).join("");
@@ -8035,18 +8053,7 @@ async function waCalcularPendientes(){
 
   (allClientes||[]).forEach(c=>{
     if(c.estatus === "Entregado") return;
-    // FIX v58.2: antes solo se restaba el anticipo (precio-anticipo), ignorando
-    // abonos posteriores, paquete, adicionales e interés — igual que en las demás
-    // secciones de saldo de la app (Pagos, Abonos, Entregas).
-    const precio = Number(c.precio||0);
-    const paquete = Number(c.precioPaquete||0);
-    const extras = (c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
-    const total = precio+paquete+extras;
-    const anticipo = Number(c.anticipo||0);
-    const abonos = (c.pagos||[]).reduce((s,p)=>s+Number(p.monto||0),0);
-    const pagado = anticipo+abonos;
-    const interes = c.interes==="si" ? total*0.1 : 0;
-    const saldo = total+interes-pagado;
+    const saldo = Number(c.precio||0) - Number(c.anticipo||0);
     if(saldo <= 0) return; // Sin saldo pendiente, no aplica
     const clienteId = c.id || c.folio;
     if(!clienteId) return;
