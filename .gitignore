@@ -6,3 +6,6 @@
 
 # 3. Excepción: Permitir el archivo .gitignore
 !.gitignore
+
+node_modules/
+*.json
