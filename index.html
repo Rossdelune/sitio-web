@@ -567,7 +567,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Producción v60.3.1 · parcialidadesAjustes</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Producción v63.0 · ModalClientasModificado</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -614,6 +614,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
       <div class="subnav" id="sub-clientes">
         <button class="sub-item" onclick="goSec('nuevo-cliente')">➕ Nuevo cliente</button>
         <button class="sub-item" onclick="goSec('lista-clientes')">📋 Lista de clientes</button>
+        <button class="sub-item" onclick="goSec('lista-entregados')">✅ Clientes entregados</button>
       </div>
     </div>
 
@@ -641,9 +642,9 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <div style="position:relative;flex-shrink:0">
       <button class="nav-btn" id="nb-progreso" onclick="toggleNav('progreso')">📦 Progreso <span class="arrow">▾</span></button>
       <div class="subnav" id="sub-progreso">
-        <button class="sub-item" onclick="goSec('progreso-pedido')">🔄 Proceso pedido</button>
+        <button class="sub-item" onclick="goSec('progreso-pedido')">🔄 Compra a proveedor</button>
         <button class="sub-item" onclick="goSec('progreso-agenda')">📅 Agenda de ajustes</button>
-        <button class="sub-item" onclick="goSec('progreso-diseno')">✂️ Proceso diseño</button>
+        <button class="sub-item" onclick="goSec('progreso-diseno')">✂️ Confección en la boutique</button>
         <button class="sub-item" onclick="goSec('progreso-formato')">🖨️ Formato de ajustes</button>
       </div>
     </div>
@@ -798,10 +799,24 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
             <div class="fi"><label>Largo (cm)</label><input type="number" id="m-largo2" placeholder="120"></div>
           </div>
         </div>
+        <div class="fi">
+          <label style="font-size:1rem;font-weight:700;color:var(--texto);margin-bottom:.6rem;display:block">¿Cómo se consigue este vestido? *</label>
+          <div style="display:flex;flex-direction:column;gap:.5rem">
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;cursor:pointer">
+              <input type="radio" name="c-origen" value="Sobre diseño" onchange="toggleOrigenVestido()" style="accent-color:var(--dorado-d);width:16px;height:16px;cursor:pointer">
+              Confección en la boutique
+            </label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;cursor:pointer">
+              <input type="radio" name="c-origen" value="Sobre pedido" onchange="toggleOrigenVestido()" style="accent-color:var(--dorado-d);width:16px;height:16px;cursor:pointer">
+              Compra a proveedor
+            </label>
+          </div>
+        </div>
         <div class="fg2">
-          <div class="fi"><label>Elaboración</label>
+          <div class="fi" id="fi-estatus-pedido" style="display:none">
+            <label>Estatus del pedido *</label>
             <select id="c-elab">
-              <option value="">Seleccionar elaboración *</option>
+              <option value="">Seleccionar...</option>
               <option value="Pedido Realizado">Pedido Realizado</option>
               <option value="En Compra">En Compra</option>
               <option value="En Tienda">En Tienda</option>
@@ -921,7 +936,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 
     <!-- ── LISTA CLIENTES ── -->
     <div class="section" id="sec-lista-clientes">
-      <div class="sec-title">Clientes</div>
+      <div class="sec-title">Clientes Activos</div>
       <div class="card" style="padding:.5rem;">
         <div class="hdr-row" style="padding:.8rem .6rem .4rem;">
           <div class="card-title" style="margin:0">Expedientes</div>
@@ -969,11 +984,62 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
               <th>F. Vencimiento</th>
               <th>Estatus</th>
               <th>Adicionales</th>
-              <th>Sobre pedido</th>
+              <th>Tipo de proceso</th>
               <th></th>
             </tr></thead>
             <tbody id="clientes-tbody">
               <tr><td colspan="24" style="color:#AAA;padding:1.5rem;text-align:center;">Sin clientes registrados aún.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CLIENTES ENTREGADOS ── -->
+    <div class="section" id="sec-lista-entregados">
+      <div class="sec-title">Clientes Entregados</div>
+      <div class="card" style="padding:.5rem;">
+        <div class="hdr-row" style="padding:.8rem .6rem .4rem;">
+          <div class="card-title" style="margin:0">Expedientes entregados</div>
+          <button class="btn-new" onclick="goSec('nuevo-cliente')">+ Nuevo</button>
+        </div>
+        <div class="buscador-box">
+          <span class="buscador-ic">🔍</span>
+          <input type="text" id="buscar-entregado" placeholder="Buscar por folio o nombre..." oninput="filtrarClientesEntregados()">
+          <span class="buscador-clear" id="buscar-entregado-clear" onclick="limpiarBuscarClienteEntregado()">✕</span>
+        </div>
+        <div class="buscador-count" id="buscar-entregado-count"></div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr>
+              <th>Fecha</th>
+              <th>Contrato</th>
+              <th>Nombre</th>
+              <th>Celular</th>
+              <th>Teléfono</th>
+              <th>Correo</th>
+              <th>Domicilio</th>
+              <th>Costo</th>
+              <th>Sist. Pago</th>
+              <th>Plazo</th>
+              <th>Tipo</th>
+              <th>Elaboración</th>
+              <th>Modelo</th>
+              <th>Color</th>
+              <th>Talla</th>
+              <th>Paquete</th>
+              <th>Entrega</th>
+              <th>F. Entrega Real</th>
+              <th>Anticipo</th>
+              <th>F. Pago</th>
+              <th>F. Vencimiento</th>
+              <th>Estatus</th>
+              <th>Adicionales</th>
+              <th>Tipo de proceso</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="entregados-tbody">
+              <tr><td colspan="25" style="color:#AAA;padding:1.5rem;text-align:center;">Sin clientes entregados aún.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1253,7 +1319,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <!-- ── PROCESO DE ELABORACIÓN ── -->
     <!-- ── PROCESO PEDIDO (Ajustes) ── -->
     <div class="section" id="sec-progreso-pedido">
-      <div class="sec-title">Proceso de Pedido</div>
+      <div class="sec-title">Compra a proveedor</div>
       <div class="card" style="padding:.8rem 1rem">
         <div class="proceso-header">
           <div class="card-title" style="margin:0">Registro de ajustes</div>
@@ -1299,7 +1365,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
 
     <!-- ── PROCESO DISEÑO (Elaboración propia) ── -->
     <div class="section" id="sec-progreso-diseno">
-      <div class="sec-title">Proceso de Diseño</div>
+      <div class="sec-title">Confección en la boutique</div>
       <div class="card" style="padding:.8rem 1rem">
         <div class="proceso-header">
           <div class="card-title" style="margin:0">Elaboración sobre diseño / pedido</div>
@@ -1970,7 +2036,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-//if(location.hostname==="localhost"||location.hostname==="127.0.0.1"){auth.useEmulator("http://localhost:9099");db.settings({host:"localhost:8080",ssl:false});console.log("🔧 Modo emulador activo");}
+if(location.hostname==="localhost"||location.hostname==="127.0.0.1"){auth.useEmulator("http://localhost:9099");db.settings({host:"localhost:8080",ssl:false});console.log("🔧 Modo emulador activo");}
 
 // Instancia secundaria de Firebase, SOLO para verificar credenciales de un
 // segundo admin (modal de autorización de supervisor) sin cerrar la sesión
@@ -2402,7 +2468,8 @@ function goSec(id){
     refrescarInventarioDesdeServidor().then(()=>buscarModeloInventario(""));
   }
   if(id==="inv-nuevo"){limpiarFormInv();}
-  if(id==="lista-clientes"){renderClientes();}
+  if(id==="lista-clientes"){renderClientes(null,"activos");}
+  if(id==="lista-entregados"){renderClientes(null,"entregados");}
   if(id==="nuevo-cliente"){limpiarFormularioCliente();}
   if(id==="mensajeria-recordatorios"){waMostrarRecordatorios();waRefrescarBadge(false);}
   if(id==="mensajeria-morosas"){waMostrarMorosas();waRefrescarBadge(false);}
@@ -2430,6 +2497,8 @@ function limpiarFormularioCliente(){
   // Elaboración e imagen vuelven a su default
   const elab=document.getElementById("c-elab");
   if(elab) elab.selectedIndex=0;
+  document.querySelectorAll('input[name="c-origen"]').forEach(r=>{ r.checked = false; });
+  toggleOrigenVestido();
   const imagen=document.getElementById("c-imagen");
   if(imagen) imagen.selectedIndex=0;
   // Limpiar y ocultar campo cuenta anticipo
@@ -2490,6 +2559,16 @@ function initColorPicker(){
 function onColorChange(val){
   selectedColor=val;
   document.getElementById("color-preview-box").style.background=val;
+}
+function toggleOrigenVestido(){
+  const radio = document.querySelector('input[name="c-origen"]:checked');
+  const fi = document.getElementById("fi-estatus-pedido");
+  if(!fi) return;
+  if(!radio){
+    fi.style.display = "none";
+    return;
+  }
+  fi.style.display = radio.value === "Sobre diseño" ? "none" : "block";
 }
 function onColorNameInput(val){}
 function onColorChange2(val){
@@ -2804,8 +2883,14 @@ async function saveCliente(){
   const btnSave=document.getElementById("btn-guardar-cliente");
   msg.textContent="";
   if(!nombre){msg.textContent="El nombre es obligatorio.";return;}
-  const elabVal=document.getElementById("c-elab").value;
-  if(!elabVal){msg.textContent="La elaboración del vestido es un campo obligatorio.";return;}
+  const origenRadio = document.querySelector('input[name="c-origen"]:checked');
+  if(!origenRadio){
+    msg.textContent="Debes elegir cómo se consigue este vestido: Compra a proveedor o Confección en la boutique.";
+    return;
+  }
+  const origenVal = origenRadio.value;
+  const estatusVal = origenVal === "Sobre diseño" ? "Pedido Realizado" : document.getElementById("c-elab").value;
+  if(origenVal === "Sobre pedido" && !estatusVal){msg.textContent="El estatus del pedido es un campo obligatorio.";return;}
   const colorHex=document.getElementById("color-picker").value;
   const colorName=document.getElementById("c-color-name").value.trim()||colorHex;
   const cliente={
@@ -2822,7 +2907,7 @@ async function saveCliente(){
     modelo:document.getElementById("c-modelo").value.trim(),
     talla:document.getElementById("c-talla").value.trim(),
     color:{hex:colorHex,nombre:colorName},
-    elaboracion:document.getElementById("c-elab").value,
+    elaboracion:origenVal,
     medidas:{busto:document.getElementById("m-busto").value,cintura:document.getElementById("m-cintura").value,cadera:document.getElementById("m-cadera").value,copa:document.getElementById("m-copa").value,largo:document.getElementById("m-largo").value},
     paquete:getPkgData(),
     precioPaquete:document.getElementById("c-precio-paquete").value,
@@ -2840,7 +2925,7 @@ async function saveCliente(){
     refAnticipo:document.getElementById("c-ref-anticipo").value.trim(),
     entrega:document.getElementById("c-entrega").value,
     observaciones:document.getElementById("c-obs").value.trim(),
-    estatus:document.getElementById("c-elab").value,
+    estatus:estatusVal,
     imagen:document.getElementById("c-imagen").value,
     articuloId:window._qrArticuloActual||null,
     vestido2: document.getElementById("bloque-vestido2").style.display!=="none" && document.getElementById("c-modelo2").value.trim()
@@ -2858,6 +2943,15 @@ async function saveCliente(){
     creadoPor:currentUser.user,
     creadoEn:new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"})
   };
+  // Si el usuario eligió "Entregado" en Elaboración, confirmar antes de guardar
+  if(cliente.estatus === "Entregado"){
+    const advertencias = await calcularAdvertenciasEntrega(cliente);
+    const ok = await confirmarEntregaPopup(cliente.nombre, advertencias);
+    if(!ok){
+      cliente.elaboracion = "Recibido";
+      cliente.estatus = "Recibido";
+    }
+  }
   try{
     if(btnSave){btnSave.disabled=true;btnSave.innerHTML='<span class="spinner"></span>Generando folio...';}
     await new Promise(r=>setTimeout(r,0));
@@ -2868,6 +2962,11 @@ async function saveCliente(){
     cliente.folio=String(maxFolio+1).padStart(4,"0");
     await saveUnCliente(cliente);
     allClientes.push(cliente);
+    // Si quedó como Entregado, aplicar proceso completo (fecha real + descuento de inventario)
+    if(cliente.estatus === "Entregado"){
+      await aplicarEntregaCompleta(cliente);
+      await saveUnCliente(cliente);
+    }
     await sincronizarAccesoriosCliente(cliente);
     // Si este cliente viene de "Convertir a cliente", AHORA sí se cierra el
     // vínculo — nunca antes. Si esto falla, el cliente ya quedó guardado de
@@ -2885,7 +2984,7 @@ async function saveCliente(){
     }
     toast("Cliente guardado ✓ — Folio "+cliente.folio);
     if(btnSave){btnSave.disabled=false;btnSave.innerHTML='💾 Guardar cliente';}
-    renderClientes();
+    refrescarListasClientes();
     goSec("lista-clientes");
   }catch(e){
     console.error("saveCliente error:",e);
@@ -2904,7 +3003,7 @@ async function eliminarCliente(id, nombre){
     const cliente = allClientes.find(c=>c.id===id);
     if(cliente) await eliminarClienteFS(cliente);
     allClientes = allClientes.filter(c=>c.id!==id);
-    renderClientes();
+    refrescarListasClientes();
     toast("Cliente eliminado ✓");
   }catch(e){console.error(e);toast("Error al eliminar","err");}
 }
@@ -2925,7 +3024,15 @@ function abrirEditarCliente(id){
   document.getElementById("edit-correo").value       = c.correo||"";
   document.getElementById("edit-domicilio").value    = c.domicilio||"";
   document.getElementById("edit-tipo").value         = c.tipo||"";
-  document.getElementById("edit-elab").value         = c.elaboracion||"Sobre pedido";
+  document.querySelectorAll('input[name="edit-origen"]').forEach(r=>{ r.checked = false; });
+  if(c.elaboracion === "Sobre pedido"){
+    const r = document.querySelector('input[name="edit-origen"][value="Sobre pedido"]');
+    if(r) r.checked = true;
+  } else if(c.elaboracion === "Sobre diseño"){
+    const r = document.querySelector('input[name="edit-origen"][value="Sobre diseño"]');
+    if(r) r.checked = true;
+  }
+  editToggleOrigenVestido();
   document.getElementById("edit-marca").value        = c.marca||"";
   document.getElementById("edit-modelo").value       = c.modelo||"";
   document.getElementById("edit-talla").value        = c.talla||"";
@@ -3296,6 +3403,16 @@ function editToggleParcialidades(){
   const v = document.getElementById("edit-sispago").value;
   document.getElementById("edit-fi-parcialidades").style.display = v==="En parcialidades"?"block":"none";
 }
+function editToggleOrigenVestido(){
+  const radio = document.querySelector('input[name="edit-origen"]:checked');
+  const fi = document.getElementById("edit-fi-estatus");
+  if(!fi) return;
+  if(!radio){
+    fi.style.display = "none";
+    return;
+  }
+  fi.style.display = radio.value === "Sobre diseño" ? "none" : "block";
+}
 
 async function guardarEdicionCliente(){
   const msg = document.getElementById("edit-cliente-msg");
@@ -3304,6 +3421,13 @@ async function guardarEdicionCliente(){
 
   const nombre = document.getElementById("edit-nombre").value.trim();
   if(!nombre){msg.textContent="El nombre es obligatorio.";return;}
+
+  const editOrigenRadio = document.querySelector('input[name="edit-origen"]:checked');
+  if(!editOrigenRadio){
+    msg.textContent="Debes elegir cómo se consigue este vestido: Compra a proveedor o Confección en la boutique.";
+    return;
+  }
+  const editOrigenVal = editOrigenRadio.value;
 
   const folioRaw = document.getElementById("edit-folio").value.trim();
   if(!folioRaw){msg.textContent="El folio es obligatorio.";return;}
@@ -3326,6 +3450,18 @@ async function guardarEdicionCliente(){
     const original = allClientes[idx];
     const folioAnterior = original.folio;
     const hex = document.getElementById("edit-color-picker").value;
+
+    let estatusFinal;
+    if(editOrigenVal === "Sobre diseño"){
+      estatusFinal = (original.estatus === "Entregado") ? "Entregado" : "Pedido Realizado";
+    } else {
+      estatusFinal = document.getElementById("edit-estatus").value;
+      if(!estatusFinal){
+        msg.textContent="El estatus del pedido es obligatorio para Compra a proveedor.";
+        btn.disabled=false; btn.innerHTML='💾 Guardar cambios';
+        return;
+      }
+    }
 
     let contratoUrl = original.contratoUrl || "";
     if(window._contratoEditBase64){
@@ -3352,7 +3488,7 @@ async function guardarEdicionCliente(){
       correo:      document.getElementById("edit-correo").value.trim(),
       domicilio:   document.getElementById("edit-domicilio").value.trim(),
       tipo:        document.getElementById("edit-tipo").value,
-      elaboracion: document.getElementById("edit-elab").value,
+      elaboracion: editOrigenVal,
       marca:       document.getElementById("edit-marca").value.trim(),
       modelo:      document.getElementById("edit-modelo").value.trim(),
       talla:       document.getElementById("edit-talla").value.trim(),
@@ -3393,13 +3529,33 @@ async function guardarEdicionCliente(){
       parcialidades: document.getElementById("edit-parcialidades").value||30,
       fechaLimite:   document.getElementById("edit-fecha-limite").value,
       entrega:       document.getElementById("edit-entrega").value,
-      estatus:       document.getElementById("edit-estatus").value,
+      estatus:       estatusFinal,
       observaciones: document.getElementById("edit-obs").value.trim(),
       editadoPor:    currentUser.user,
       editadoEn:     new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"})
     };
 
-    await saveUnCliente(allClientes[idx]);
+    // Detectar si el estatus pasó a "Entregado" (o salió de él)
+    const estatusNuevo = allClientes[idx].estatus;
+    const estatusViejo = original.estatus;
+    if(estatusNuevo === "Entregado" && estatusViejo !== "Entregado"){
+      const advertencias = await calcularAdvertenciasEntrega(allClientes[idx]);
+      const ok = await confirmarEntregaPopup(allClientes[idx].nombre, advertencias);
+      if(!ok){
+        btn.disabled=false; btn.innerHTML='💾 Guardar cambios';
+        return; // no se guarda nada, ni estatus ni nada más
+      }
+      await saveUnCliente(allClientes[idx]);
+      await aplicarEntregaCompleta(allClientes[idx]);
+      await saveUnCliente(allClientes[idx]);
+    } else if(estatusNuevo !== "Entregado" && estatusViejo === "Entregado"){
+      // Salió de "Entregado" — devolver stock
+      await saveUnCliente(allClientes[idx]);
+      await desmarcarEntregaCliente(allClientes[idx]);
+      await saveUnCliente(allClientes[idx]);
+    } else {
+      await saveUnCliente(allClientes[idx]);
+    }
     if(folioAnterior!==folioNormalizado){
       // El folio cambió → el ID del documento en Firestore también debe
       // cambiar. Se guarda primero con el folio nuevo (arriba) y luego se
@@ -3410,7 +3566,7 @@ async function guardarEdicionCliente(){
     toast("Cliente actualizado ✓ — Folio "+folioNormalizado);
     window._contratoEditBase64 = null;
     cerrarEditarCliente();
-    renderClientes();
+    refrescarListasClientes();
   }catch(e){
     console.error("guardarEdicionCliente error:",e);
     msg.textContent="Error al guardar. Verifica tu conexión.";
@@ -3453,6 +3609,137 @@ document.addEventListener("click", function(e){
   }
 });
 
+// ══ FUNCIONES COMPARTIDAS DE ENTREGA ══
+// Se llaman desde TODOS los caminos que marcan/desmarcan "Entregado":
+// dropdown de Elaboración, dropdown de Pedidos, Editar cliente, y los
+// toggles de Proceso Pedido y Proceso Diseño. Así el trabajo es idéntico
+// desde cualquier lugar.
+
+async function aplicarEntregaCompleta(cliente){
+  if(!cliente.progreso) cliente.progreso = {};
+  if(!cliente.progreso.pedido) cliente.progreso.pedido = {};
+  cliente.estatus = "Entregado";
+  cliente.fechaEntregaReal = fechaLocalISO();
+  cliente.progreso.pedido.entregado = true;
+  let inv = [];
+  try{ inv = await loadInventarioFS(); }catch(e){ inv = window._invData || []; }
+  const articulosTocados = [];
+  if(cliente.articuloId && !cliente.progreso.pedido.entregado_descontado){
+    const artIdx = inv.findIndex(a=>a.id===cliente.articuloId);
+    if(artIdx>-1){
+      inv[artIdx].cantidad = Math.max(0, (Number(inv[artIdx].cantidad)||0) - 1);
+      articulosTocados.push(inv[artIdx]);
+    }
+    cliente.progreso.pedido.entregado_descontado = true;
+  }
+  if(cliente.vestido2 && cliente.vestido2.articuloId && !cliente.progreso.pedido.entregado_descontado2){
+    const artIdx2 = inv.findIndex(a=>a.id===cliente.vestido2.articuloId);
+    if(artIdx2>-1){
+      inv[artIdx2].cantidad = Math.max(0, (Number(inv[artIdx2].cantidad)||0) - 1);
+      articulosTocados.push(inv[artIdx2]);
+    }
+    cliente.progreso.pedido.entregado_descontado2 = true;
+  }
+  if(articulosTocados.length){
+    await Promise.all(articulosTocados.map(a=>saveUnArticulo(a)));
+    window._invData = inv;
+  }
+  return articulosTocados.length;
+}
+
+async function desmarcarEntregaCliente(cliente){
+  if(!cliente.progreso) cliente.progreso = {};
+  if(!cliente.progreso.pedido) cliente.progreso.pedido = {};
+  cliente.fechaEntregaReal = null;
+  cliente.progreso.pedido.entregado = false;
+  let inv = [];
+  try{ inv = await loadInventarioFS(); }catch(e){ inv = window._invData || []; }
+  const articulosTocados = [];
+  if(cliente.articuloId && cliente.progreso.pedido.entregado_descontado){
+    const artIdx = inv.findIndex(a=>a.id===cliente.articuloId);
+    if(artIdx>-1){
+      inv[artIdx].cantidad = (Number(inv[artIdx].cantidad)||0) + 1;
+      articulosTocados.push(inv[artIdx]);
+    }
+    cliente.progreso.pedido.entregado_descontado = false;
+  }
+  if(cliente.vestido2 && cliente.vestido2.articuloId && cliente.progreso.pedido.entregado_descontado2){
+    const artIdx2 = inv.findIndex(a=>a.id===cliente.vestido2.articuloId);
+    if(artIdx2>-1){
+      inv[artIdx2].cantidad = (Number(inv[artIdx2].cantidad)||0) + 1;
+      articulosTocados.push(inv[artIdx2]);
+    }
+    cliente.progreso.pedido.entregado_descontado2 = false;
+  }
+  if(articulosTocados.length){
+    await Promise.all(articulosTocados.map(a=>saveUnArticulo(a)));
+    window._invData = inv;
+  }
+  return articulosTocados.length;
+}
+
+function confirmarEntregaPopup(nombreCliente, advertencias){
+  return new Promise((resolve)=>{
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(30,18,8,.6);backdrop-filter:blur(5px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem";
+    const modal = document.createElement("div");
+    modal.style.cssText = "background:#FFF;border-radius:6px;padding:1.8rem;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(30,18,8,.3);font-family:'Lato',sans-serif";
+    const bloqueAviso = (advertencias && advertencias.length)
+      ? `<div style="background:#FEF3CD;border-left:3px solid #856404;border-radius:4px;padding:.8rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#856404;line-height:1.6">
+          <strong>⚠️ Atención:</strong><br>${advertencias.join("<br>")}
+        </div>`
+      : "";
+    modal.innerHTML = `
+      <div style="font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:#7A4F2A;margin-bottom:.6rem">Marcar como Entregado</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:#3A2A1A;margin-bottom:1rem">${nombreCliente||""}</div>
+      ${bloqueAviso}
+      <div style="background:#F9F5EF;border-radius:4px;padding:.9rem 1rem;margin-bottom:1.2rem;font-size:.85rem;color:#3A2A1A;line-height:1.7">
+        Se aplicará el proceso completo:<br><br>
+        ✓ Se guardará <strong>la fecha de hoy</strong> como fecha de entrega<br>
+        ✓ Se restará <strong>1 del stock</strong> del vestido en el inventario<br>
+        <span style="color:#888;font-size:.78rem">(si ya estaba descontado, no se resta otra vez)</span>
+      </div>
+      <div style="display:flex;gap:.6rem;justify-content:flex-end">
+        <button id="popup-entrega-cancelar" style="padding:.7rem 1.4rem;background:transparent;color:#7A4F2A;border:1px solid #C9A84C;border-radius:3px;font-family:'Lato',sans-serif;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;cursor:pointer">Cancelar</button>
+        <button id="popup-entrega-aceptar" style="padding:.7rem 1.4rem;background:linear-gradient(135deg,#7A4F2A,#C9A84C);color:#FFF8EC;border:none;border-radius:3px;font-family:'Lato',sans-serif;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;cursor:pointer">Sí, marcar como Entregado</button>
+      </div>`;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    document.getElementById("popup-entrega-aceptar").onclick = ()=>{ overlay.remove(); resolve(true); };
+    document.getElementById("popup-entrega-cancelar").onclick = ()=>{ overlay.remove(); resolve(false); };
+  });
+}
+
+// Calcula advertencias antes de confirmar entrega: stock en 0, artículos no vinculados, etc.
+async function calcularAdvertenciasEntrega(cliente){
+  const avisos = [];
+  let inv = [];
+  try{ inv = await loadInventarioFS(); }catch(e){ inv = window._invData || []; }
+  if(cliente.articuloId && !cliente.progreso?.pedido?.entregado_descontado){
+    const art = inv.find(a=>a.id===cliente.articuloId);
+    if(!art){
+      avisos.push("El vestido 1 tiene un artículo vinculado que ya no existe en el inventario.");
+    } else if((Number(art.cantidad)||0) <= 0){
+      avisos.push(`El vestido 1 (<strong>${art.modelo||"sin modelo"}</strong>) tiene stock en <strong>0</strong>. Aun así se descontará (quedará en 0).`);
+    }
+  }
+  if(cliente.articuloId && cliente.progreso?.pedido?.entregado_descontado){
+    avisos.push("El vestido 1 ya había sido descontado del inventario antes. No se descontará de nuevo.");
+  }
+  if(cliente.vestido2 && cliente.vestido2.articuloId && !cliente.progreso?.pedido?.entregado_descontado2){
+    const art2 = inv.find(a=>a.id===cliente.vestido2.articuloId);
+    if(!art2){
+      avisos.push("El vestido 2 tiene un artículo vinculado que ya no existe en el inventario.");
+    } else if((Number(art2.cantidad)||0) <= 0){
+      avisos.push(`El vestido 2 (<strong>${art2.modelo||"sin modelo"}</strong>) tiene stock en <strong>0</strong>. Aun así se descontará (quedará en 0).`);
+    }
+  }
+  if(cliente.vestido2 && cliente.vestido2.articuloId && cliente.progreso?.pedido?.entregado_descontado2){
+    avisos.push("El vestido 2 ya había sido descontado del inventario antes. No se descontará de nuevo.");
+  }
+  return avisos;
+}
+
 async function repararEstatusAtascado(clienteId){
   if(!confirm("Esto regresará este cliente a 'Pedido Realizado' Y reiniciará por completo el interruptor de Entrega (para que quede sin marcar), para que puedas marcar la Entrega real desde cero. Si el inventario ya se había descontado, se le regresa el stock. ¿Continuar?")) return;
   try{
@@ -3477,6 +3764,7 @@ async function repararEstatusAtascado(clienteId){
     }
 
     cli.estatus = "Pedido Realizado";
+    cli.fechaEntregaReal = null;
     cli.progreso.pedido.entregado = false;
     cli.progreso.pedido.entregado_descontado = false;
     cli.progreso.pedido.entregado_descontado2 = false;
@@ -3486,39 +3774,48 @@ async function repararEstatusAtascado(clienteId){
       window._invData = inv;
     }
     toast("Reparado por completo ✓ — el botón de Entrega ya está sin marcar"+(articulosTocados.length?" y el stock se restauró":""));
-    renderClientes();
+    refrescarListasClientes();
     renderInventario();
   }catch(e){ console.error(e); toast("Error al reparar","err"); }
 }
+function renderClientes(lista, modo){
+  modo = modo || "activos";
+  const esEntregados = modo === "entregados";
+  const tbody = document.getElementById(esEntregados ? "entregados-tbody" : "clientes-tbody");
+  const colSpan = esEntregados ? 25 : 24;
+  const countId = esEntregados ? "buscar-entregado-count" : "buscar-cliente-count";
+  const searchInputId = esEntregados ? "buscar-entregado" : "buscar-cliente";
+  const estatusFiltroId = esEntregados ? null : "filtro-estatus-cliente";
 
-function renderClientes(lista){
-  const tbody=document.getElementById("clientes-tbody");
-  const data=[...(lista||allClientes)].sort((a,b)=>{
+  const baseAll = allClientes.filter(c => esEntregados ? c.estatus === "Entregado" : c.estatus !== "Entregado");
+  const baseData = (lista || baseAll).filter(c => esEntregados ? c.estatus === "Entregado" : c.estatus !== "Entregado");
+  const data = [...baseData].sort((a,b)=>{
     const fa=parseInt(a.folio,10);
     const fb=parseInt(b.folio,10);
     return (isNaN(fa)?Infinity:fa)-(isNaN(fb)?Infinity:fb);
   });
-  if(!allClientes.length){
-    tbody.innerHTML='<tr><td colspan="24" style="color:#AAA;padding:1.5rem;text-align:center;">Sin clientes registrados aún.</td></tr>';return;
+  if(!baseAll.length){
+    tbody.innerHTML=`<tr><td colspan="${colSpan}" style="color:#AAA;padding:1.5rem;text-align:center;">${esEntregados ? "Sin clientes entregados aún." : "Sin clientes activos registrados aún."}</td></tr>`;
+    const cEl=document.getElementById(countId); if(cEl) cEl.textContent="";
+    return;
   }
   if(!data.length){
-    tbody.innerHTML='<tr><td colspan="24" style="color:#AAA;padding:1.5rem;text-align:center;">No se encontraron clientes con esa búsqueda.</td></tr>';return;
+    tbody.innerHTML=`<tr><td colspan="${colSpan}" style="color:#AAA;padding:1.5rem;text-align:center;">No se encontraron clientes con esa búsqueda.</td></tr>`;
+    const cEl=document.getElementById(countId); if(cEl) cEl.textContent="";
+    return;
   }
   const tipos={"xv":"Quinceañera","novia":"Novia","solo":"Solo vestido","custom":"Personalizado","":" — "};
   const pkgNombre={"xv":"Paquete XV","novia":"Paquete Novia","solo":"Solo vestido","custom":"Personalizado","":" — "};
   tbody.innerHTML=data.map(c=>{
-    // Calcular costo total
     const precio=Number(c.precio||0);
     const paquete=Number(c.precioPaquete||0);
     const extras=(c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
     const total=precio+paquete+extras;
-    // Adicionales como lista
     const adicionales=(c.paquete?.adicionales||[]).map(a=>a.nombre).join(", ")||"—";
-    // Fecha formateada
     const fContrato=c.fecha?new Date(c.fecha+"T12:00:00").toLocaleDateString("es-MX"):"—";
     const fEntrega=c.entrega?new Date(c.entrega+"T12:00:00").toLocaleDateString("es-MX"):"—";
     const fVence=c.fechaLimite?new Date(c.fechaLimite+"T12:00:00").toLocaleDateString("es-MX"):"—";
-    // Alerta vencimiento
+    const fEntregaReal=c.fechaEntregaReal?new Date(c.fechaEntregaReal+"T12:00:00").toLocaleDateString("es-MX"):"—";
     let venceClass="";
     if(c.fechaLimite){
       const hoy=new Date();hoy.setHours(0,0,0,0);
@@ -3527,6 +3824,13 @@ function renderClientes(lista){
       if(dias<0) venceClass="color:var(--rojo);font-weight:500";
       else if(dias<=7) venceClass="color:#856404;font-weight:500";
     }
+    const colorHex = c.color?.hex || "#CCC";
+    const filaEntregaReal = esEntregados
+      ? `<td style="font-size:.74rem;white-space:nowrap">${fEntregaReal}</td>`
+      : "";
+    const botonReparar = (!esEntregados && ((c.estatus==="Entregado") !== !!(c.progreso?.pedido?.entregado)))
+      ? `<br><button onclick="repararEstatusAtascado('${c.id}')" style="margin-top:.2rem;background:none;border:1px solid var(--rojo);color:var(--rojo);border-radius:10px;padding:.1rem .5rem;font-size:.62rem;cursor:pointer;white-space:nowrap" title="El estatus y el botón real de Entrega no coinciden en este cliente">⚠️ Reparar</button>`
+      : "";
     return `<tr>
       <td style="font-size:.74rem;white-space:nowrap">${fContrato}</td>
       <td style="font-size:.74rem;color:#888">${c.esNotaSencilla?"Sin folio":(c.folio||"—")}</td>
@@ -3541,18 +3845,17 @@ function renderClientes(lista){
       <td style="font-size:.76rem;white-space:nowrap">${c.esNotaSencilla?"Venta directa":(tipos[c.tipo]||c.tipo||"—")}</td>
       <td style="font-size:.74rem">${c.elaboracion||"—"}</td>
       <td style="font-size:.76rem">${c.modelo||"—"}</td>
-      <td style="white-space:nowrap"><span class="color-dot" style="background:${c.color?.hex||"#CCC"}"></span><span style="font-size:.74rem">${c.color?.nombre||"—"}</span></td>
+      <td style="white-space:nowrap"><span class="color-dot" style="background:${colorHex}"></span><span style="font-size:.74rem">${c.color?.nombre||"—"}</span></td>
       <td style="font-size:.76rem;text-align:center">${c.talla||"—"}</td>
       <td style="font-size:.74rem">${pkgNombre[c.paquete?.tipo]||"—"}</td>
       <td style="font-size:.74rem;white-space:nowrap">${fEntrega}</td>
+      ${filaEntregaReal}
       <td style="font-size:.76rem;white-space:nowrap;color:var(--verde)">$${Number(c.anticipo||0).toLocaleString("es-MX")}</td>
       <td style="font-size:.74rem">${c.fpago||"—"}</td>
       <td style="font-size:.74rem;white-space:nowrap;${venceClass}">${fVence}</td>
-      <td><span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}" style="white-space:nowrap">${c.estatus||"—"}</span>
-        ${((c.estatus==="Entregado") !== !!(c.progreso?.pedido?.entregado)) ? `<br><button onclick="repararEstatusAtascado('${c.id}')" style="margin-top:.2rem;background:none;border:1px solid var(--rojo);color:var(--rojo);border-radius:10px;padding:.1rem .5rem;font-size:.62rem;cursor:pointer;white-space:nowrap" title="El estatus y el botón real de Entrega no coinciden en este cliente — toca para reiniciar ambos y marcar la entrega correctamente">⚠️ Reparar</button>` : ""}
-      </td>
+      <td><span class="status-badge ${c.estatus==="Entregado"?"s-entregado":c.estatus==="Recibido"?"s-recibido":"s-pedido"}" style="white-space:nowrap">${c.estatus||"—"}</span>${botonReparar}</td>
       <td style="font-size:.72rem;max-width:160px">${adicionales}</td>
-      <td style="font-size:.74rem">${c.elaboracion==="Sobre pedido"?"✓":"—"}</td>
+      <td style="font-size:.74rem">${c.elaboracion==="Sobre diseño"?"Confección en la boutique":"Compra a proveedor"}</td>
       <td style="position:relative">
         ${c.esNotaSencilla?
           `<button class="ic-btn menu-toggle" onclick="toggleClienteMenu('${c.id}',this)" title="Más opciones">⋮</button>
@@ -3569,18 +3872,30 @@ function renderClientes(lista){
           ${c.contratoUrl?`<button onclick="window.open('${c.contratoUrl}','_blank');cerrarClienteMenus()">📎 Documento firmado</button>`:""}
           <button onclick="verNotaVenta('${c.id}');cerrarClienteMenus()">🧾 Nota de venta</button>
           <button onclick="verFormatoEntrega('${c.id}');cerrarClienteMenus()">📦 Formato de entrega</button>
+          ${esEntregados && c.estatus==="Entregado" ? `<button onclick="deshacerEntregaDesdeMenu('${c.id}');cerrarClienteMenus()">↩️ Deshacer entrega</button>` : ""}
           ${currentUser.role==="admin"?`<button onclick="abrirEditarCliente('${c.id}');cerrarClienteMenus()">✏️ Editar cliente</button><button onclick="eliminarCliente('${c.id}','${c.nombre}');cerrarClienteMenus()" style="color:var(--rojo)">🗑️ Eliminar cliente</button>`:""}
         </div>`
         }
       </td>
     </tr>`;
   }).join("");
-  const cEl=document.getElementById("buscar-cliente-count");
+  const cEl=document.getElementById(countId);
   if(cEl){
-    const q=(document.getElementById("buscar-cliente")?.value||"").trim();
-    const estatusActivo=(document.getElementById("filtro-estatus-cliente")?.value||"");
-    cEl.textContent=(q||estatusActivo)?`${data.length} de ${allClientes.length} clientes`:"";
+    const q=(document.getElementById(searchInputId)?.value||"").trim();
+    const estatusActivo= estatusFiltroId ? (document.getElementById(estatusFiltroId)?.value||"") : "";
+    if(q||estatusActivo){
+      cEl.textContent = esEntregados
+        ? `${data.length} de ${baseAll.length} entregados`
+        : `${data.length} de ${baseAll.length} clientes activos`;
+    } else {
+      cEl.textContent = "";
+    }
   }
+}
+
+function refrescarListasClientes(){
+  renderClientes(null,"activos");
+  renderClientes(null,"entregados");
 }
 function normTexto(s){
   return (s||"").toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
@@ -3591,16 +3906,40 @@ function filtrarClientes(){
   document.getElementById("buscar-cliente-clear").style.display=q?"block":"none";
   const estatusSel=document.getElementById("filtro-estatus-cliente");
   const estatusFiltro=estatusSel?estatusSel.value:"";
-  if(!q && !estatusFiltro){renderClientes();return;}
-  let filtrados=allClientes;
+  if(!q && !estatusFiltro){renderClientes(null,"activos");return;}
+  let filtrados=allClientes.filter(c=>c.estatus!=="Entregado");
   if(q){
     filtrados=filtrados.filter(c=>normTexto(c.nombre).includes(q) || normTexto(c.folio).includes(q));
   }
   if(estatusFiltro){
     filtrados=filtrados.filter(c=>(c.estatus||"")===estatusFiltro);
   }
-  renderClientes(filtrados);
+  renderClientes(filtrados,"activos");
 }
+function limpiarBuscarCliente(){
+  const inp=document.getElementById("buscar-cliente");
+  inp.value="";
+  document.getElementById("buscar-cliente-clear").style.display="none";
+  renderClientes(null,"activos");
+  inp.focus();
+}
+function filtrarClientesEntregados(){
+  const inp=document.getElementById("buscar-entregado");
+  const q=normTexto(inp.value.trim());
+  document.getElementById("buscar-entregado-clear").style.display=q?"block":"none";
+  if(!q){renderClientes(null,"entregados");return;}
+  let filtrados=allClientes.filter(c=>c.estatus==="Entregado");
+  filtrados=filtrados.filter(c=>normTexto(c.nombre).includes(q) || normTexto(c.folio).includes(q));
+  renderClientes(filtrados,"entregados");
+}
+function limpiarBuscarClienteEntregado(){
+  const inp=document.getElementById("buscar-entregado");
+  inp.value="";
+  document.getElementById("buscar-entregado-clear").style.display="none";
+  renderClientes(null,"entregados");
+  inp.focus();
+}
+
 function limpiarBuscarCliente(){
   const inp=document.getElementById("buscar-cliente");
   inp.value="";
@@ -3608,6 +3947,98 @@ function limpiarBuscarCliente(){
   renderClientes();
   inp.focus();
 }
+// ══ POPUP DE ERROR DE FORMULARIO ══
+function mostrarErrorPopup(mensaje){
+  const overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(30,18,8,.6);backdrop-filter:blur(5px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem";
+  const modal = document.createElement("div");
+  modal.style.cssText = "background:#FFF;border-radius:6px;padding:2rem 1.8rem;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(30,18,8,.3);font-family:'Lato',sans-serif;text-align:center";
+  modal.innerHTML = `
+    <div style="font-size:2.4rem;margin-bottom:.8rem">⚠️</div>
+    <div style="font-size:1.1rem;color:#3A2A1A;line-height:1.6;margin-bottom:1.6rem">${mensaje}</div>
+    <button id="popup-error-cerrar" style="padding:.8rem 2.2rem;background:linear-gradient(135deg,#7A4F2A,#C9A84C);color:#FFF8EC;border:none;border-radius:3px;font-family:'Lato',sans-serif;font-size:.82rem;letter-spacing:.18em;text-transform:uppercase;cursor:pointer">Entendido</button>`;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  const cerrar = () => {
+    overlay.remove();
+    const nombre = document.getElementById("c-nombre");
+    if(nombre) nombre.focus();
+  };
+  document.getElementById("popup-error-cerrar").onclick = cerrar;
+  overlay.onclick = (e)=>{ if(e.target === overlay) cerrar(); };
+}
+
+// Vigila los dos mensajes de error del formulario y dispara el popup
+// automáticamente cada vez que se escribe un texto nuevo.
+// Se usa setInterval en vez de MutationObserver porque el modal de Editar
+// cliente está oculto por default y el observer no detectaba cambios ahí.
+(function vigilarMensajesError(){
+  const textos = { "cliente-msg":"", "edit-cliente-msg":"" };
+  setInterval(()=>{
+    Object.keys(textos).forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      const texto = (el.textContent || "").trim();
+      if(texto && texto !== textos[id]){
+        textos[id] = texto;
+        mostrarErrorPopup(texto);
+      } else if(!texto && textos[id]){
+        textos[id] = "";
+      }
+    });
+  }, 250);
+})();
+
+// ══ DESHACER ENTREGA (desde menú ⋮ en Lista de entregados) ══
+function confirmarDeshacerPopup(nombreCliente){
+  return new Promise((resolve)=>{
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(30,18,8,.6);backdrop-filter:blur(5px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem";
+    const modal = document.createElement("div");
+    modal.style.cssText = "background:#FFF;border-radius:6px;padding:1.8rem;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(30,18,8,.3);font-family:'Lato',sans-serif";
+    modal.innerHTML = `
+      <div style="font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:#7A4F2A;margin-bottom:.6rem">Deshacer entrega</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:#3A2A1A;margin-bottom:1rem">${nombreCliente||""}</div>
+      <div style="background:#FEF3CD;border-left:3px solid #856404;border-radius:4px;padding:.8rem 1rem;margin-bottom:1.2rem;font-size:.85rem;color:#856404;line-height:1.7">
+        Se aplicará lo siguiente:<br><br>
+        ✓ Se borrará la fecha real de entrega<br>
+        ✓ Se regresará <strong>1 al stock</strong> del vestido en el inventario<br>
+        <span style="color:#888;font-size:.78rem">(si no se había descontado, no se devuelve nada)</span>
+      </div>
+      <div style="display:flex;gap:.6rem;justify-content:flex-end">
+        <button id="popup-deshacer-cancelar" style="padding:.7rem 1.4rem;background:transparent;color:#7A4F2A;border:1px solid #C9A84C;border-radius:3px;font-family:'Lato',sans-serif;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;cursor:pointer">Cancelar</button>
+        <button id="popup-deshacer-aceptar" style="padding:.7rem 1.4rem;background:linear-gradient(135deg,#7A4F2A,#C9A84C);color:#FFF8EC;border:none;border-radius:3px;font-family:'Lato',sans-serif;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;cursor:pointer">Sí, deshacer entrega</button>
+      </div>`;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    document.getElementById("popup-deshacer-aceptar").onclick = ()=>{ overlay.remove(); resolve(true); };
+    document.getElementById("popup-deshacer-cancelar").onclick = ()=>{ overlay.remove(); resolve(false); };
+  });
+}
+
+async function deshacerEntregaDesdeMenu(clienteId){
+  const c = allClientes.find(x=>x.id===clienteId);
+  if(!c) return;
+  const ok = await confirmarDeshacerPopup(c.nombre);
+  if(!ok) return;
+  try{
+    allClientes = await loadClientesFS();
+    const idx = allClientes.findIndex(x=>x.id===clienteId);
+    if(idx<0){ toast("Cliente no encontrado","err"); return; }
+    const cli = allClientes[idx];
+    await desmarcarEntregaCliente(cli);
+    if(cli.elaboracion === "Sobre diseño"){
+      cli.estatus = "Pedido Realizado";
+    } else {
+      cli.estatus = "Recibido";
+    }
+    await saveUnCliente(cli);
+    toast("Entrega deshecha ✓");
+    refrescarListasClientes();
+    renderInventario();
+  }catch(e){ console.error(e); toast("Error al deshacer la entrega","err"); }
+}
+
 function verCliente(id){toast("Expediente completo · próxima fase 🎀","ok");}
 
 // ══ MI CUENTA ══
@@ -4545,7 +4976,7 @@ async function generarEImprimirNotaSencilla(folio){
     };
     await saveUnCliente(nuevoCliente);
     allClientes = await loadClientesFS();
-    renderClientes();
+    refrescarListasClientes();
   }catch(e){console.error("Error guardando folio",e);}
 
   // Ocultar formulario y mostrar solo impresión
@@ -4567,7 +4998,7 @@ const PASOS_PEDIDO = [
 function renderProceso(){
   const lista = document.getElementById("proceso-lista");
   if(!lista) return;
-  const activos = allClientes.filter(c => c.estatus !== "Entregado" && !c.esNotaSencilla);
+  const activos = allClientes.filter(c => c.estatus !== "Entregado" && !c.esNotaSencilla && c.elaboracion !== "Sobre diseño");
   if(!activos.length){
     lista.innerHTML='<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin pedidos activos.</p>';
     return;
@@ -4581,7 +5012,7 @@ function filtrarProceso(q){
   if(!lista) return;
   const txt = q.toLowerCase();
   const filtrados = allClientes.filter(c =>
-    c.estatus !== "Entregado" && !c.esNotaSencilla &&
+    c.estatus !== "Entregado" && !c.esNotaSencilla && c.elaboracion !== "Sobre diseño" &&
     (c.nombre.toLowerCase().includes(txt) || (c.folio||"").includes(txt))
   );
   if(!filtrados.length){
@@ -4675,7 +5106,20 @@ async function togglePasoPedido(clienteId, pasoId){
   if(!c.progreso) c.progreso={};
   if(!c.progreso.pedido) c.progreso.pedido={};
   c.progreso.pedido[pasoId] = !c.progreso.pedido[pasoId];
-  if(pasoId==="entregado" && c.progreso.pedido[pasoId]) c.estatus="Entregado";
+  if(pasoId==="entregado"){
+    if(c.progreso.pedido[pasoId]){
+      const advertencias = await calcularAdvertenciasEntrega(c);
+      const ok = await confirmarEntregaPopup(c.nombre, advertencias);
+      if(!ok){
+        c.progreso.pedido[pasoId] = false; // revertir el toggle visual
+        return;
+      }
+      c.estatus="Entregado";
+      c.fechaEntregaReal = fechaLocalISO();
+    } else {
+      c.fechaEntregaReal = null;
+    }
+  }
   try{
     const [clientesFS,inventarioFS]=await Promise.all([loadClientesFS(),loadInventarioFS()]);
     allClientes = clientesFS;
@@ -4683,7 +5127,14 @@ async function togglePasoPedido(clienteId, pasoId){
     let avisoInventario = "";
     if(idx>-1){
       allClientes[idx].progreso = c.progreso;
-      if(pasoId==="entregado" && c.progreso.pedido[pasoId]) allClientes[idx].estatus="Entregado";
+      if(pasoId==="entregado"){
+        if(c.progreso.pedido[pasoId]){
+          allClientes[idx].estatus="Entregado";
+          allClientes[idx].fechaEntregaReal = c.fechaEntregaReal;
+        } else {
+          allClientes[idx].fechaEntregaReal = null;
+        }
+      }
 
       // Descontar/revertir del inventario al marcar/desmarcar Entrega
       if(pasoId==="entregado"){
@@ -4740,7 +5191,7 @@ async function togglePasoPedido(clienteId, pasoId){
         await saveUnCliente(cli);
         await Promise.all(articulosTocados.map(a=>saveUnArticulo(a)));
         renderProceso();
-        renderClientes();
+        refrescarListasClientes();
         renderInventario();
         toast(entregando ? "Entrega marcada ✓"+avisoInventario : "Entrega desmarcada", avisoInventario?"err":"ok");
         return;
@@ -5101,7 +5552,7 @@ function renderDiseno(){
   const lista = document.getElementById("diseno-lista");
   if(!lista) return;
   const activos = allClientes.filter(c =>
-    (c.elaboracion==="Sobre diseño"||c.elaboracion==="Sobre pedido") &&
+    c.elaboracion==="Sobre diseño" &&
     c.estatus !== "Entregado"
   );
   if(!activos.length){
@@ -5117,7 +5568,7 @@ function filtrarDiseno(q){
   if(!lista) return;
   const txt = q.toLowerCase();
   const filtrados = allClientes.filter(c =>
-    (c.elaboracion==="Sobre diseño"||c.elaboracion==="Sobre pedido") &&
+    c.elaboracion==="Sobre diseño" &&
     c.estatus !== "Entregado" &&
     (c.nombre.toLowerCase().includes(txt)||(c.folio||"").includes(txt))
   );
@@ -5217,15 +5668,37 @@ async function togglePasoDiseno(clienteId, pasoId){
   if(!c.progreso) c.progreso={};
   if(!c.progreso.diseno) c.progreso.diseno={};
   c.progreso.diseno[pasoId] = !c.progreso.diseno[pasoId];
-  if(pasoId==="entregado" && c.progreso.diseno[pasoId]) c.estatus="Entregado";
+  const marcando = c.progreso.diseno[pasoId];
+  if(pasoId==="entregado"){
+    if(marcando){
+      const advertencias = await calcularAdvertenciasEntrega(c);
+      const ok = await confirmarEntregaPopup(c.nombre, advertencias);
+      if(!ok){
+        c.progreso.diseno[pasoId] = false;
+        return;
+      }
+      c.estatus = "Entregado";
+    } else {
+      c.estatus = "Recibido";
+    }
+  }
   try{
     allClientes = await loadClientesFS();
     const idx = allClientes.findIndex(x=>x.id===clienteId);
     if(idx>-1){
       allClientes[idx].progreso = c.progreso;
-      if(pasoId==="entregado" && c.progreso.diseno[pasoId]) allClientes[idx].estatus="Entregado";
+      allClientes[idx].estatus = c.estatus;
+      await saveUnCliente(allClientes[idx]);
+      if(pasoId==="entregado"){
+        if(marcando){
+          await aplicarEntregaCompleta(allClientes[idx]);
+          await saveUnCliente(allClientes[idx]);
+        } else {
+          await desmarcarEntregaCliente(allClientes[idx]);
+          await saveUnCliente(allClientes[idx]);
+        }
+      }
     }
-    await saveUnCliente(allClientes[idx]);
     renderDiseno();
   }catch(e){console.error(e);toast("Error al guardar","err");}
 }
@@ -7878,12 +8351,28 @@ async function cambiarEstatusPedido(clienteId, nuevoEstatus){
     allClientes = await loadClientesFS();
     const idx = allClientes.findIndex(x=>x.id===clienteId);
     if(idx===-1) return;
+    const estatusViejo = allClientes[idx].estatus;
     allClientes[idx].estatus = nuevoEstatus;
     allClientes[idx].editadoPor = currentUser.user;
     allClientes[idx].editadoEn = new Date().toLocaleString("es-MX",{timeZone:"America/Mexico_City"});
-    await saveUnCliente(allClientes[idx]);
+    if(nuevoEstatus === "Entregado" && estatusViejo !== "Entregado"){
+      const advertencias = await calcularAdvertenciasEntrega(allClientes[idx]);
+      const ok = await confirmarEntregaPopup(allClientes[idx].nombre, advertencias);
+      if(!ok){ renderPedidos(); return; } // no se aplicó nada
+      await saveUnCliente(allClientes[idx]);
+      await aplicarEntregaCompleta(allClientes[idx]);
+      await saveUnCliente(allClientes[idx]);
+    } else if(nuevoEstatus !== "Entregado" && estatusViejo === "Entregado"){
+      await saveUnCliente(allClientes[idx]);
+      await desmarcarEntregaCliente(allClientes[idx]);
+      await saveUnCliente(allClientes[idx]);
+    } else {
+      await saveUnCliente(allClientes[idx]);
+    }
     toast("Estatus actualizado ✓");
     renderPedidos();
+    refrescarListasClientes();
+    refrescarListasClientes();
   }catch(e){
     console.error(e);
     toast("Error al actualizar estatus","err");
@@ -8667,20 +9156,34 @@ async function waEnviarPrueba(){
     <div class="field"><label>Correo electrónico</label><input type="email" id="edit-correo" placeholder="correo@ejemplo.com"></div>
     <div class="field"><label>Domicilio</label><input type="text" id="edit-domicilio" placeholder="Calle, colonia, ciudad"></div>
     <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dorado-d);margin:.8rem 0 .5rem">Datos del vestido</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
-      <div class="field"><label>Tipo</label>
-        <select id="edit-tipo">
-          <option value="">Seleccionar...</option>
-          <option value="xv">Quinceañera</option>
-          <option value="novia">Novia</option>
-        </select>
+    <div class="field"><label>Tipo</label>
+      <select id="edit-tipo">
+        <option value="">Seleccionar...</option>
+        <option value="xv">Quinceañera</option>
+        <option value="novia">Novia</option>
+      </select>
+    </div>
+    <div class="field">
+      <label style="font-size:1rem;font-weight:700;color:var(--texto);margin-bottom:.6rem;display:block">¿Cómo se consigue este vestido? *</label>
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        <label style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;cursor:pointer">
+          <input type="radio" name="edit-origen" value="Sobre diseño" onchange="editToggleOrigenVestido()" style="accent-color:var(--dorado-d);width:16px;height:16px;cursor:pointer">
+          Confección en la boutique
+        </label>
+        <label style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;cursor:pointer">
+          <input type="radio" name="edit-origen" value="Sobre pedido" onchange="editToggleOrigenVestido()" style="accent-color:var(--dorado-d);width:16px;height:16px;cursor:pointer">
+          Compra a proveedor
+        </label>
       </div>
-      <div class="field"><label>Elaboración</label>
-        <select id="edit-elab">
-          <option value="Sobre pedido">Sobre pedido</option>
-          <option value="Sobre diseño">Sobre diseño</option>
-        </select>
-      </div>
+    </div>
+    <div class="field" id="edit-fi-estatus"><label>Estatus del pedido *</label>
+      <select id="edit-estatus">
+        <option value="Pedido Realizado">Pedido Realizado</option>
+        <option value="En Compra">En Compra</option>
+        <option value="En Tienda">En Tienda</option>
+        <option value="Recibido">Recibido</option>
+        <option value="Entregado" disabled title="Se marca automáticamente al presionar el botón de Entrega en Proceso Pedido">Entregado</option>
+      </select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
       <div class="field"><label>Marca</label><input type="text" id="edit-marca" placeholder="Ej: Morilee"></div>
@@ -8819,15 +9322,7 @@ async function waEnviarPrueba(){
       <div class="field"><label>Fecha de evento</label><input type="date" id="edit-entrega"></div>
     </div>
     <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dorado-d);margin:.8rem 0 .5rem">Otros</div>
-    <div class="field"><label>Estatus</label>
-      <select id="edit-estatus">
-        <option value="Pedido Realizado">Pedido Realizado</option>
-        <option value="En Compra">En Compra</option>
-        <option value="En Tienda">En Tienda</option>
-        <option value="Recibido">Recibido</option>
-        <option value="Entregado" disabled title="Se marca automáticamente al presionar el botón de Entrega en Proceso Pedido">Entregado</option>
-      </select>
-    </div>
+
     <div class="field"><label>Observaciones</label><textarea id="edit-obs" rows="3" style="width:100%;border:1px solid #E8DDD0;border-radius:3px;padding:.5rem;font-family:'Lato',sans-serif;font-size:.82rem;resize:vertical;outline:none" placeholder="Notas adicionales..."></textarea></div>
     <div class="field">
       <label style="font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--dorado-d);display:block;margin-bottom:.4rem">Contrato firmado</label>
