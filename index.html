@@ -567,7 +567,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Producción v63.0 · ModalClientasModificado</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Producción v65.0 · CancelarVestido</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -615,6 +615,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
         <button class="sub-item" onclick="goSec('nuevo-cliente')">➕ Nuevo cliente</button>
         <button class="sub-item" onclick="goSec('lista-clientes')">📋 Lista de clientes</button>
         <button class="sub-item" onclick="goSec('lista-entregados')">✅ Clientes entregados</button>
+        <button class="sub-item" onclick="goSec('lista-cancelados')">❌ Clientes cancelados</button>
       </div>
     </div>
 
@@ -1040,6 +1041,47 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
             </tr></thead>
             <tbody id="entregados-tbody">
               <tr><td colspan="25" style="color:#AAA;padding:1.5rem;text-align:center;">Sin clientes entregados aún.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CLIENTES CANCELADOS ── -->
+    <div class="section" id="sec-lista-cancelados">
+      <div class="sec-title">Clientes Cancelados</div>
+      <div class="card" style="padding:.5rem;">
+        <div class="hdr-row" style="padding:.8rem .6rem .4rem;">
+          <div class="card-title" style="margin:0">Expedientes cancelados</div>
+          <button class="btn-new" onclick="goSec('nuevo-cliente')">+ Nuevo</button>
+        </div>
+        <div class="buscador-box">
+          <span class="buscador-ic">🔍</span>
+          <input type="text" id="buscar-cancelado" placeholder="Buscar por folio o nombre..." oninput="filtrarClientesCancelados()">
+          <span class="buscador-clear" id="buscar-cancelado-clear" onclick="limpiarBuscarClienteCancelado()">✕</span>
+        </div>
+        <div class="buscador-count" id="buscar-cancelado-count"></div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr>
+              <th>Fecha</th>
+              <th>Contrato</th>
+              <th>Nombre</th>
+              <th>Celular</th>
+              <th>Modelo</th>
+              <th>Color</th>
+              <th>Talla</th>
+              <th>Total facturado</th>
+              <th>Anticipo</th>
+              <th>Abonos</th>
+              <th>Saldo pendiente</th>
+              <th>F. Cancelación</th>
+              <th>Motivo</th>
+              <th>Cancelado por</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="cancelados-tbody">
+              <tr><td colspan="15" style="color:#AAA;padding:1.5rem;text-align:center;">Sin clientes cancelados aún.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1859,7 +1901,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
       <div style="font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dorado-d);margin-bottom:.5rem">Historial de abonos</div>
       <div id="abono-historial-lista" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto"></div>
     </div>
-    <div style="border:1px solid #E8DDD0;border-radius:3px;padding:.7rem;margin-bottom:1rem">
+    <div id="abono-bloque-prorroga" style="border:1px solid #E8DDD0;border-radius:3px;padding:.7rem;margin-bottom:1rem">
       <div style="font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dorado-d);margin-bottom:.6rem">Gestión de vencimiento</div>
       <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem">
         <input type="checkbox" id="abono-proroga" style="width:16px;height:16px;accent-color:var(--dorado-d)" onchange="toggleAbonoProroga()">
@@ -1881,6 +1923,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
       <span>✏️ Editando <strong id="abono-edit-label"></strong></span>
       <a href="#" onclick="cancelarEdicionAbono();return false;" style="color:var(--dorado-d);text-decoration:underline;white-space:nowrap">cancelar</a>
     </div>
+    <div id="abono-form-wrap">
     <div class="field">
       <label>Monto del abono ($)</label>
       <input type="number" id="abono-monto" placeholder="0" min="1">
@@ -1904,6 +1947,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <div class="field">
       <label>Referencia (opcional)</label>
       <input type="text" id="abono-ref" placeholder="Número de transferencia...">
+    </div>
     </div>
     <div class="msg-err" id="abono-msg"></div>
     <button class="btn-primary" onclick="guardarAbono()" id="btn-guardar-abono" style="background:linear-gradient(135deg,#1E8449,#27AE60)">Registrar abono</button>
@@ -1939,6 +1983,34 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <div style="display:flex;gap:.6rem;margin-top:1rem">
       <button class="btn-sec" style="flex:1" onclick="cqCerrarMotivoModal()">Cancelar</button>
       <button class="btn-save" style="flex:1" onclick="cqConfirmarMotivo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CANCELAR CLIENTE -->
+<div class="overlay" id="modal-cancelar-cliente" style="z-index:310">
+  <div class="modal" style="max-width:440px">
+    <button class="btn-close" onclick="cerrarCancelarModal()">✕</button>
+    <div class="badge" style="background:var(--rojo)">Cancelar vestido</div>
+    <div class="modal-title" id="cancelar-titulo" style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:var(--texto);margin-bottom:.8rem"></div>
+    <div style="background:#FEF3CD;border-left:3px solid #856404;border-radius:4px;padding:.7rem .9rem;margin-bottom:1rem;font-size:.8rem;color:#856404;line-height:1.6">
+      <strong>⚠️ Esta acción marcará al cliente como Cancelado.</strong><br>
+      El folio queda ocupado, los abonos y contratos se conservan. El cliente desaparecerá de las listas activas pero seguirá visible en Historial de pagos y en esta sección.
+    </div>
+    <div class="field">
+      <label>Motivo de cancelación *</label>
+      <select id="cancelar-motivo" onchange="toggleCancelarOtro()">
+        <option value="">Seleccionar...</option>
+      </select>
+    </div>
+    <div class="field" id="cancelar-otro-wrap" style="display:none">
+      <label>Especifica el motivo</label>
+      <input type="text" id="cancelar-otro" placeholder="Motivo...">
+    </div>
+    <div class="msg-err" id="cancelar-msg"></div>
+    <div style="display:flex;gap:.6rem;margin-top:1rem">
+      <button class="btn-sec" style="flex:1" onclick="cerrarCancelarModal()">Cancelar</button>
+      <button class="btn-save" style="flex:1;background:linear-gradient(135deg,#8B2020,#C0392B)" onclick="confirmarCancelarCliente()">🚫 Sí, cancelar</button>
     </div>
   </div>
 </div>
@@ -2036,7 +2108,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-if(location.hostname==="localhost"||location.hostname==="127.0.0.1"){auth.useEmulator("http://localhost:9099");db.settings({host:"localhost:8080",ssl:false});console.log("🔧 Modo emulador activo");}
+//if(location.hostname==="localhost"||location.hostname==="127.0.0.1"){auth.useEmulator("http://localhost:9099");db.settings({host:"localhost:8080",ssl:false});console.log("🔧 Modo emulador activo");}
 
 // Instancia secundaria de Firebase, SOLO para verificar credenciales de un
 // segundo admin (modal de autorización de supervisor) sin cerrar la sesión
@@ -2057,6 +2129,15 @@ const secondaryApp = firebase.initializeApp(firebaseConfig,"secondary");
 // + este sufijo, sin espacios). Si no coincide letra por letra, el login
 // falla sin mostrar un error claro.
 const EMAIL_DOMAIN = "@rossdelune.app";
+
+// Motivos de cancelación — lista desplegable + "Otro" para texto libre
+const MOTIVOS_CANCELACION = [
+  "No volvió a pagar",
+  "Cambió de opinión",
+  "Cambió de fecha de evento",
+  "Eligió otro proveedor",
+  "Otro"
+];
 
 let currentUser = null, allUsers = [], allClientes = [];
 let allCuentas = [];
@@ -2470,6 +2551,7 @@ function goSec(id){
   if(id==="inv-nuevo"){limpiarFormInv();}
   if(id==="lista-clientes"){renderClientes(null,"activos");}
   if(id==="lista-entregados"){renderClientes(null,"entregados");}
+  if(id==="lista-cancelados"){renderClientesCancelados(null);}
   if(id==="nuevo-cliente"){limpiarFormularioCliente();}
   if(id==="mensajeria-recordatorios"){waMostrarRecordatorios();waRefrescarBadge(false);}
   if(id==="mensajeria-morosas"){waMostrarMorosas();waRefrescarBadge(false);}
@@ -2792,6 +2874,7 @@ function getAdicionales(){
 // no perder el rastro de una compra en curso si alguien desmarca el checkbox
 // al editar.
 async function sincronizarAccesoriosCliente(cliente){
+  if(cliente?.estatus === "Cancelado") return;
   const adicionales = cliente?.paquete?.adicionales || [];
   if(!adicionales.length) return;
   try{
@@ -2842,6 +2925,7 @@ async function sincronizarAccesoriosTodosClientes(){
     allClientes = await loadClientesFS();
     let creados = 0, clientesTocados = 0;
     for(const cliente of allClientes){
+      if(cliente.estatus === "Cancelado") continue;
       const adicionales = cliente?.paquete?.adicionales || [];
       if(!adicionales.length) continue;
       const yaExisten = new Set(
@@ -3787,8 +3871,8 @@ function renderClientes(lista, modo){
   const searchInputId = esEntregados ? "buscar-entregado" : "buscar-cliente";
   const estatusFiltroId = esEntregados ? null : "filtro-estatus-cliente";
 
-  const baseAll = allClientes.filter(c => esEntregados ? c.estatus === "Entregado" : c.estatus !== "Entregado");
-  const baseData = (lista || baseAll).filter(c => esEntregados ? c.estatus === "Entregado" : c.estatus !== "Entregado");
+  const baseAll = allClientes.filter(c => esEntregados ? c.estatus === "Entregado" : (c.estatus !== "Entregado" && c.estatus !== "Cancelado"));
+  const baseData = (lista || baseAll).filter(c => esEntregados ? c.estatus === "Entregado" : (c.estatus !== "Entregado" && c.estatus !== "Cancelado"));
   const data = [...baseData].sort((a,b)=>{
     const fa=parseInt(a.folio,10);
     const fb=parseInt(b.folio,10);
@@ -3873,7 +3957,7 @@ function renderClientes(lista, modo){
           <button onclick="verNotaVenta('${c.id}');cerrarClienteMenus()">🧾 Nota de venta</button>
           <button onclick="verFormatoEntrega('${c.id}');cerrarClienteMenus()">📦 Formato de entrega</button>
           ${esEntregados && c.estatus==="Entregado" ? `<button onclick="deshacerEntregaDesdeMenu('${c.id}');cerrarClienteMenus()">↩️ Deshacer entrega</button>` : ""}
-          ${currentUser.role==="admin"?`<button onclick="abrirEditarCliente('${c.id}');cerrarClienteMenus()">✏️ Editar cliente</button><button onclick="eliminarCliente('${c.id}','${c.nombre}');cerrarClienteMenus()" style="color:var(--rojo)">🗑️ Eliminar cliente</button>`:""}
+          ${currentUser.role==="admin"?`<button onclick="abrirEditarCliente('${c.id}');cerrarClienteMenus()">✏️ Editar cliente</button><button onclick="abrirCancelarCliente('${c.id}');cerrarClienteMenus()" style="color:var(--rojo)">🚫 Cancelar vestido</button><button onclick="eliminarCliente('${c.id}','${c.nombre}');cerrarClienteMenus()" style="color:var(--rojo)">🗑️ Eliminar cliente</button>`:""}
         </div>`
         }
       </td>
@@ -3896,6 +3980,7 @@ function renderClientes(lista, modo){
 function refrescarListasClientes(){
   renderClientes(null,"activos");
   renderClientes(null,"entregados");
+  renderClientesCancelados(null);
 }
 function normTexto(s){
   return (s||"").toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
@@ -3907,7 +3992,7 @@ function filtrarClientes(){
   const estatusSel=document.getElementById("filtro-estatus-cliente");
   const estatusFiltro=estatusSel?estatusSel.value:"";
   if(!q && !estatusFiltro){renderClientes(null,"activos");return;}
-  let filtrados=allClientes.filter(c=>c.estatus!=="Entregado");
+  let filtrados=allClientes.filter(c=>c.estatus!=="Entregado" && c.estatus!=="Cancelado");
   if(q){
     filtrados=filtrados.filter(c=>normTexto(c.nombre).includes(q) || normTexto(c.folio).includes(q));
   }
@@ -4238,7 +4323,7 @@ function renderPagosPendientes(){
   }
   const hoy = new Date(); hoy.setHours(0,0,0,0);
   let sumaTotal=0, sumaPagado=0, sumaSaldo=0;
-  const pendientes = allClientes.filter(c=>c.estatus!=="Entregado" && !c.esNotaSencilla).map(c=>{
+  const pendientes = allClientes.filter(c=>c.estatus!=="Entregado" && c.estatus!=="Cancelado" && !c.esNotaSencilla).map(c=>{
     const precio = Number(c.precio||0);
     const paquete = Number(c.precioPaquete||0);
     const extras = (c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
@@ -4478,7 +4563,9 @@ function renderCorteCaja(){
 // ══ MODAL ABONO ══
 let abonoClienteId = null;
 let editandoAbonoIndex = null; // null = registrando abono nuevo; número = editando c.pagos[i]
-function abrirAbonoModal(id){
+let _abonoSoloLectura = false; // true cuando el modal se abre desde un cliente cancelado
+function abrirAbonoModal(id, soloLectura){
+  _abonoSoloLectura = !!soloLectura;
   const c = allClientes.find(x=>x.id===id);
   if(!c) return;
   abonoClienteId = id;
@@ -4492,7 +4579,9 @@ function abrirAbonoModal(id){
   const pagado = Number(c.anticipo||0)+(c.pagos||[]).reduce((s,p)=>s+Number(p.monto||0),0);
   const interes = c.interes==="si" ? total*0.1 : 0;
   const saldo = total+interes-pagado;
-  document.getElementById("abono-cliente-nombre").textContent = c.nombre;
+  document.getElementById("abono-cliente-nombre").textContent = _abonoSoloLectura
+    ? (c.nombre + " — Cancelado")
+    : c.nombre;
   document.getElementById("abono-total").textContent = "$"+(total+interes).toLocaleString("es-MX");
   document.getElementById("abono-pagado").textContent = "$"+pagado.toLocaleString("es-MX");
   document.getElementById("abono-saldo").textContent = "$"+saldo.toLocaleString("es-MX");
@@ -4504,6 +4593,24 @@ function abrirAbonoModal(id){
   document.getElementById("abono-proroga-dias").value = c.prorogaDias||"";
   document.getElementById("fi-abono-proroga-dias").style.display = c.proroga?"block":"none";
   document.getElementById("abono-interes").value = c.interes||"no";
+
+  // Mostrar/ocultar secciones según el modo
+  const formWrap = document.getElementById("abono-form-wrap");
+  const prorrogaBlock = document.getElementById("abono-bloque-prorroga");
+  const btnGuardar = document.getElementById("btn-guardar-abono");
+  const badge = document.querySelector("#modal-abono .badge");
+  if(_abonoSoloLectura){
+    if(formWrap) formWrap.style.display = "none";
+    if(prorrogaBlock) prorrogaBlock.style.display = "none";
+    if(btnGuardar) btnGuardar.style.display = "none";
+    if(badge){ badge.textContent = "Historial de pagos (solo lectura)"; badge.style.background = "#555"; }
+  } else {
+    if(formWrap) formWrap.style.display = "";
+    if(prorrogaBlock) prorrogaBlock.style.display = "";
+    if(btnGuardar) btnGuardar.style.display = "";
+    if(badge){ badge.textContent = "Registrar Abono"; badge.style.background = "var(--verde)"; }
+  }
+
   renderHistorialAbonoModal(c);
   document.getElementById("modal-abono").classList.add("open");
 }
@@ -4536,7 +4643,8 @@ function renderHistorialAbonoModal(c){
     const detalle = [m.metodo, m.ref].filter(Boolean).join(" · ");
     const porTxt = m.por ? " · Reg. "+m.por : "";
     // El anticipo no lleva botones aquí — se edita solo desde "Editar cliente".
-    const acciones = m.tipo==="abono"
+    // En modo solo lectura tampoco se muestran botones de editar/eliminar.
+    const acciones = (!_abonoSoloLectura && m.tipo==="abono")
       ? '<div style="display:flex;gap:.3rem;margin-left:.5rem">'
         + '<button type="button" onclick="iniciarEdicionAbono('+m.idx+')" title="Editar abono" style="background:none;border:none;cursor:pointer;font-size:.82rem;padding:.1rem .15rem;line-height:1">✏️</button>'
         + '<button type="button" onclick="eliminarAbono('+m.idx+')" title="Eliminar abono" style="background:none;border:none;cursor:pointer;font-size:.82rem;padding:.1rem .15rem;line-height:1">🗑️</button>'
@@ -4595,6 +4703,7 @@ function closeAbonoModal(){
   editandoAbonoIndex = null;
   document.getElementById("abono-edit-aviso").style.display = "none";
   document.getElementById("btn-guardar-abono").textContent = "Registrar abono";
+  _abonoSoloLectura = false;
 }
 function toggleAbonoCuenta(){
   const metodo = document.getElementById("abono-metodo").value;
@@ -4998,7 +5107,7 @@ const PASOS_PEDIDO = [
 function renderProceso(){
   const lista = document.getElementById("proceso-lista");
   if(!lista) return;
-  const activos = allClientes.filter(c => c.estatus !== "Entregado" && !c.esNotaSencilla && c.elaboracion !== "Sobre diseño");
+  const activos = allClientes.filter(c => c.estatus !== "Entregado" && c.estatus !== "Cancelado" && !c.esNotaSencilla && c.elaboracion !== "Sobre diseño");
   if(!activos.length){
     lista.innerHTML='<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin pedidos activos.</p>';
     return;
@@ -5012,7 +5121,7 @@ function filtrarProceso(q){
   if(!lista) return;
   const txt = q.toLowerCase();
   const filtrados = allClientes.filter(c =>
-    c.estatus !== "Entregado" && !c.esNotaSencilla && c.elaboracion !== "Sobre diseño" &&
+    c.estatus !== "Entregado" && c.estatus !== "Cancelado" && !c.esNotaSencilla && c.elaboracion !== "Sobre diseño" &&
     (c.nombre.toLowerCase().includes(txt) || (c.folio||"").includes(txt))
   );
   if(!filtrados.length){
@@ -5353,7 +5462,8 @@ async function renderFormatoAjustesLista(){
     lista.innerHTML='<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin clientes.</p>';
     return;
   }
-  lista.innerHTML = allClientes.map(c => buildFormatoAjustesRow(c)).join("");
+  const dataFormato = allClientes.filter(c => c.estatus !== "Cancelado");
+  lista.innerHTML = dataFormato.map(c => buildFormatoAjustesRow(c)).join("");
 }
 
 function filtrarFormatoAjustes(q){
@@ -5361,7 +5471,8 @@ function filtrarFormatoAjustes(q){
   if(!lista) return;
   const txt = q.toLowerCase();
   const filtrados = allClientes.filter(c =>
-    c.nombre.toLowerCase().includes(txt) || (c.folio||"").includes(txt)
+    c.estatus !== "Cancelado" &&
+    (c.nombre.toLowerCase().includes(txt) || (c.folio||"").includes(txt))
   );
   if(!filtrados.length){
     lista.innerHTML='<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin resultados.</p>';
@@ -5553,7 +5664,8 @@ function renderDiseno(){
   if(!lista) return;
   const activos = allClientes.filter(c =>
     c.elaboracion==="Sobre diseño" &&
-    c.estatus !== "Entregado"
+    c.estatus !== "Entregado" &&
+    c.estatus !== "Cancelado"
   );
   if(!activos.length){
     lista.innerHTML='<p style="color:#AAA;font-size:.82rem;padding:.5rem">Sin vestidos en proceso de diseño.</p>';
@@ -5570,6 +5682,7 @@ function filtrarDiseno(q){
   const filtrados = allClientes.filter(c =>
     c.elaboracion==="Sobre diseño" &&
     c.estatus !== "Entregado" &&
+    c.estatus !== "Cancelado" &&
     (c.nombre.toLowerCase().includes(txt)||(c.folio||"").includes(txt))
   );
   if(!filtrados.length){
@@ -8251,6 +8364,7 @@ function renderEntregasFecha(){
     const mes=parseInt(document.getElementById("ent-mes").value);
     const anio=parseInt(document.getElementById("ent-anio").value);
     filtrados=allClientes.filter(c=>{
+      if(c.estatus === "Cancelado") return false;
       if(!c.entrega)return false;
       const d=new Date(c.entrega+"T12:00:00");
       return d.getMonth()===mes&&d.getFullYear()===anio;
@@ -8258,10 +8372,11 @@ function renderEntregasFecha(){
   } else {
     const desde=document.getElementById("ent-desde").value;
     const hasta=document.getElementById("ent-hasta").value;
-    if(!desde&&!hasta){filtrados=allClientes.filter(c=>!c.esNotaSencilla);}
+    if(!desde&&!hasta){filtrados=allClientes.filter(c=>!c.esNotaSencilla && c.estatus !== "Cancelado");}
     else {
       filtrados=allClientes.filter(c=>{
         if(c.esNotaSencilla)return false;
+        if(c.estatus === "Cancelado") return false;
         if(!c.entrega)return false;
         if(desde&&c.entrega<desde)return false;
         if(hasta&&c.entrega>hasta)return false;
@@ -8678,6 +8793,7 @@ async function waCalcularPendientes(){
   const hoy = fechaLocalISO();
 
   (allClientes||[]).forEach(c => {
+    if(c.estatus === "Cancelado") return;
     const est = waEstadoCliente(c);
     if(est.tipo === "fuera") return;
 
@@ -9088,6 +9204,250 @@ async function waEnviarPrueba(){
     res.innerHTML='<span style="color:var(--verde)">✅ Mensaje de prueba enviado a '+numeroFinal+'</span>';
     toast("Prueba enviada ✓");
   }catch(e){ res.innerHTML='<span style="color:var(--rojo)">Error: '+e.message+'</span>'; }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ══ CANCELACIÓN DE CLIENTE ══
+// ══════════════════════════════════════════════════════════════════════
+// Cancelar = marcar cliente completo como "Cancelado". El folio queda ocupado,
+// los pagos/abonos/contratos se conservan, y si el inventario se había
+// descontado por error, se devuelve. Se guarda el estatus anterior para poder
+// revertir. Espejo de aplicarEntregaCompleta / desmarcarEntregaCliente.
+// ══════════════════════════════════════════════════════════════════════
+
+let _cancelarClienteId = null;
+
+function abrirCancelarCliente(id){
+  const c = allClientes.find(x=>x.id===id);
+  if(!c){ toast("Cliente no encontrado", "err"); return; }
+  if(c.estatus === "Entregado"){
+    toast("No se puede cancelar un cliente ya entregado. Primero deshaz la entrega.", "err");
+    return;
+  }
+  if(c.estatus === "Cancelado"){
+    toast("Este cliente ya está cancelado", "err");
+    return;
+  }
+  _cancelarClienteId = id;
+  document.getElementById("cancelar-titulo").textContent = c.nombre || "Cliente";
+  const sel = document.getElementById("cancelar-motivo");
+  sel.innerHTML = '<option value="">Seleccionar...</option>' + MOTIVOS_CANCELACION.map(m=>`<option>${m}</option>`).join("");
+  sel.value = "";
+  document.getElementById("cancelar-otro-wrap").style.display = "none";
+  document.getElementById("cancelar-otro").value = "";
+  document.getElementById("cancelar-msg").textContent = "";
+  document.getElementById("modal-cancelar-cliente").classList.add("open");
+}
+
+function toggleCancelarOtro(){
+  const v = document.getElementById("cancelar-motivo").value;
+  document.getElementById("cancelar-otro-wrap").style.display = v === "Otro" ? "block" : "none";
+}
+
+function cerrarCancelarModal(){
+  document.getElementById("modal-cancelar-cliente").classList.remove("open");
+  _cancelarClienteId = null;
+}
+
+async function confirmarCancelarCliente(){
+  const msg = document.getElementById("cancelar-msg");
+  msg.textContent = "";
+  if(!_cancelarClienteId) return;
+  const motivoSel = document.getElementById("cancelar-motivo").value;
+  const motivoOtro = document.getElementById("cancelar-otro").value.trim();
+  if(!motivoSel){ msg.textContent = "Selecciona un motivo."; return; }
+  if(motivoSel === "Otro" && !motivoOtro){ msg.textContent = "Especifica el motivo."; return; }
+  const motivoFinal = motivoSel === "Otro" ? motivoOtro : motivoSel;
+  const btn = document.querySelector("#modal-cancelar-cliente .btn-save");
+  if(btn){ btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Cancelando...'; }
+  try{
+    allClientes = await loadClientesFS();
+    const idx = allClientes.findIndex(x=>x.id===_cancelarClienteId);
+    if(idx === -1){ msg.textContent = "Cliente no encontrado."; return; }
+    const cli = allClientes[idx];
+    await aplicarCancelacionCompleta(cli, motivoFinal);
+    await saveUnCliente(cli);
+    toast("Cliente cancelado ✓");
+    cerrarCancelarModal();
+    refrescarListasClientes();
+  }catch(e){
+    console.error("confirmarCancelarCliente error:", e);
+    msg.textContent = "Error al cancelar. Verifica tu conexión.";
+  }finally{
+    if(btn){ btn.disabled = false; btn.innerHTML = '🚫 Sí, cancelar'; }
+  }
+}
+
+async function aplicarCancelacionCompleta(cliente, motivo){
+  // Guardar estatus anterior para poder revertir
+  cliente.estatusAntesDeCancelar = cliente.estatus || "Pedido Realizado";
+  cliente.estatus = "Cancelado";
+  cliente.fechaCancelacion = fechaLocalISO();
+  cliente.motivoCancelacion = motivo;
+  cliente.canceladoPor = currentUser.user;
+
+  // Si por alguna razón el inventario ya se había descontado (caso rarísimo:
+  // se marcó Entregado por error y luego se intenta cancelar), devolver stock.
+  if(cliente.progreso?.pedido?.entregado_descontado || cliente.progreso?.pedido?.entregado_descontado2){
+    try{
+      const inv = await loadInventarioFS();
+      const articulosTocados = [];
+      if(cliente.articuloId && cliente.progreso?.pedido?.entregado_descontado){
+        const artIdx = inv.findIndex(a=>a.id===cliente.articuloId);
+        if(artIdx>-1){ inv[artIdx].cantidad = (Number(inv[artIdx].cantidad)||0) + 1; articulosTocados.push(inv[artIdx]); }
+        cliente.progreso.pedido.entregado_descontado = false;
+      }
+      if(cliente.vestido2?.articuloId && cliente.progreso?.pedido?.entregado_descontado2){
+        const artIdx2 = inv.findIndex(a=>a.id===cliente.vestido2.articuloId);
+        if(artIdx2>-1){ inv[artIdx2].cantidad = (Number(inv[artIdx2].cantidad)||0) + 1; articulosTocados.push(inv[artIdx2]); }
+        cliente.progreso.pedido.entregado_descontado2 = false;
+      }
+      if(articulosTocados.length){
+        await Promise.all(articulosTocados.map(a=>saveUnArticulo(a)));
+        window._invData = inv;
+      }
+    }catch(e){ console.error("No se pudo revertir inventario:", e); }
+  }
+
+  // Limpiar banderas de mensajería para que no siga apareciendo en recordatorios
+  if(cliente.id){
+    try{ await waBorrarBanderasHitosCliente(cliente.id); }
+    catch(e){ console.warn("No se pudieron borrar banderas de WhatsApp:", e); }
+  }
+}
+
+async function reactivarClienteDesdeMenu(clienteId){
+  const c = allClientes.find(x=>x.id===clienteId);
+  if(!c) return;
+  const ok = await confirmarReactivarPopup(c.nombre);
+  if(!ok) return;
+  try{
+    allClientes = await loadClientesFS();
+    const idx = allClientes.findIndex(x=>x.id===clienteId);
+    if(idx < 0){ toast("Cliente no encontrado","err"); return; }
+    const cli = allClientes[idx];
+    reactivarCliente(cli);
+    await saveUnCliente(cli);
+    toast("Cliente reactivado ✓");
+    refrescarListasClientes();
+  }catch(e){
+    console.error("reactivarClienteDesdeMenu error:", e);
+    toast("Error al reactivar","err");
+  }
+}
+
+function reactivarCliente(cliente){
+  cliente.estatus = cliente.estatusAntesDeCancelar || "Pedido Realizado";
+  cliente.fechaCancelacion = null;
+  cliente.motivoCancelacion = null;
+  cliente.canceladoPor = null;
+  cliente.estatusAntesDeCancelar = null;
+}
+
+function confirmarReactivarPopup(nombreCliente){
+  return new Promise((resolve)=>{
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(30,18,8,.6);backdrop-filter:blur(5px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem";
+    const modal = document.createElement("div");
+    modal.style.cssText = "background:#FFF;border-radius:6px;padding:1.8rem;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(30,18,8,.3);font-family:'Lato',sans-serif";
+    modal.innerHTML = `
+      <div style="font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:#7A4F2A;margin-bottom:.6rem">Reactivar cliente</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:#3A2A1A;margin-bottom:1rem">${nombreCliente||""}</div>
+      <div style="background:#FDF8F0;border-left:3px solid #C9A84C;border-radius:4px;padding:.8rem 1rem;margin-bottom:1.2rem;font-size:.85rem;color:#7A4F2A;line-height:1.7">
+        El cliente volverá a su estatus anterior y reaparecerá en las listas activas. Los pagos, abonos y contratos se conservan intactos.
+      </div>
+      <div style="display:flex;gap:.6rem;justify-content:flex-end">
+        <button id="popup-reactivar-cancelar" style="padding:.7rem 1.4rem;background:transparent;color:#7A4F2A;border:1px solid #C9A84C;border-radius:3px;font-family:'Lato',sans-serif;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;cursor:pointer">Cancelar</button>
+        <button id="popup-reactivar-aceptar" style="padding:.7rem 1.4rem;background:linear-gradient(135deg,#7A4F2A,#C9A84C);color:#FFF8EC;border:none;border-radius:3px;font-family:'Lato',sans-serif;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;cursor:pointer">Sí, reactivar</button>
+      </div>`;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    document.getElementById("popup-reactivar-aceptar").onclick = ()=>{ overlay.remove(); resolve(true); };
+    document.getElementById("popup-reactivar-cancelar").onclick = ()=>{ overlay.remove(); resolve(false); };
+  });
+}
+
+function renderClientesCancelados(lista){
+  const tbody = document.getElementById("cancelados-tbody");
+  if(!tbody) return;
+  const baseAll = allClientes.filter(c => c.estatus === "Cancelado");
+  const data = (lista || baseAll).slice().sort((a,b)=>{
+    const fa = parseInt(a.folio,10);
+    const fb = parseInt(b.folio,10);
+    return (isNaN(fa)?Infinity:fa) - (isNaN(fb)?Infinity:fb);
+  });
+  if(!baseAll.length){
+    tbody.innerHTML = '<tr><td colspan="15" style="color:#AAA;padding:1.5rem;text-align:center;">Sin clientes cancelados aún.</td></tr>';
+    const cEl = document.getElementById("buscar-cancelado-count"); if(cEl) cEl.textContent = "";
+    return;
+  }
+  if(!data.length){
+    tbody.innerHTML = '<tr><td colspan="15" style="color:#AAA;padding:1.5rem;text-align:center;">No se encontraron clientes con esa búsqueda.</td></tr>';
+    const cEl = document.getElementById("buscar-cancelado-count"); if(cEl) cEl.textContent = "";
+    return;
+  }
+  tbody.innerHTML = data.map(c=>{
+    const precio = Number(c.precio||0);
+    const paquete = Number(c.precioPaquete||0);
+    const extras = (c.paquete?.adicionales||[]).reduce((s,a)=>s+Number(a.precio||0),0);
+    const total = precio + paquete + extras;
+    const anticipo = Number(c.anticipo||0);
+    const abonos = (c.pagos||[]).reduce((s,p)=>s+Number(p.monto||0),0);
+    const saldo = total - anticipo - abonos;
+    const fContrato = c.fecha ? new Date(c.fecha+"T12:00:00").toLocaleDateString("es-MX") : "—";
+    const fCancel = c.fechaCancelacion ? new Date(c.fechaCancelacion+"T12:00:00").toLocaleDateString("es-MX") : "—";
+    const colorHex = c.color?.hex || "#CCC";
+    return `<tr style="opacity:.9">
+      <td style="font-size:.74rem;white-space:nowrap">${fContrato}</td>
+      <td style="font-size:.74rem;color:#888">${c.folio||"—"}</td>
+      <td style="white-space:nowrap"><strong style="font-weight:500;font-size:.82rem">${c.nombre}</strong></td>
+      <td style="font-size:.76rem;white-space:nowrap">${c.cel||"—"}</td>
+      <td style="font-size:.76rem">${c.modelo||"—"}</td>
+      <td style="white-space:nowrap"><span class="color-dot" style="background:${colorHex}"></span><span style="font-size:.74rem">${c.color?.nombre||"—"}</span></td>
+      <td style="font-size:.76rem;text-align:center">${c.talla||"—"}</td>
+      <td style="font-size:.76rem;white-space:nowrap">$${total.toLocaleString("es-MX")}</td>
+      <td style="font-size:.76rem;white-space:nowrap;color:var(--verde)">$${anticipo.toLocaleString("es-MX")}</td>
+      <td style="font-size:.76rem;white-space:nowrap;color:var(--verde)">$${abonos.toLocaleString("es-MX")}</td>
+      <td style="font-size:.76rem;white-space:nowrap;color:var(--rojo);font-weight:500">$${saldo.toLocaleString("es-MX")}</td>
+      <td style="font-size:.74rem;white-space:nowrap">${fCancel}</td>
+      <td style="font-size:.74rem;max-width:160px">${c.motivoCancelacion||"—"}</td>
+      <td style="font-size:.74rem">${c.canceladoPor||"—"}</td>
+      <td style="position:relative">
+        <button class="ic-btn menu-toggle" onclick="toggleClienteMenu('${c.id}',this)" title="Más opciones">⋮</button>
+        <div class="cliente-menu" id="menu-${c.id}" style="display:none">
+          <button onclick="abrirAbonoModal('${c.id}', true);cerrarClienteMenus()">💳 Ver historial de pagos</button>
+          <button onclick="verContrato('${c.id}');cerrarClienteMenus()">📄 Contrato</button>
+          ${c.contratoUrl?`<button onclick="window.open('${c.contratoUrl}','_blank');cerrarClienteMenus()">📎 Documento firmado</button>`:""}
+          ${currentUser.role==="admin"?`<button onclick="reactivarClienteDesdeMenu('${c.id}');cerrarClienteMenus()" style="color:var(--verde)">↩️ Reactivar cliente</button>`:""}
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+  const cEl = document.getElementById("buscar-cancelado-count");
+  if(cEl){
+    const q = (document.getElementById("buscar-cancelado")?.value||"").trim();
+    cEl.textContent = q ? `${data.length} de ${baseAll.length} cancelados` : "";
+  }
+}
+
+function filtrarClientesCancelados(){
+  const inp = document.getElementById("buscar-cancelado");
+  const q = normTexto(inp.value.trim());
+  document.getElementById("buscar-cancelado-clear").style.display = q ? "block" : "none";
+  if(!q){ renderClientesCancelados(null); return; }
+  const filtrados = allClientes.filter(c =>
+    c.estatus === "Cancelado" &&
+    (normTexto(c.nombre).includes(q) || normTexto(c.folio).includes(q))
+  );
+  renderClientesCancelados(filtrados);
+}
+
+function limpiarBuscarClienteCancelado(){
+  const inp = document.getElementById("buscar-cancelado");
+  inp.value = "";
+  document.getElementById("buscar-cancelado-clear").style.display = "none";
+  renderClientesCancelados(null);
+  inp.focus();
 }
 
 </script>
