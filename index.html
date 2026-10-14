@@ -567,7 +567,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Producción v65.0 · CancelarVestido</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Producción v66.0 · Buscador de Accesorios</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -1120,6 +1120,12 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
           <button class="btn-new" onclick="openAccesorioModal()">+ Registrar accesorio</button>
           <button class="btn-sec" id="btn-sync-accesorios" onclick="sincronizarAccesoriosTodosClientes()" title="Revisa TODOS los clientes y crea en esta tabla los accesorios que ya tengan marcados en su pedido pero que todavía no estén aquí. No duplica ni borra nada.">🔄 Sincronizar pendientes</button>
         </div>
+        <div class="buscador-box">
+          <span class="buscador-ic">🔍</span>
+          <input type="text" id="buscar-accesorio" placeholder="Buscar por tipo, cliente o folio..." oninput="filtrarAccesorios()">
+          <span class="buscador-clear" id="buscar-accesorio-clear" onclick="limpiarBuscarAccesorio()">✕</span>
+        </div>
+        <div class="buscador-count" id="buscar-accesorio-count"></div>
         <div style="overflow-x:auto;">
           <table class="tbl">
             <thead><tr><th>Fecha</th><th>Tipo</th><th>Cantidad</th><th>Cliente</th><th>Estatus</th><th></th></tr></thead>
@@ -6841,13 +6847,30 @@ async function renderAccesorios(){
   // En cuanto pasa a "En Tienda" (o más adelante), desaparece de esta lista.
   const activos = allAccesorios.filter(a=>!a.estatus||a.estatus==="Pedido Realizado"||a.estatus==="En Compra")
     .slice().sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
-  tbodyPed.innerHTML = activos.length ? activos.map(a=>{
+
+  // Filtro de búsqueda sobre los pedidos ACTIVOS (no toca el resumen mensual de abajo).
+  // Busca por tipo de artículo, nombre del cliente, folio del cliente ligado, o estatus.
+  const q = normTexto((document.getElementById("buscar-accesorio")?.value||"").trim());
+  const visibles = q ? activos.filter(a=>{
+    const cliente = a.clienteId ? allClientes.find(c=>c.id===a.clienteId) : null;
+    const folio = cliente ? (cliente.folio||"") : "";
+    return normTexto(a.tipo).includes(q)
+        || normTexto(a.clienteNombre).includes(q)
+        || normTexto(folio).includes(q)
+        || normTexto(a.estatus).includes(q);
+  }) : activos;
+
+  tbodyPed.innerHTML = visibles.length ? visibles.map(a=>{
     const cls = estatusClassAcc(a.estatus);
+    const cliente = a.clienteId ? allClientes.find(c=>c.id===a.clienteId) : null;
+    const clienteTexto = a.clienteNombre
+      ? (cliente ? "#"+cliente.folio+" — "+a.clienteNombre : a.clienteNombre)
+      : "Venta suelta";
     return '<tr>'
       + '<td style="font-size:.72rem;color:#AAA">'+(a.fecha||"—")+'</td>'
       + '<td style="font-size:.78rem">'+a.tipo+'</td>'
       + '<td style="font-size:.78rem;font-weight:600">'+Number(a.cantidad||0).toLocaleString("es-MX")+'</td>'
-      + '<td style="font-size:.76rem;color:#888">'+(a.clienteNombre||"Venta suelta")+'</td>'
+      + '<td style="font-size:.76rem;color:#888">'+clienteTexto+'</td>'
       + '<td><select class="status-badge '+cls+'" onchange="cambiarEstatusAccesorio(\''+a.id+'\',this.value)">'
         + '<option value="Pedido Realizado" '+((!a.estatus||a.estatus==="Pedido Realizado")?"selected":"")+'>Pedido Realizado</option>'
         + '<option value="En Compra" '+(a.estatus==="En Compra"?"selected":"")+'>En Compra</option>'
@@ -6857,7 +6880,14 @@ async function renderAccesorios(){
       + '</select></td>'
       + '<td><button class="ic-btn" onclick="eliminarAccesorio(\''+a.id+'\')" title="Eliminar">🗑️</button></td>'
       + '</tr>';
-  }).join("") : '<tr><td colspan="6" style="color:#AAA;padding:1.5rem;text-align:center">Sin pedidos de accesorios activos 🎀</td></tr>';
+  }).join("")
+    : (q
+        ? '<tr><td colspan="6" style="color:#AAA;padding:1.5rem;text-align:center">No se encontraron accesorios con esa búsqueda.</td></tr>'
+        : '<tr><td colspan="6" style="color:#AAA;padding:1.5rem;text-align:center">Sin pedidos de accesorios activos 🎀</td></tr>');
+
+  // Contador de resultados — solo cuando hay búsqueda activa
+  const cElAcc = document.getElementById("buscar-accesorio-count");
+  if(cElAcc) cElAcc.textContent = q ? `${visibles.length} de ${activos.length} pedidos activos` : "";
 
   // Resumen mensual por tipo — cuenta TODOS los registros del mes sin importar estatus,
   // porque su propósito es planeación de capital, no seguimiento de entrega.
@@ -6872,7 +6902,28 @@ async function renderAccesorios(){
     + '</div>'
   ).join("") : '<div style="color:#AAA;font-size:.8rem;padding:.4rem">Sin registros este mes.</div>';
 }
+// ══ BUSCADOR DE ACCESORIOS ══
+// Se hace con un pequeño retraso (debounce) porque renderAccesorios() vuelve a leer
+// de Firestore en cada llamada — sin esto, cada tecla dispara una consulta a la nube.
+// Limpiar el buscador no necesita debounce: es una sola acción del usuario.
+let _accBuscarTimer = null;
+function filtrarAccesorios(){
+  const inp = document.getElementById("buscar-accesorio");
+  const clear = document.getElementById("buscar-accesorio-clear");
+  if(clear) clear.style.display = (inp && inp.value.trim()) ? "block" : "none";
+  clearTimeout(_accBuscarTimer);
+  _accBuscarTimer = setTimeout(()=>renderAccesorios(), 250);
+}
 
+function limpiarBuscarAccesorio(){
+  const inp = document.getElementById("buscar-accesorio");
+  if(inp) inp.value = "";
+  const clear = document.getElementById("buscar-accesorio-clear");
+  if(clear) clear.style.display = "none";
+  clearTimeout(_accBuscarTimer);
+  renderAccesorios();
+  if(inp) inp.focus();
+}
 // ══ INGRESOS MENSUALES (gráfica de líneas por concepto/cuenta) ══
 const MESES_CORTOS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 const COLORES_LINEA = ["#7A4F2A","#27AE60","#2E86AB","#C0392B","#6B4F7A","#D68910","#16A085","#8E44AD"];
