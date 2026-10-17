@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+		<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -567,7 +567,7 @@ select.status-badge{border:none;cursor:pointer;appearance:none;-webkit-appearanc
     <button type="button" class="btn-access btn-worker" onclick="openLogin('worker')">✦ &nbsp;Acceso Colaborador</button>
   </div>
 </div>
-<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Producción v66.0 · Buscador de Accesorios</p>
+<p class="footer-tag">Ross de Lune · Novias y Quinceañeras · Production v68.0 · fechaLimite</p>
 
 <!-- ══ LOGIN ══ -->
 <div class="overlay" id="ov-login">
@@ -2111,10 +2111,20 @@ const firebaseConfig = {
   measurementId: "G-KENSFN9PPR"
 };
 
+//const firebaseConfig = {
+//  apiKey: "AIzaSyCA16iPWtJE_XEGfB6QoBvbn1kpUUCHjFA",
+//  authDomain: "rossdelune2026.firebaseapp.com",
+//  projectId: "rossdelune2026",
+//  storageBucket: "rossdelune2026.firebasestorage.app",
+//  messagingSenderId: "396024136594",
+//  appId: "1:396024136594:web:05286384348f6fbbe4374b",
+//  measurementId: "G-7Y4N4283TT"
+//};
+
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-//if(location.hostname==="localhost"||location.hostname==="127.0.0.1"){auth.useEmulator("http://localhost:9099");db.settings({host:"localhost:8080",ssl:false});console.log("🔧 Modo emulador activo");}
+//fif(location.hostname==="localhost"||location.hostname==="127.0.0.1"){auth.useEmulator("http://localhost:9099");db.settings({host:"localhost:8080",ssl:false});console.log("🔧 Modo emulador activo");}
 
 // Instancia secundaria de Firebase, SOLO para verificar credenciales de un
 // segundo admin (modal de autorización de supervisor) sin cerrar la sesión
@@ -8635,9 +8645,10 @@ async function waEnviarAutomatico(){
     if(!numero) continue;
     const numeroFinal = numero.startsWith("52") ? numero : "52"+numero;
     const monto      = "$" + p.saldo.toLocaleString("es-MX");
-    const fechaISO   = p.estado === "morosa" ? p.peldañoVencido : p.peldañoProximo;
-    const fechaTexto = waFormatearFecha(fechaISO);
-    const mensaje    = waGenerarMensaje(p.cliente.nombre||"clienta", monto, fechaTexto);
+        const fechaFrase = p.cliente.fechaLimite
+      ? "contrato con fecha límite " + waFormatearFecha(p.cliente.fechaLimite)
+      : "contrato con fecha límite la fecha límite de su contrato";
+    const mensaje    = waGenerarMensaje(p.cliente.nombre||"clienta", monto, fechaFrase);
     try{
       const url  = `https://graph.facebook.com/v19.0/${_waConfig.phoneNumberId}/messages`;
       const body = {messaging_product:"whatsapp", to:numeroFinal, type:"text", text:{body:mensaje}};
@@ -8669,9 +8680,8 @@ function waCargarConfigUI(){
   document.getElementById("wa-cfg-dias-morosa").value    = _waConfig.diasMorosa || "";
   document.getElementById("wa-cfg-msg").textContent      = "";
   document.getElementById("wa-test-resultado").textContent = "";
-  // Mostrar vista previa del mensaje con datos de ejemplo
-  document.getElementById("wa-preview-mensaje").textContent =
-    waGenerarMensaje("María García", "$3,500.00", "15 de agosto de 2026");
+    document.getElementById("wa-preview-mensaje").textContent =
+    waGenerarMensaje("María García", "$3,500.00", "contrato con fecha límite 15 de agosto de 2026");
 }
 
 // Guarda la config en Firestore
@@ -8693,8 +8703,9 @@ async function waGuardarConfig(){
     msg.textContent = "✓ Configuración guardada correctamente.";
     toast("Configuración WA guardada ✓");
     // Actualizar vista previa con el nuevo número de soporte
-    document.getElementById("wa-preview-mensaje").textContent =
-      waGenerarMensaje("María García", "$3,500.00", "15 de agosto de 2026");
+   
+        document.getElementById("wa-preview-mensaje").textContent =
+      waGenerarMensaje("María García", "$3,500.00", "contrato con fecha límite 15 de agosto de 2026");
   }catch(e){ msg.textContent = "Error al guardar: " + e.message; }
 }
 
@@ -9100,8 +9111,10 @@ async function waMostrarRecordatorios(){
   lista.innerHTML = pendientes.map(p=>{
     const clienteId  = p.cliente.id || p.cliente.folio || "";
     const monto      = "$" + p.saldo.toLocaleString("es-MX");
-    const fechaTexto = waFormatearFecha(p.peldañoProximo);
-    const msgTexto   = waGenerarMensaje(p.cliente.nombre||"clienta", monto, fechaTexto);
+    const fechaFrase = p.cliente.fechaLimite
+      ? "contrato con fecha límite " + waFormatearFecha(p.cliente.fechaLimite)
+      : "contrato con fecha límite la fecha límite de su contrato";
+    const msgTexto   = waGenerarMensaje(p.cliente.nombre||"clienta", monto, fechaFrase);
     const numero     = (p.cliente.cel||p.cliente.tel||"").replace(/\D/g,"");
     const numeroFinal= numero ? (numero.startsWith("52")?numero:"52"+numero) : "";
     const numDisplay = numero ? numero : '<span style="color:var(--rojo)">Sin número registrado</span>';
@@ -9163,14 +9176,16 @@ async function waMostrarMorosas(){
   lista.innerHTML = morosas.map(p=>{
     const clienteId  = p.cliente.id || p.cliente.folio || "";
     const monto      = "$" + p.saldo.toLocaleString("es-MX");
-    const fechaTexto = waFormatearFecha(p.peldañoVencido);
-    const msgTexto   = waGenerarMensaje(p.cliente.nombre||"clienta", monto, fechaTexto);
+        const fechaFrase = p.cliente.fechaLimite
+      ? "contrato con fecha límite " + waFormatearFecha(p.cliente.fechaLimite)
+      : "contrato con fecha límite la fecha límite de su contrato";
+    const msgTexto   = waGenerarMensaje(p.cliente.nombre||"clienta", monto, fechaFrase);
     const numero     = (p.cliente.cel||p.cliente.tel||"").replace(/\D/g,"");
     const numeroFinal= numero ? (numero.startsWith("52")?numero:"52"+numero) : "";
     const numDisplay = numero ? numero : '<span style="color:var(--rojo)">Sin número registrado</span>';
     const linkWa     = numeroFinal ? `https://wa.me/${numeroFinal}?text=${encodeURIComponent(msgTexto)}` : "";
     const nombreEsc  = (p.cliente.nombre||"").replace(/'/g,"\\'");
-    const etiqueta   = `Debe el pago del ${fechaTexto}`;
+    const etiqueta   = `Debe el pago del ${waFormatearFecha(p.peldañoVencido)}`;
 
     const accionesAdmin = esAdmin ? `
       <div style="display:flex;align-items:center;gap:.9rem;margin-top:.6rem;flex-wrap:wrap">
